@@ -30,7 +30,7 @@ const COL_W = 128;
 const MAP_LEFT = 340;
 const ACT_TEX = ['', 'dirt', 'netherrack', 'endstone', 'sift'];
 
-export function MapView({ s }: { s: RunState }) {
+export function MapView({ s }: { s: RunState; v?: number }) {
   const scroller = useRef<HTMLDivElement>(null);
   const nodes = Object.values(s.map.nodes);
   const avail = new Set(availableNodes(s).map((n) => n.id));

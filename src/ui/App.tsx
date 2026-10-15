@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
-import { screen, stageScale, overlay, toasts, settings, go } from './store.ts';
+import { screen, stageScale, overlay, toasts, settings, go, getRun, runVersion } from './store.ts';
+import { reloadForUpdate, updateReady } from './update.ts';
 import { TooltipLayer } from './components/common.tsx';
 import { Title } from './screens/Title.tsx';
 import { NewRun } from './screens/NewRun.tsx';
@@ -120,6 +121,7 @@ export function App() {
     <div class="stage" style={{ transform: `translate(${layout.x}px, ${layout.y}px) scale(${layout.s})`, left: 0, top: 0 }}>
       {body}
       {overlay.value === 'settings' && <SettingsModal />}
+      {updateReady.value && <UpdateTip />}
       <div class="toasts">
         {toasts.value.map((t) => (
           <div key={t.id} class={`toast ${t.tone}`}>
@@ -129,6 +131,21 @@ export function App() {
       </div>
       <TooltipLayer />
       {settings.value.fps && <div id="fps" class="fps" />}
+    </div>
+  );
+}
+
+/** Offered outside battles only: refreshing mid-fight would restart the fight. */
+function UpdateTip() {
+  runVersion.value;
+  const sc = screen.value;
+  if (sc === 'boot' || sc === 'classic' || (sc === 'run' && getRun()?.queue[0]?.type === 'battle')) return null;
+  return (
+    <div class="update-tip">
+      <span>游戏已更新到新版本</span>
+      <button class="mc-btn small green" onClick={() => reloadForUpdate()}>
+        刷新更新
+      </button>
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { sfx } from '../../audio/audio.ts';
 
 type P<T extends Pending['type']> = Extract<Pending, { type: T }>;
 
-export function RestView({ s, p }: { s: RunState; p: P<'rest'> }) {
+export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
   const heal = restHeal(s);
   const noRest = hasRelic(s, 'sculk_catalyst');
   const canUp = allCards(s).some(canSmith);
@@ -73,7 +73,7 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'> }) {
   );
 }
 
-export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'> }) {
+export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: number }) {
   const [sel, setSel] = useState<string | null>(null);
   const maxStar = Number(p.data?.maxStar ?? 2);
   const ok = (c: Card) => {
@@ -233,7 +233,7 @@ function ChangePreview({ p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
   );
 }
 
-export function EnchantChoiceView({ s, p }: { s: RunState; p: P<'enchant_choice'> }) {
+export function EnchantChoiceView({ s, p }: { s: RunState; p: P<'enchant_choice'>; v?: number }) {
   return (
     <div class="screen choice-screen">
       <div class="choice-head">
@@ -270,7 +270,7 @@ export function EnchantChoiceView({ s, p }: { s: RunState; p: P<'enchant_choice'
   );
 }
 
-export function MessageView({ p }: { s: RunState; p: P<'message'> }) {
+export function MessageView({ p }: { s: RunState; p: P<'message'>; v?: number }) {
   return (
     <div class="screen choice-screen">
       <div class="panel" style={{ width: 640, margin: '220px auto 0', textAlign: 'center' }}>

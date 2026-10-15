@@ -6,7 +6,7 @@ import { Btn } from '../components/common.tsx';
 import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
 
-export function EventView({ s, p }: { s: RunState; p: Extract<Pending, { type: 'event' }> }) {
+export function EventView({ s, p }: { s: RunState; p: Extract<Pending, { type: 'event' }>; v?: number }) {
   const ev = EVENT_MAP[p.id];
   const choices = ev.choices(s, p.data);
   return (

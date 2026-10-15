@@ -4,8 +4,10 @@ import './styles/screens.css';
 import './styles/battle.css';
 import { App } from './ui/App.tsx';
 import { unlockAudio } from './audio/audio.ts';
+import { watchForUpdates } from './ui/update.ts';
 
 render(<App />, document.getElementById('app')!);
+watchForUpdates();
 
 // Prevent accidental browser zoom / context menu inside the game.
 window.addEventListener('contextmenu', (e) => e.preventDefault());

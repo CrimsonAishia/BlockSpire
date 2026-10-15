@@ -25,7 +25,7 @@ function RelicTile({ id, onPick }: { id: string; onPick: () => void }) {
   );
 }
 
-export function RelicChoice({ p }: { s: RunState; p: Extract<Pending, { type: 'relic_choice' }> }) {
+export function RelicChoice({ p }: { s: RunState; p: Extract<Pending, { type: 'relic_choice' }>; v?: number }) {
   return (
     <div class="screen choice-screen">
       <div class="choice-head">
@@ -43,7 +43,7 @@ export function RelicChoice({ p }: { s: RunState; p: Extract<Pending, { type: 'r
   );
 }
 
-export function BossReward({ s, p }: { s: RunState; p: Extract<Pending, { type: 'boss_reward' }> }) {
+export function BossReward({ s, p }: { s: RunState; p: Extract<Pending, { type: 'boss_reward' }>; v?: number }) {
   return (
     <div class="screen choice-screen boss-reward">
       <div class="choice-head">

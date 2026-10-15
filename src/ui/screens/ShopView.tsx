@@ -73,7 +73,7 @@ function disabledReason(s: RunState, it: ShopItem): string | null {
   return null;
 }
 
-export function ShopView({ s, p }: { s: RunState; p: P }) {
+export function ShopView({ s, p }: { s: RunState; p: P; v?: number }) {
   const [ordering, setOrdering] = useState(false);
   const owned = new Set(allCards(s).map((c) => c.mob));
   const groups: [string, ShopItem['kind'][]][] = [

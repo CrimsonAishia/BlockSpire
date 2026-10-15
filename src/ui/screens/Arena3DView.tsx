@@ -12,6 +12,7 @@ import { Emerald, PotionTipContent, Tip, itemIcon } from '../components/common.t
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
 import { earnAchievement, settings, stageScale, updateSettings } from '../store.ts';
+import { reloadForUpdate } from '../update.ts';
 import { playMusic, sfx } from '../../audio/audio.ts';
 
 interface Props {
@@ -320,6 +321,10 @@ export function Arena3DView({
         raf = requestAnimationFrame(loop);
       };
       raf = requestAnimationFrame(loop);
+    }).catch((e) => {
+      // The battle module of an older deploy is gone: load the new build (the run is saved).
+      console.error(e);
+      if (!reloadForUpdate()) flash('战场加载失败，请刷新页面');
     });
     const unsub = stageScale.subscribe((v) => R.current.arena?.resize(1600, 900, v));
     return () => {

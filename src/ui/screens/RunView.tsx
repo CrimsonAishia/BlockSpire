@@ -51,14 +51,14 @@ export function RunView() {
 
   let body;
   let hud = true;
-  if (!p) body = <MapView s={s} />;
+  if (!p) body = <MapView s={s} v={v} />;
   else
     switch (p.type) {
       case 'starter':
-        body = <StarterView s={s} p={p} />;
+        body = <StarterView s={s} p={p} v={v} />;
         break;
       case 'open':
-        body = <RunCrateOpen s={s} p={p} />;
+        body = <RunCrateOpen s={s} p={p} v={v} />;
         hud = false;
         break;
       case 'battle':
@@ -66,41 +66,41 @@ export function RunView() {
         hud = false;
         break;
       case 'result':
-        body = <BattleResultView s={s} p={p} />;
+        body = <BattleResultView s={s} p={p} v={v} />;
         break;
       case 'crates':
-        body = <CrateChoice s={s} p={p} />;
+        body = <CrateChoice s={s} p={p} v={v} />;
         break;
       case 'card_decide':
-        body = <CardDecide s={s} p={p} />;
+        body = <CardDecide s={s} p={p} v={v} />;
         break;
       case 'relic_choice':
-        body = <RelicChoice s={s} p={p} />;
+        body = <RelicChoice s={s} p={p} v={v} />;
         break;
       case 'boss_reward':
-        body = <BossReward s={s} p={p} />;
+        body = <BossReward s={s} p={p} v={v} />;
         break;
       case 'shop':
-        body = <ShopView s={s} p={p} />;
+        body = <ShopView s={s} p={p} v={v} />;
         break;
       case 'event':
-        body = <EventView s={s} p={p} />;
+        body = <EventView s={s} p={p} v={v} />;
         break;
       case 'rest':
-        body = <RestView s={s} p={p} />;
+        body = <RestView s={s} p={p} v={v} />;
         break;
       case 'pick_card':
-        body = <PickCardView s={s} p={p} />;
+        body = <PickCardView s={s} p={p} v={v} />;
         break;
       case 'enchant_choice':
-        body = <EnchantChoiceView s={s} p={p} />;
+        body = <EnchantChoiceView s={s} p={p} v={v} />;
         break;
       case 'act_intro':
-        body = <ActIntro s={s} p={p} />;
+        body = <ActIntro s={s} p={p} v={v} />;
         hud = false;
         break;
       case 'message':
-        body = <MessageView s={s} p={p} />;
+        body = <MessageView s={s} p={p} v={v} />;
         break;
       case 'victory':
       case 'defeat':

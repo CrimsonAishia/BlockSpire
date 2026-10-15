@@ -26,7 +26,7 @@ function CountUp({ to, ms = 800 }: { to: number; ms?: number }) {
   return <>{v}</>;
 }
 
-export function BattleResultView({ s, p }: { s: RunState; p: P }) {
+export function BattleResultView({ s, p }: { s: RunState; p: P; v?: number }) {
   const mine = p.summary.cards.filter((c) => c.team === 0 && !mobDef(c.mob).structure);
   const foes = p.summary.cards.filter((c) => c.team === 1 && !mobDef(c.mob).structure);
   const maxDmg = Math.max(1, ...mine.map((c) => c.dmg));

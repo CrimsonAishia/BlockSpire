@@ -20,7 +20,7 @@ const ACTS = [
   },
 ] as const;
 
-export function ActIntro({ s, p }: { s: RunState; p: Extract<Pending, { type: 'act_intro' }> }) {
+export function ActIntro({ s, p }: { s: RunState; p: Extract<Pending, { type: 'act_intro' }>; v?: number }) {
   const a = ACTS[p.act]!;
   const bossId = s.bosses[p.act - 1] ?? 'a4b_monstrosity';
   const boss = ENC_MAP[bossId];

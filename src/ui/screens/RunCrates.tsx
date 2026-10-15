@@ -33,7 +33,7 @@ export function outcomeInfo(out: GainOutcome, mob: string): RevealInfo {
   }
 }
 
-export function RunCrateOpen({ s, p }: { s: RunState; p: P<'open'> }) {
+export function RunCrateOpen({ s, p }: { s: RunState; p: P<'open'>; v?: number }) {
   return (
     <CrateOpen
       key={`open-${p.seq}`}
@@ -62,7 +62,7 @@ export function RunCrateOpen({ s, p }: { s: RunState; p: P<'open'> }) {
   );
 }
 
-export function StarterView({ s, p }: { s: RunState; p: P<'starter'> }) {
+export function StarterView({ s, p }: { s: RunState; p: P<'starter'>; v?: number }) {
   const go = () => act((r) => r.queue.unshift(rollStarter(r)));
   return (
     <div class="screen starter-screen">
@@ -108,7 +108,7 @@ export function StarterView({ s, p }: { s: RunState; p: P<'starter'> }) {
   );
 }
 
-export function CrateChoice({ s, p }: { s: RunState; p: P<'crates'> }) {
+export function CrateChoice({ s, p }: { s: RunState; p: P<'crates'>; v?: number }) {
   const ctx = openContext(s);
   const fams = new Set(s.team.flatMap((c) => mobDef(c.mob).families));
   const owned = new Set(allCards(s).map((c) => c.mob));
@@ -179,7 +179,7 @@ export function CrateChoice({ s, p }: { s: RunState; p: P<'crates'> }) {
   );
 }
 
-export function CardDecide({ s, p }: { s: RunState; p: P<'card_decide'> }) {
+export function CardDecide({ s, p }: { s: RunState; p: P<'card_decide'>; v?: number }) {
   const m = mobDef(p.mob);
   return (
     <div class="screen choice-screen">
