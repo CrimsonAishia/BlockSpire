@@ -106,6 +106,9 @@ export interface BattleResult {
   skillsUsed: string[];
   /** Playable mobs the player tamed that are still alive at the end (Alex can keep one). */
   tamed: string[];
+  /** Units that fell per side, and units still standing at the end (summons and structures not counted). */
+  lost?: [number, number];
+  left?: [number, number];
 }
 
 export type BuffKind = 'atk' | 'atkSpd' | 'move' | 'taken' | 'fire';
@@ -154,6 +157,8 @@ export class Battle {
   platTeam: Int8Array | null = null;
   fortTeam: Int8Array | null = null;
   tamed: Unit[] = [];
+  /** Non-summon units that died, per side (achievements). */
+  lost: [number, number] = [0, 0];
   headless: boolean;
   boss: boolean;
   suddenAt: number;
@@ -543,6 +548,8 @@ export class Battle {
       itemsUsed: this.itemsUsed[0].slice(),
       skillsUsed: this.skillsUsed[0].slice(),
       tamed: this.tamed.filter((u) => u.alive && u.team === 0 && !u.mob.hidden && !u.isSummon).map((u) => u.mob.id),
+      lost: [this.lost[0], this.lost[1]],
+      left: [0, 1].map((k) => this.units.filter((u) => u.alive && u.team === k && !u.isSummon && !u.structure).length) as [number, number],
     };
   }
 
@@ -1767,6 +1774,7 @@ export class Battle {
     t.hp = 0;
     t.deadT = 0;
     t.target = null;
+    if (!t.isSummon && !t.structure) this.lost[t.team]++;
     const card = this.cards[t.card];
     card.alive--;
     this.emit({ k: 'death', u: t });

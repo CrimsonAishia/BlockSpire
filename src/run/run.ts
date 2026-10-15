@@ -126,6 +126,12 @@ export interface RunStats {
   starUps: number;
   mvp: Record<string, number>;
   startTime: number;
+  /** Battle items used (all) and potions among them. */
+  itemsUsed?: number;
+  potionsUsed?: number;
+  /** Current and longest streak of blue pulls in a row. */
+  blueRun?: number;
+  blueBest?: number;
 }
 
 export interface RunState {
@@ -168,6 +174,16 @@ export interface RunState {
   ambush?: { enc: string; onWin: string; act: number; minRow: number; name: string; desc: string };
   /** Notifications for the UI (toasts), drained by the UI. */
   toasts: { text: string; tone: 'good' | 'bad' | 'neutral' | 'gold' }[];
+  /** Achievements earned by run actions, drained into the profile by the UI. */
+  earned?: string[];
+  /** Daily challenge date (YYYY-MM-DD, Beijing time) when this is the daily run. */
+  daily?: string;
+  /** Ended with 放弃本局. */
+  abandoned?: boolean;
+  /** Score already sent to the leaderboard. */
+  submitted?: boolean;
+  /** Commanders unlocked during this run (shown again on the end screen). */
+  unlocked?: string[];
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -192,6 +208,12 @@ export function withRng<T>(s: RunState, fn: (r: Rng) => T): T {
 
 export function toast(s: RunState, text: string, tone: 'good' | 'bad' | 'neutral' | 'gold' = 'neutral') {
   s.toasts.push({ text, tone });
+}
+
+/** Queues an achievement for the profile (see store.commit). */
+export function earn(s: RunState, id: string) {
+  if (!s.earned) s.earned = [];
+  if (!s.earned.includes(id)) s.earned.push(id);
 }
 
 export function hasRelic(s: RunState, id: string) {
@@ -593,6 +615,10 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       s.stats.damage += c.dmg;
       s.stats.mvp[c.mob] = (s.stats.mvp[c.mob] ?? 0) + c.dmg;
     }
+  const used = res.itemsUsed ?? [];
+  s.stats.itemsUsed = (s.stats.itemsUsed ?? 0) + used.length;
+  s.stats.potionsUsed = (s.stats.potionsUsed ?? 0) + used.filter((id) => ITEM_MAP[id]?.potion).length;
+  battleAchievements(s, p, res, win);
   const row = s.nodeId ? s.map.nodes[s.nodeId].row : 0;
   s.queue.shift();
   const follow: Pending[] = [];
@@ -648,6 +674,7 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       s.relics = s.relics.filter((r) => r !== 'totem');
       s.hearts = 2;
       totem = true;
+      earn(s, 'totem_save');
     }
     follow.push({ type: 'result', win, kind: p.kind, emeralds: em, heartsLost: lost, summary, totem, golemCost: golemPaid || undefined });
     // Falling in the Sift still ends the run as the dragon slayer.
@@ -660,6 +687,29 @@ export function resolveBattle(s: RunState, res: BattleResult) {
     }
   }
   s.queue.unshift(...follow);
+}
+
+/** Achievements decided by how a fight went (the rest follow from the run state, see profile.ts). */
+function battleAchievements(s: RunState, p: Extract<Pending, { type: 'battle' }>, res: BattleResult, win: boolean) {
+  if (!win) {
+    if (s.stats.battlesWon + s.stats.battlesLost === 0) earn(s, 'first_fight_loss');
+    return;
+  }
+  if (p.kind !== 'boss') return;
+  if (p.attempt > 1) earn(s, 'boss_retry');
+  if (s.hearts === 1) earn(s, 'one_heart');
+  if (res.left?.[0] === 1) earn(s, 'last_stand');
+  if (res.lost?.[0] === 0) earn(s, 'flawless_boss');
+  // The dragon: challenge clears judged on the squad that fought it.
+  if (s.act === 3) {
+    const team = s.team.map((c) => mobDef(c.mob));
+    if (team.length && team.every((m) => m.rarity === 'blue')) earn(s, 'all_blue');
+    if (team.length <= 3) earn(s, 'trio');
+    if (team.length >= 4 && team[0].families.some((f) => team.every((m) => m.families.includes(f)))) earn(s, 'pure_family');
+    if (s.stats.battlesLost === 0) earn(s, 'no_loss');
+    if (!s.stats.itemsUsed) earn(s, 'no_items');
+    if (Date.now() - s.stats.startTime <= 30 * 60_000) earn(s, 'speedrun');
+  }
 }
 
 export function crateOffers(s: RunState, n: number, grade: CrateGrade): CrateOffer[] {
@@ -748,6 +798,9 @@ export function gainCard(s: RunState, mob: string, fromCrate = true): GainOutcom
     s.stats.pulls[rarity]++;
     if (rarity === 'red' || rarity === 'gold') s.pity = 0;
     else s.pity++;
+    s.stats.blueRun = rarity === 'blue' ? (s.stats.blueRun ?? 0) + 1 : 0;
+    s.stats.blueBest = Math.max(s.stats.blueBest ?? 0, s.stats.blueRun);
+    if (mob === 'wither') earn(s, 'wither_pull');
   }
   const existing = allCards(s).find((c) => c.mob === mob);
   if (existing) {
@@ -1042,6 +1095,7 @@ export function captureTamed(s: RunState, mob: string): GainOutcome | null {
   if (p?.type !== 'result' || !p.capture?.includes(mob)) return null;
   p.capture = undefined;
   const out = gainCard(s, mob, false);
+  if (mobDef(mob).rarity === 'red' || mobDef(mob).rarity === 'gold') earn(s, 'capture_rare');
   if (out.kind === 'decide') s.queue.splice(1, 0, { type: 'card_decide', mob, star: 1, dust: dustValue(mob, 1) });
   else toast(s, `${mobDef(mob).name} 被收服了！`, 'gold');
   return out;
@@ -1267,12 +1321,39 @@ export function finishRun(s: RunState, won: boolean) {
   s.won = won;
 }
 
-export function runScore(s: RunState) {
+/** What the leaderboard needs to know about a finished run (api/leaderboard.ts checks it). */
+export interface RunSummary {
+  commander: string;
+  omen: number;
+  won: boolean;
+  act: number;
+  floor: number;
+  elites: number;
+  bosses: number;
+  gold: number;
+  red: number;
+  crates: number;
+  team: [string, number][];
+  mins: number;
+  daily?: string;
+}
+
+export function runSummary(s: RunState, won = s.won): RunSummary {
   const st = s.stats;
-  const actProgress = (s.act - 1) * 14 + (s.nodeId ? s.map.nodes[s.nodeId].row + 1 : 0);
-  return Math.round(
-    (actProgress * 10 + st.elitesWon * 30 + st.bossesWon * 120 + st.pulls.gold * 60 + st.pulls.red * 20 + (s.won ? 500 : 0)) * (1 + 0.2 * s.omen),
-  );
+  return {
+    commander: s.commander, omen: s.omen, won, act: s.act, floor: (s.act - 1) * 14 + (s.nodeId ? s.map.nodes[s.nodeId].row + 1 : 0),
+    elites: st.elitesWon, bosses: st.bossesWon, gold: st.pulls.gold, red: st.pulls.red, crates: st.crates,
+    team: s.team.map((c) => [c.mob, c.star]), mins: Math.max(0, Math.round((Date.now() - st.startTime) / 60000)), ...(s.daily ? { daily: s.daily } : {}),
+  };
+}
+
+/** Same formula as the leaderboard API's scoreOf. */
+export function scoreOf(r: Pick<RunSummary, 'floor' | 'elites' | 'bosses' | 'gold' | 'red' | 'won' | 'omen'>) {
+  return Math.round((r.floor * 10 + r.elites * 30 + r.bosses * 120 + r.gold * 60 + r.red * 20 + (r.won ? 500 : 0)) * (1 + 0.2 * r.omen));
+}
+
+export function runScore(s: RunState) {
+  return scoreOf(runSummary(s));
 }
 
 export function potionDef(id: string) {

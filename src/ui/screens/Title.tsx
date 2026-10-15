@@ -5,6 +5,9 @@ import { go, overlay, profile, setRun } from '../store.ts';
 import { loadRun } from '../../meta/profile.ts';
 import { playMusic } from '../../audio/audio.ts';
 import { PLAYABLE_MOBS } from '../../data/mobs.ts';
+import { COMMANDER_MAP } from '../../data/items.ts';
+import { ACHIEVEMENTS, ROMAN_OMEN } from '../../meta/profile.ts';
+import { dailyState, lbTab } from './Leaderboard.tsx';
 
 const SPLASHES = [
   '开箱即战斗！',
@@ -26,6 +29,8 @@ export function Title() {
   const splash = useMemo(() => SPLASHES[Math.floor(Math.random() * SPLASHES.length)], []);
   const p = profile.value;
   const found = p.discovered.filter((d) => PLAYABLE_MOBS.some((m) => m.id === d)).length;
+  const daily = dailyState();
+  const ach = ACHIEVEMENTS.filter((a) => p.achievements[a.id]).length;
   useEffect(() => {
     playMusic('menu');
   }, []);
@@ -52,12 +57,18 @@ export function Title() {
             >
               继续冒险
               <span class="menu-note">
-                第{['', '一', '二', '三'][save.act]}幕 · ❤{save.hearts}
+                {save.daily ? '每日挑战 · ' : ''}第{['', '一', '二', '三', '四'][save.act]}幕 · ❤{save.hearts}
               </span>
             </Btn>
           )}
           <Btn variant={save ? '' : 'green'} size="big" wide onClick={() => go('newrun')}>
             {save ? '新的爬塔' : '开始爬塔'}
+          </Btn>
+          <Btn size="big" wide onClick={() => ((lbTab.value = 'daily'), go('leaderboard'))}>
+            每日挑战
+            <span class="menu-note">
+              {daily.status === 'done' ? '今日次数已用完' : `今日：${COMMANDER_MAP[daily.cfg.commander].name} · 不祥之兆 ${ROMAN_OMEN[daily.cfg.omen]}`}
+            </span>
           </Btn>
           <Btn size="big" wide onClick={() => go('classic')}>
             经典对决 3V3
@@ -65,9 +76,12 @@ export function Title() {
           <Btn size="big" wide disabled>
             联机对战 <span class="menu-note">敬请期待</span>
           </Btn>
-          <div class="row gap12">
+          <div class="row gap12 menu-row">
             <Btn size="big" wide onClick={() => go('codex')}>
               图鉴
+            </Btn>
+            <Btn size="big" wide onClick={() => ((lbTab.value = 'week'), go('leaderboard'))}>
+              排行榜
             </Btn>
             <Btn size="big" wide onClick={() => (overlay.value = 'settings')}>
               设置
@@ -75,7 +89,7 @@ export function Title() {
           </div>
         </div>
         <div class="title-stats faint">
-          通关 {p.wins} / {p.runs} 局 · 图鉴 {found}/{PLAYABLE_MOBS.length} · 最高分 {p.bestScore}
+          通关 {p.wins} / {p.runs} 局 · 图鉴 {found}/{PLAYABLE_MOBS.length} · 成就 {ach}/{ACHIEVEMENTS.length} · 最高分 {p.bestScore}
         </div>
       </div>
       <GitHubLink label="GitHub 开源" class="title-gh" />

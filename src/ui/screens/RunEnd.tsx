@@ -7,7 +7,8 @@ import { RARITY_INFO } from '../../data/mobs.ts';
 import { RARITIES } from '../../core/types.ts';
 import { url } from '../assets.ts';
 import { Btn, MobCard } from '../components/common.tsx';
-import { commit, go, profile, setRun, updateProfile, pushToast } from '../store.ts';
+import { commit, go, profile, progress, setRun, updateProfile, pushToast } from '../store.ts';
+import { SubmitPanel } from './SubmitPanel.tsx';
 import { sfx } from '../../audio/audio.ts';
 import { OMEN_TIER_NAME, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
 
@@ -20,54 +21,50 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
     if (done.current) return;
     done.current = true;
     sfx(won ? 'victory' : 'defeat');
-    const before = { ...profile.value, flags: { ...profile.value.flags } };
-    const got: string[] = [];
+    const before = { ...profile.value };
     updateProfile((p) => {
       p.runs++;
       if (won) p.wins++;
       p.bestScore = Math.max(p.bestScore, score);
       p.totalEmeralds += s.stats.emeraldsEarned;
-      p.flags = { ...p.flags };
-      p.achievements = { ...p.achievements };
-      if (s.stats.bossesWon >= 1) p.flags.beat_act1 = true;
-      if (p.totalEmeralds >= 1500) p.flags.emeralds_1500 = true;
-      if (won) p.flags.win_1 = true;
-      const ach = (id: string) => {
-        if (!p.achievements[id]) {
-          p.achievements[id] = Date.now();
-          got.push(id);
-        }
-      };
-      if (s.stats.bossesWon >= 1) ach(s.bosses[0] === 'a1b_raid' ? 'beat_raid' : 'beat_monument');
-      if (s.stats.bossesWon >= 2) ach('beat_wither');
-      if (won) ach('win_1');
-      if (won && s.stats.bossesWon >= 4) ach('beat_sift');
-      if (won) for (let k = 1; k <= s.omen; k++) ach(`omen${k}`);
       if (won && s.omen >= p.maxOmen && p.maxOmen < 5) p.maxOmen = s.omen + 1;
       // Per-commander record: the highest omen cleared earns that commander a frame.
       if (won && s.omen > (p.bestOmen[s.commander] ?? -1)) p.bestOmen = { ...p.bestOmen, [s.commander]: s.omen };
-      if (COMMANDERS.every((c) => (p.bestOmen[c.id] ?? -1) >= 5)) ach('omen5_all');
+      if (s.daily) {
+        const rec = p.daily?.[s.daily] ?? { tries: 1, best: -1 };
+        p.daily = { ...(p.daily ?? {}), [s.daily]: { ...rec, best: Math.max(rec.best, score) } };
+      }
       p.history = [
         { date: Date.now(), commander: s.commander, omen: s.omen, won, act: s.act, score, team: s.team.map((c) => ({ mob: c.mob, star: c.star })) },
         ...p.history,
       ].slice(0, 30);
     });
     const after = profile.value;
-    const u: string[] = [];
-    for (const c of COMMANDERS) if (c.unlock && !before.flags[c.unlock.key] && after.flags[c.unlock.key]) u.push(`解锁统领：${c.name} · ${c.title}`);
-    if (after.maxOmen > before.maxOmen) u.push(`解锁难度：不祥之兆 ${ROMAN_OMEN[after.maxOmen]}`);
+    // Achievements only the end of a run can tell (the rest come with every run action).
+    const ids: string[] = [];
+    if (won) for (let k = 1; k <= s.omen; k++) ids.push(`omen${k}`);
+    if (COMMANDERS.every((c) => (after.bestOmen[c.id] ?? -1) >= 5)) ids.push('omen5_all');
+    if (!won) ids.push('first_death');
+    if (s.abandoned) ids.push('abandon');
+    if (new Date().getHours() < 5) ids.push('night_owl');
+    if (s.daily) ids.push('daily_1');
+    if (won && s.stats.bossesWon >= 4) ids.push('beat_sift');
+    finishRun(s, won);
+    commit();
+    progress(s, ids);
+    const u = [...(s.unlocked ?? [])];
+    const fresh: string[] = [];
+    if (after.maxOmen > before.maxOmen) fresh.push(`解锁难度：不祥之兆 ${ROMAN_OMEN[after.maxOmen]}`);
     const was = before.bestOmen?.[s.commander];
     const now = after.bestOmen[s.commander];
     if (now !== undefined && now !== was && now > 0) {
       const name = COMMANDER_MAP[s.commander].name;
-      u.push(`新纪录：${name}通关不祥之兆 ${ROMAN_OMEN[now]}`);
+      fresh.push(`新纪录：${name}通关不祥之兆 ${ROMAN_OMEN[now]}`);
       const t = omenTier(now);
-      if (t && t !== omenTier(was)) u.push(`解锁${name}的${OMEN_TIER_NAME[t]}色统领边框`);
+      if (t && t !== omenTier(was)) fresh.push(`解锁${name}的${OMEN_TIER_NAME[t]}色统领边框`);
     }
-    setUnlocks(u);
-    for (const x of u) pushToast(x, 'gold');
-    finishRun(s, won);
-    commit();
+    setUnlocks([...u, ...fresh]);
+    for (const x of fresh) pushToast(x, 'gold');
   }, []);
 
   const mvpMob = Object.entries(s.stats.mvp).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -81,6 +78,7 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
       <div class="end-shade" />
       <div class="end-inner">
         <div class="end-title title-shadow">{!won ? '你死了！' : sift ? '筛界征服者！' : '屠龙者！'}</div>
+        {s.daily && <div class="end-daily">每日挑战 · {s.daily}</div>}
         <div class="end-sub">
           {!won
             ? `倒在了第${['', '一', '二', '三', '四'][s.act]}幕 · 第 ${floorReached} 层。`
@@ -133,6 +131,7 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
                 {unlocks.map((u) => <div key={u} class="gold-t">✦ {u}</div>)}
               </div>
             )}
+            <SubmitPanel s={s} won={won} />
           </div>
         </div>
         <div class="row gap16 center">

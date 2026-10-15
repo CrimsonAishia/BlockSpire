@@ -20,6 +20,8 @@ export interface ArenaOpts {
   particles: 'high' | 'medium' | 'low';
   /** Animation frames per mob: all seven, the basic three, or the card art alone (default high). */
   frames?: FrameTier;
+  /** A name-tag easter egg showed up on the field (secret achievements). */
+  onEgg?: (id: 'dinnerbone' | 'jeb' | 'johnny') => void;
 }
 
 const SPRITE_SCALE = 1.3;
@@ -590,6 +592,7 @@ export class Arena3D {
       v.rainbow = true;
       v.tag = 'jeb_';
     } else if (id === 'vindicator' && r(5) < 1 / 10) v.tag = 'Johnny';
+    if (v.tag) this.opts.onEgg?.(v.tag === 'jeb_' ? 'jeb' : v.tag === 'Johnny' ? 'johnny' : 'dinnerbone');
   }
 
   private syncUnits(_dt: number) {

@@ -11,7 +11,7 @@ import { SKILL_INFO, type SkillId } from '../../data/commanders.ts';
 import { Emerald, PotionTipContent, Tip, itemIcon } from '../components/common.tsx';
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
-import { settings, stageScale, updateSettings } from '../store.ts';
+import { earnAchievement, settings, stageScale, updateSettings } from '../store.ts';
 import { playMusic, sfx } from '../../audio/audio.ts';
 
 interface Props {
@@ -245,7 +245,11 @@ export function Arena3DView({
     Promise.all([import('../../battle3d/arena3d.ts'), preload(pics)]).then(([mod]) => {
       if (disposed) return;
       const s = settings.value;
-      const arena = new mod.Arena3D(hostRef.current!, terrain, battle, { shake: s.shake, numbers: s.numbers, particles: s.particles, frames: tier });
+      const arena = new mod.Arena3D(hostRef.current!, terrain, battle, {
+        shake: s.shake, numbers: s.numbers, particles: s.particles, frames: tier,
+        // Deferred: the egg can roll while the arena is still being built inside this effect.
+        onEgg: (id) => setTimeout(() => earnAchievement(id), 600),
+      });
       R.current.arena = arena;
       arena.resize(1600, 900, stageScale.value);
       arena.setMode(phase === 'deploy' ? 'deploy' : 'battle');

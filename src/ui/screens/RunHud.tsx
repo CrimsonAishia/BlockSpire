@@ -71,7 +71,7 @@ export function RunHud({ s }: { s: RunState }) {
       <div class="hud-act">
         <div class="act-name">第{['', '一', '二', '三', '四'][s.act]}幕 · {ACT_NAMES[s.act]}</div>
         <div class="faint" style={{ fontSize: 13 }}>
-          第 {floor} 层 / 14
+          {s.daily && <span class="gold-t">每日挑战 · </span>}第 {floor} 层 / 14
         </div>
       </div>
       <button class="mc-btn small" onClick={() => (sfx('page'), (overlay.value = 'team'))}>

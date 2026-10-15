@@ -3,6 +3,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "regions": ["hnd1"],
   "headers": [
     {
       "source": "/(.*)",
@@ -36,6 +37,10 @@
     {
       "source": "/assets/(mobs|icons|crates|commanders|bg|events|tex)/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=2592000" }]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     },
     {
       "source": "/fonts/(.*)",

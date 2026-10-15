@@ -3,7 +3,7 @@ import { MOBS, PLAYABLE_MOBS, RARITY_INFO, ROLE_INFO, mobDef, starStatMul, unitC
 import { CRATES } from '../../data/crates.ts';
 import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_TIER_INFO, COMMANDER_MAP, COMMANDERS } from '../../data/items.ts';
 import { FAMILY_LIST } from '../../data/families.ts';
-import { ACHIEVEMENTS, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
+import { ACHIEVEMENTS, ACH_CAT, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
 import { RARITIES, type Family } from '../../core/types.ts';
 import { url } from '../assets.ts';
 import { Btn, FamBadge, RelicTipContent, Tip, itemIcon } from '../components/common.tsx';
@@ -155,24 +155,7 @@ export function Codex() {
               </div>
             </div>
           )}
-          {tab === 'achievements' && (
-            <div class="codex-ach">
-              {ACHIEVEMENTS.map((a) => {
-                const t = p.achievements[a.id];
-                return (
-                  <div key={a.id} class={`ach ${t ? 'on' : ''}`}>
-                    <div class="ach-icon">{t ? '★' : '☆'}</div>
-                    <div>
-                      <div class={t ? 'gold-t' : 'faint'}>{a.name}</div>
-                      <div class="subtle" style={{ fontSize: 14 }}>
-                        {a.desc}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {tab === 'achievements' && <AchievementsTab />}
           {tab === 'records' && (
             <div class="codex-cols">
               <div>
@@ -425,6 +408,51 @@ function RulesTab() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function AchievementsTab() {
+  const p = profile.value;
+  const got = ACHIEVEMENTS.filter((a) => p.achievements[a.id]).length;
+  return (
+    <div class="ach-tab">
+      <div class="ach-sum">
+        已达成 <b class="gold-t">{got}</b> / {ACHIEVEMENTS.length}
+        <div class="ach-bar">
+          <div style={{ width: `${(got / ACHIEVEMENTS.length) * 100}%` }} />
+        </div>
+      </div>
+      {ACH_CAT.map(([cat, label]) => {
+        const list = ACHIEVEMENTS.filter((a) => a.cat === cat);
+        const n = list.filter((a) => p.achievements[a.id]).length;
+        return (
+          <div key={cat}>
+            <div class="tp-sec">
+              {label} <span class="faint">{n}/{list.length}</span>
+              {cat === 'secret' && <span class="faint"> · 达成之前只显示一句提示</span>}
+            </div>
+            <div class="codex-ach">
+              {list.map((a) => {
+                const t = p.achievements[a.id];
+                const hidden = cat === 'secret' && !t;
+                return (
+                  <div key={a.id} class={`ach ${t ? 'on' : ''} ${cat}`}>
+                    <div class="ach-icon">{t ? '★' : hidden ? '?' : '☆'}</div>
+                    <div>
+                      <div class={t ? 'gold-t' : 'faint'}>{hidden ? '？？？' : a.name}</div>
+                      <div class="subtle" style={{ fontSize: 14 }}>
+                        {hidden ? a.hint : a.desc}
+                      </div>
+                      {t > 1e12 && <div class="ach-date faint">{new Date(t).toLocaleDateString('zh-CN')} 达成</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

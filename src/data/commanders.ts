@@ -10,7 +10,8 @@ export interface CommanderDef {
   color: string;
   hearts: number;
   emeralds: number;
-  unlock?: { text: string; key: string };
+  /** Commanders unlock in a chain: slay the dragon with the one before it on at least this omen level. */
+  unlock?: { text: string; key: string; prev: string; omen: number };
   /** One line on how this commander wins. */
   style: string;
   /** Battle skill (hotbar). */
@@ -33,7 +34,7 @@ export const COMMANDERS: CommanderDef[] = [
   },
   {
     id: 'alex', name: '亚历克斯', title: '驯兽师', color: '#ff8a3d', hearts: 5, emeralds: 50,
-    unlock: { text: '击败任意第一幕首领', key: 'beat_act1' },
+    unlock: { text: '用史蒂夫通关（击败末影龙）', key: 'unlock_alex', prev: 'steve', omen: 0 },
     style: '收服流：把打残的敌人拉进队伍，组出补给箱开不到的阵容。',
     skill: {
       id: 'tame', name: '驯服', charges: 1,
@@ -44,7 +45,7 @@ export const COMMANDERS: CommanderDef[] = [
   },
   {
     id: 'villager', name: '村民', title: '大商人', color: '#4caf50', hearts: 5, emeralds: 120,
-    unlock: { text: '累计获得 1500 绿宝石', key: 'emeralds_1500' },
+    unlock: { text: '用亚历克斯在不祥之兆 I 或更高难度下通关', key: 'unlock_villager', prev: 'alex', omen: 1 },
     style: '经济流：钱就是战力——指定订购想要的生物，危急时花钱雇铁傀儡。',
     skill: {
       id: 'golem', name: '雇佣铁傀儡', charges: 1,
@@ -55,7 +56,7 @@ export const COMMANDERS: CommanderDef[] = [
   },
   {
     id: 'witch', name: '女巫', title: '药剂师', color: '#9b59b6', hearts: 5, emeralds: 60,
-    unlock: { text: '通关一次（击败末影龙）', key: 'win_1' },
+    unlock: { text: '用村民在不祥之兆 II 或更高难度下通关', key: 'unlock_witch', prev: 'villager', omen: 2 },
     style: '药剂流：每场都有免费药水，药效更强，异常状态伤害更高——靠道具运营取胜。',
     skill: {
       id: 'brew', name: '坩埚', charges: 1,

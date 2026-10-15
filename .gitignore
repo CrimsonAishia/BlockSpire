@@ -2,3 +2,5 @@ node_modules
 dist
 .env.local
 assets-raw
+.vercel
+.env*

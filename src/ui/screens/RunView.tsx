@@ -125,6 +125,7 @@ export function RunView() {
               onClick={() => {
                 overlay.value = null;
                 act((r) => {
+                  r.abandoned = true;
                   r.queue = [{ type: 'defeat' }];
                 });
               }}

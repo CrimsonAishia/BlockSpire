@@ -6,6 +6,7 @@ import { NewRun } from './screens/NewRun.tsx';
 import { RunView } from './screens/RunView.tsx';
 import { Codex } from './screens/Codex.tsx';
 import { Classic } from './screens/Classic.tsx';
+import { Leaderboard } from './screens/Leaderboard.tsx';
 import { SettingsModal } from './screens/Settings.tsx';
 import { preload, url } from './assets.ts';
 import { MOBS } from '../data/mobs.ts';
@@ -108,6 +109,9 @@ export function App() {
       break;
     case 'classic':
       body = <Classic />;
+      break;
+    case 'leaderboard':
+      body = <Leaderboard />;
       break;
     default:
       body = <Title />;

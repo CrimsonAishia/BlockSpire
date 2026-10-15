@@ -5,11 +5,11 @@ import { signal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import type { RunState } from '../run/run.ts';
 import {
-  type Profile, type Settings, checkRunAchievements, loadProfile, loadSettings, saveProfile, saveRun, saveSettings, ACHIEVEMENTS,
+  type Profile, type Settings, ACHIEVEMENT_MAP, checkProgress, grant, loadProfile, loadSettings, saveProfile, saveRun, saveSettings,
 } from '../meta/profile.ts';
 import { setVolumes, sfx } from '../audio/audio.ts';
 
-export type Screen = 'boot' | 'title' | 'newrun' | 'run' | 'codex' | 'classic' | 'records';
+export type Screen = 'boot' | 'title' | 'newrun' | 'run' | 'codex' | 'classic' | 'records' | 'leaderboard';
 
 export const screen = signal<Screen>('boot');
 export const runVersion = signal(0);
@@ -70,13 +70,10 @@ export function commit() {
       p.relicsSeen.push(rel);
       changed = true;
     }
-  const ach = checkRunAchievements(p, r);
-  for (const a of ach) {
-    const def = ACHIEVEMENTS.find((x) => x.id === a);
-    if (def) pushToast(`成就达成：${def.name}`, 'gold');
-    changed = true;
-  }
   if (changed) updateProfile(() => {});
+  const earned = r.earned ?? [];
+  r.earned = [];
+  progress(r, earned);
   clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => saveRun(runRef), 120);
 }
@@ -88,6 +85,30 @@ export function pushToast(text: string, tone: Toast['tone'] = 'neutral') {
   setTimeout(() => {
     toasts.value = toasts.value.filter((x) => x.id !== t.id);
   }, 3300);
+}
+
+/** Grants achievements (and checks unlocks) outside of run actions: classic mode, battlefield easter eggs... */
+export function earnAchievement(...ids: string[]) {
+  progress(null, ids);
+}
+
+/** Applies earned achievements and the run/profile checks, with a toast for everything new. */
+export function progress(r: RunState | null, ids: string[] = []) {
+  const before = profile.value;
+  const p = { ...before };
+  const got = ids.filter((id) => grant(p, id));
+  const res = checkProgress(p, r);
+  got.push(...res.achievements);
+  const unlocks = res.unlocks;
+  if (p.achievements === before.achievements && p.flags === before.flags) return;
+  profile.value = p;
+  saveProfile(p);
+  for (const u of unlocks) pushToast(u, 'gold');
+  if (r) r.unlocked = [...(r.unlocked ?? []), ...unlocks];
+  for (const id of got) {
+    const def = ACHIEVEMENT_MAP[id];
+    pushToast(`${def.cat === 'secret' ? '隐藏成就' : '成就达成'}：${def.name}`, 'gold');
+  }
 }
 
 export function updateProfile(fn: (p: Profile) => void) {

@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
+import { devApi } from './server/devApi.ts';
 
 export default defineConfig({
-  plugins: [preact()],
+  plugins: [preact(), devApi()],
   base: './',
   build: {
     target: 'es2022',

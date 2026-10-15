@@ -11,7 +11,7 @@ import { Btn, MobCard } from '../components/common.tsx';
 import { CrateOpen } from './CrateOpen.tsx';
 import { Arena3DView } from './Arena3DView.tsx';
 import { BIOMES, generateTerrain } from '../../battle/terrain.ts';
-import { discover, go, profile, updateProfile, pushToast } from '../store.ts';
+import { discover, earnAchievement, go, profile, updateProfile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
 
 interface Pick {
@@ -80,11 +80,9 @@ export function Classic() {
               p.classic = { ...p.classic, played: p.classic.played + 1, guesses: p.classic.guesses + 1, correct: p.classic.correct + (ok ? 1 : 0) };
               p.classic.streak = ok ? p.classic.streak + 1 : 0;
               p.classic.best = Math.max(p.classic.best, p.classic.streak);
-              if (p.classic.streak >= 5 && !p.achievements.classic_5) {
-                p.achievements = { ...p.achievements, classic_5: Date.now() };
-                pushToast('成就达成：神预言家', 'gold');
-              }
             });
+          const streak = profile.value.classic.streak;
+          if (streak >= 5) earnAchievement('classic_5', ...(streak >= 10 ? ['classic_10'] : []));
         }}
       />
     );
