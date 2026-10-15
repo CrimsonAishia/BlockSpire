@@ -1,0 +1,9 @@
+# Only what the build needs is uploaded when deploying with the Vercel CLI.
+assets-raw
+dist
+docs
+screenshots
+.claude
+tools
+scripts/*
+!scripts/subset-font.mjs

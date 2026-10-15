@@ -246,6 +246,17 @@ img {
   transition: filter 0.08s;
   white-space: nowrap;
 }
+/* Links styled as buttons (GitHub). */
+a.mc-btn {
+  text-decoration: none;
+  cursor: pointer;
+}
+.gh-mark {
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+  filter: drop-shadow(2px 2px 0 #3a3a3a);
+}
 .mc-btn:hover:not(:disabled) {
   border-color: #fff;
   color: #ffffa0;

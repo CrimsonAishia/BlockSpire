@@ -6,6 +6,8 @@ export default defineConfig({
   base: './',
   build: {
     target: 'es2022',
+    // Hashed bundles get their own folder so they can be cached forever (public/assets is not hashed).
+    assetsDir: 'bundle',
     assetsInlineLimit: 0,
     chunkSizeWarningLimit: 900,
   },

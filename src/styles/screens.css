@@ -123,6 +123,11 @@
   margin-top: 8px;
   font-size: 15px;
 }
+.title-gh {
+  position: absolute;
+  right: 24px;
+  top: 20px;
+}
 .title-foot {
   position: absolute;
   right: 18px;

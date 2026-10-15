@@ -1,8 +1,20 @@
 {
-  "name": "mob-crate-arena",
+  "name": "block-spire",
   "private": true,
   "version": "1.0.0",
+  "description": "方块尖塔 · Block Spire：开箱组军，以怪斗怪，登塔屠龙的网页游戏",
+  "homepage": "https://blockspire.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moonwesif/BlockSpire.git"
+  },
+  "bugs": {
+    "url": "https://github.com/moonwesif/BlockSpire/issues"
+  },
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "node scripts/subset-font.mjs && tsc --noEmit && vite build",

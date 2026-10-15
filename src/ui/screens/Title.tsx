@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'preact/hooks';
 import { url } from '../assets.ts';
-import { Btn } from '../components/common.tsx';
+import { Btn, GitHubLink } from '../components/common.tsx';
 import { go, overlay, profile, setRun } from '../store.ts';
 import { loadRun } from '../../meta/profile.ts';
 import { playMusic } from '../../audio/audio.ts';
@@ -34,8 +34,8 @@ export function Title() {
       <div class="title-shade" />
       <div class="title-left">
         <div class="logo">
-          <div class="logo-main">方块斗兽场</div>
-          <div class="logo-sub">MOB CRATE ARENA</div>
+          <div class="logo-main">方块尖塔</div>
+          <div class="logo-sub">BLOCK SPIRE</div>
           <div class="splash">{splash}</div>
         </div>
         <div class="tagline">开箱 · 爬塔 · 自走混战</div>
@@ -78,6 +78,7 @@ export function Title() {
           通关 {p.wins} / {p.runs} 局 · 图鉴 {found}/{PLAYABLE_MOBS.length} · 最高分 {p.bestScore}
         </div>
       </div>
+      <GitHubLink label="GitHub 开源" class="title-gh" />
       <div class="title-foot faint">v1.0 · 非 Mojang 官方作品 · 美术由 AI 生成 · 字体 Fusion Pixel (OFL)</div>
     </div>
   );

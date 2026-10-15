@@ -74,8 +74,8 @@ function Boot() {
     <div class="screen boot-screen bg-dirt" onClick={enter}>
       <div class="boot-inner">
         <div class="logo">
-          <div class="logo-main">方块斗兽场</div>
-          <div class="logo-sub">MOB CRATE ARENA</div>
+          <div class="logo-main">方块尖塔</div>
+          <div class="logo-sub">BLOCK SPIRE</div>
         </div>
         <div class="boot-bar">
           <div class="boot-fill" style={{ width: `${Math.round(prog * 100)}%` }} />

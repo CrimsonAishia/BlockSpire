@@ -99,7 +99,7 @@ export function StarterView({ s, p }: { s: RunState; p: P<'starter'> }) {
           打开第 {p.idx + 1} 个补给箱
         </Btn>
         <Hint id="starter" pos="bottom">
-          <b>欢迎来到方块斗兽场！</b>每张卡牌是一支怪物小队，战斗全自动进行。
+          <b>欢迎来到方块尖塔！</b>每张卡牌是一支怪物小队，战斗全自动进行。
           <br />
           先连开三个新手箱组成初始阵容；之后每赢一场都能挑一个补给箱继续开。
         </Hint>

@@ -13,6 +13,8 @@ const META = spriteMeta as Record<string, { w: number; h: number; ar: number }>;
  * walk2, back, back_walk) says whether its flinch and rear view are real frames.
  */
 export interface SheetMeta {
+  /** Content hash, appended to the URL so the file can be cached for good. */
+  v: string;
   n: number;
   cols: number;
   rows: number;
@@ -35,8 +37,8 @@ export function sheetFor(id: string, tier: FrameTier): { url: string; meta: Shee
   const key = MOB_MAP[id] ? spriteOf(MOB_MAP[id]) : id;
   const s = SHEETS[key];
   if (!s || tier === 'low') return null;
-  if (tier === 'high' && s.full) return { url: `${BASE}assets/sprites/${key}.webp`, meta: s.full };
-  return { url: `${BASE}assets/sprites/${key}_lite.webp`, meta: s.lite };
+  if (tier === 'high' && s.full) return { url: `${BASE}assets/sprites/${key}.webp?v=${s.full.v}`, meta: s.full };
+  return { url: `${BASE}assets/sprites/${key}_lite.webp?v=${s.lite.v}`, meta: s.lite };
 }
 
 export const url = {

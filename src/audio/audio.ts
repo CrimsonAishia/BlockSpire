@@ -1,5 +1,5 @@
 // =============================================================================
-//  Procedural audio for 方块斗兽场 — every SFX and all music are synthesized live
+//  Procedural audio for 方块尖塔 — every SFX and all music are synthesized live
 //  with the Web Audio API (no audio files).
 //
 //  Graph:

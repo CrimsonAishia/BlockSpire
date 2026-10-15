@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Btn, Modal, Tip } from '../components/common.tsx';
+import { Btn, GitHubLink, Modal, Tip } from '../components/common.tsx';
 import { overlay, settings, updateSettings, setRun } from '../store.ts';
 import { wipeAll } from '../../meta/profile.ts';
 import { sfx } from '../../audio/audio.ts';
@@ -108,6 +108,12 @@ export function SettingsModal() {
             重新显示全部
           </button>
         </div>
+      </div>
+      <div class="set-row">
+        <span>
+          开源项目<span class="faint" style={{ fontSize: 13 }}> · 欢迎 Star、反馈问题和贡献代码</span>
+        </span>
+        <GitHubLink />
       </div>
       <div class="divider" />
       <div class="row between">
