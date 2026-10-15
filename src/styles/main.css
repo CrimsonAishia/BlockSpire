@@ -1,0 +1,945 @@
+@font-face {
+  font-family: 'Pixel';
+  src: url('/fonts/pixel.woff2') format('woff2');
+  font-display: block;
+}
+
+:root {
+  --font-px: 'Pixel', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans SC', 'Source Han Sans SC', sans-serif;
+  --ink: #f2efe6;
+  --ink-dim: #b4adbf;
+  --ink-faint: #736c7e;
+  --bg0: #0b090e;
+  --bg1: #16131b;
+  --bg2: #201c26;
+  --bg3: #2b2633;
+  --line: #3a3344;
+  --gold: #ffc93c;
+  --emerald: #3ddc84;
+  --heart: #ff3b3b;
+  --r-blue: #4b69ff;
+  --r-purple: #8847ff;
+  --r-pink: #d32ce6;
+  --r-red: #eb4b4b;
+  --r-gold: #ffc93c;
+  --good: #7bed9f;
+  --bad: #ff6b6b;
+  --notch: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #070609;
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+/* ───────── Stage (fixed 1600×900 design resolution, scaled to fit) ───────── */
+#app {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, #15111b 0%, #070609 75%);
+}
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1600px;
+  height: 900px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--bg0);
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.8);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+/* Pixel display font: only for large text, buttons, names and numbers, where it stays crisp. */
+.px,
+.mc-btn,
+.panel-title,
+.logo,
+.splash,
+.tagline,
+.hud .stat,
+.hud-act .act-name,
+.mcard .mc-name,
+.mcard .mc-count,
+.mcard .mc-stars,
+.mcard .mc-rar,
+.stars,
+.toggle,
+.ctab,
+.tp-sec,
+.title-shadow,
+.bhud-time,
+.bhud-label,
+.boss-name,
+.b-title,
+.b-count,
+.b-result-text,
+.b-paused,
+.spd,
+.reveal-rar,
+.ri-head,
+.rs-name,
+.co-name,
+.rt-name,
+.cc-name,
+.ro-name,
+.ec-label,
+.shop-group-title,
+.trade-cost,
+.trade-name,
+.event-name,
+.md-name,
+.mg-title,
+.cl-team-name,
+.cl-vs,
+.es-row.big,
+.result-rewards .rr-line,
+.act-num,
+.act-name,
+.boot-hint,
+.kbd,
+.omen-pip,
+.prep-kind,
+.prep-side-title,
+.ss-label,
+.spin-name,
+.chip-name,
+.mvp-tag {
+  font-family: var(--font-px);
+  letter-spacing: 0.04em;
+  font-weight: normal;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  animation: screen-in 0.35s ease-out;
+}
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Textured backdrops */
+.bg-dirt {
+  background: #2a1e14 url('/assets/tex/dirt.png') repeat;
+  background-size: 64px;
+  image-rendering: pixelated;
+}
+.bg-stone {
+  background: #3a3a3a url('/assets/tex/stone.png') repeat;
+  background-size: 64px;
+  image-rendering: pixelated;
+}
+.bg-shade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.82));
+  pointer-events: none;
+}
+
+/* ───────── Panels ───────── */
+.panel {
+  position: relative;
+  background: linear-gradient(180deg, rgba(34, 29, 41, 0.97), rgba(20, 17, 25, 0.97));
+  clip-path: var(--notch);
+  padding: 18px 20px;
+}
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: var(--notch);
+  box-shadow:
+    inset 0 0 0 2px #4b4257,
+    inset 0 0 0 4px #110e15,
+    inset 0 2px 0 4px rgba(255, 255, 255, 0.04);
+}
+.panel.gui {
+  /* Classic Minecraft inventory gray */
+  background: #c6c6c6;
+  color: #3f3f3f;
+}
+.panel.gui::before {
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 3px 3px 0 2px #fff,
+    inset -3px -3px 0 2px #555;
+}
+.panel-title {
+  font-size: 24px;
+  color: var(--ink);
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.subtle {
+  color: var(--ink-dim);
+}
+.faint {
+  color: var(--ink-faint);
+}
+
+/* ───────── Minecraft buttons ───────── */
+.mc-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 22px;
+  font-size: 20px;
+  color: #e6e6e6;
+  text-shadow: 2px 2px 0 #3a3a3a;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.12)),
+    url('/assets/tex/stone.png') repeat;
+  background-size: auto, 48px;
+  background-color: #777;
+  image-rendering: pixelated;
+  border: 2px solid #000;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.42),
+    inset -2px -3px 0 rgba(0, 0, 0, 0.45);
+  transition: filter 0.08s;
+  white-space: nowrap;
+}
+.mc-btn:hover:not(:disabled) {
+  border-color: #fff;
+  color: #ffffa0;
+  filter: brightness(1.12) saturate(1.1);
+}
+.mc-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.3),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.15);
+}
+.mc-btn:disabled {
+  color: #9a9a9a;
+  text-shadow: 2px 2px 0 #222;
+  filter: brightness(0.55) saturate(0.4);
+  cursor: not-allowed;
+}
+.mc-btn.green {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.18)),
+    linear-gradient(#3fa34d, #2b7a36);
+  color: #f2fff0;
+  text-shadow: 2px 2px 0 #1a4a20;
+}
+.mc-btn.gold {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.15)),
+    linear-gradient(#e6b230, #b9821a);
+  color: #fffbe8;
+  text-shadow: 2px 2px 0 #6b4a08;
+}
+.mc-btn.red {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2)),
+    linear-gradient(#b93a3a, #862626);
+  color: #fff0f0;
+  text-shadow: 2px 2px 0 #4a1010;
+}
+.mc-btn.purple {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2)),
+    linear-gradient(#7d4bd6, #5a2fa6);
+  color: #f6f0ff;
+  text-shadow: 2px 2px 0 #2c1460;
+}
+.mc-btn.small {
+  min-height: 34px;
+  font-size: 16px;
+  padding: 4px 14px;
+}
+.mc-btn.tiny {
+  min-height: 28px;
+  font-size: 14px;
+  padding: 2px 10px;
+}
+.mc-btn.big {
+  min-height: 60px;
+  font-size: 26px;
+  padding: 8px 40px;
+}
+.mc-btn.wide {
+  width: 100%;
+}
+.mc-btn .price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #9bffb8;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  min-height: 0;
+}
+
+/* ───────── Tooltip (MC item tooltip) ───────── */
+.mc-tip {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 380px;
+  padding: 10px 12px;
+  background: rgba(16, 0, 16, 0.95);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+  box-shadow:
+    0 0 0 2px rgba(16, 0, 16, 0.95),
+    inset 0 0 0 2px #5000ff80,
+    0 8px 30px rgba(0, 0, 0, 0.6);
+  border: 2px solid transparent;
+  border-image: linear-gradient(#5a1fff, #2a0a80) 1;
+  animation: tip-in 0.12s ease-out;
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.mc-tip .tt-title {
+  font-family: var(--font-px);
+  font-weight: normal;
+  font-size: 18px;
+  margin-bottom: 4px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+.mc-tip .tt-line {
+  color: #c8c8c8;
+}
+.mc-tip .tt-sec {
+  margin-top: 8px;
+}
+.mc-tip .tt-gray {
+  color: #8a8a8a;
+}
+.mc-tip .tt-blue {
+  color: #5555ff;
+}
+.mc-tip .tt-aqua {
+  color: #55ffff;
+}
+.mc-tip .tt-green {
+  color: #55ff55;
+}
+.mc-tip .tt-gold {
+  color: #ffaa00;
+}
+.mc-tip .tt-yellow {
+  color: #ffff55;
+}
+.mc-tip .tt-purple {
+  color: #ff55ff;
+}
+.mc-tip .tt-red {
+  color: #ff5555;
+}
+
+/* ───────── Rarity ───────── */
+.r-blue {
+  --rc: var(--r-blue);
+  --rg: rgba(75, 105, 255, 0.5);
+}
+.r-purple {
+  --rc: var(--r-purple);
+  --rg: rgba(136, 71, 255, 0.5);
+}
+.r-pink {
+  --rc: var(--r-pink);
+  --rg: rgba(211, 44, 230, 0.5);
+}
+.r-red {
+  --rc: var(--r-red);
+  --rg: rgba(235, 75, 75, 0.55);
+}
+.r-gold {
+  --rc: var(--r-gold);
+  --rg: rgba(255, 201, 60, 0.6);
+}
+.rc {
+  color: var(--rc);
+}
+
+/* ───────── Mob card ───────── */
+.mcard {
+  position: relative;
+  width: 168px;
+  height: 236px;
+  flex-shrink: 0;
+  background:
+    radial-gradient(ellipse at 50% 42%, var(--rg) 0%, transparent 62%),
+    linear-gradient(180deg, #2a2432 0%, #141118 70%);
+  clip-path: var(--notch);
+  transition:
+    transform 0.15s,
+    filter 0.15s;
+  cursor: default;
+}
+.mcard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: var(--notch);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px color-mix(in srgb, var(--rc) 55%, #000);
+  pointer-events: none;
+  z-index: 3;
+}
+.mcard.clickable {
+  cursor: pointer;
+}
+.mcard.clickable:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.12);
+}
+.mcard.selected {
+  transform: translateY(-6px);
+}
+.mcard.selected::before {
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    inset 0 0 0 4px var(--rc);
+}
+.mcard .mc-top {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  z-index: 2;
+}
+.mcard .mc-rar {
+  color: var(--rc);
+  text-shadow: 1px 1px 0 #000;
+}
+.mcard .mc-stars {
+  color: var(--gold);
+  text-shadow: 1px 1px 0 #000;
+  font-size: 14px;
+  letter-spacing: -1px;
+}
+.mcard .mc-stars .off {
+  color: #4a4352;
+}
+.mcard .mc-art {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 26px;
+  height: 122px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.mcard .mc-art img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.55));
+}
+.mcard .mc-name {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 152px;
+  text-align: center;
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+  white-space: nowrap;
+}
+.mcard .mc-count {
+  position: absolute;
+  right: 10px;
+  top: 124px;
+  font-size: 16px;
+  color: #fff;
+  text-shadow:
+    2px 2px 0 #000,
+    -1px -1px 0 #000;
+  z-index: 2;
+}
+.mcard .mc-fams {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 180px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.mcard .mc-bar {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 6px;
+  background: var(--rc);
+  box-shadow: 0 0 12px var(--rc);
+}
+.mcard .mc-ench {
+  position: absolute;
+  left: 8px;
+  bottom: 14px;
+  font-size: 12px;
+  color: #c9a6ff;
+  text-shadow: 1px 1px 0 #000;
+}
+.mcard .mc-role {
+  position: absolute;
+  right: 8px;
+  bottom: 14px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.mcard .mc-glint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Masked by the sprite itself so the shimmer only covers the mob, like MC enchanted items. */
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center bottom;
+  mask-position: center bottom;
+  background:
+    linear-gradient(120deg, transparent 0%, transparent 38%, rgba(196, 140, 255, 0.85) 46%, rgba(255, 230, 255, 0.95) 50%, rgba(170, 110, 255, 0.8) 54%, transparent 62%, transparent 100%),
+    linear-gradient(60deg, transparent 0%, transparent 55%, rgba(140, 90, 255, 0.5) 62%, transparent 70%, transparent 100%);
+  background-size: 300% 100%, 260% 100%;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  animation: glint 3.6s linear infinite;
+}
+@keyframes glint {
+  from {
+    background-position: 130% 0, -60% 0;
+  }
+  to {
+    background-position: -130% 0, 160% 0;
+  }
+}
+.mcard.gold-card {
+  animation: gold-pulse 2.2s ease-in-out infinite;
+}
+@keyframes gold-pulse {
+  50% {
+    filter: brightness(1.15) drop-shadow(0 0 10px rgba(255, 201, 60, 0.6));
+  }
+}
+.mcard.sm {
+  width: 120px;
+  height: 168px;
+}
+.mcard.sm .mc-art {
+  top: 22px;
+  height: 84px;
+}
+.mcard.sm .mc-name {
+  top: 108px;
+  font-size: 15px;
+}
+.mcard.sm .mc-count {
+  top: 86px;
+  font-size: 13px;
+}
+.mcard.sm .mc-fams {
+  top: 130px;
+}
+.mcard.sm .mc-top {
+  font-size: 11px;
+}
+.mcard.sm .mc-ench,
+.mcard.sm .mc-role {
+  display: none;
+}
+.mcard.lg {
+  width: 260px;
+  height: 360px;
+}
+.mcard.lg .mc-top {
+  font-size: 16px;
+  top: 12px;
+  left: 14px;
+  right: 14px;
+}
+.mcard.lg .mc-stars {
+  font-size: 20px;
+}
+.mcard.lg .mc-art {
+  top: 40px;
+  height: 200px;
+}
+.mcard.lg .mc-name {
+  top: 248px;
+  font-size: 26px;
+}
+.mcard.lg .mc-count {
+  top: 208px;
+  font-size: 22px;
+}
+.mcard.lg .mc-fams {
+  top: 290px;
+}
+.mcard.lg .mc-bar {
+  height: 8px;
+}
+.mcard.lg .mc-ench,
+.mcard.lg .mc-role {
+  font-size: 14px;
+  bottom: 18px;
+}
+
+.fam {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #111;
+  background: var(--fc);
+  box-shadow:
+    inset -1px -2px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 1px #000;
+  white-space: nowrap;
+}
+
+.stars {
+  color: var(--gold);
+  letter-spacing: -1px;
+}
+
+/* ───────── HUD ───────── */
+.hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 18px;
+  background: linear-gradient(180deg, rgba(8, 6, 10, 0.95), rgba(8, 6, 10, 0.75));
+  box-shadow: 0 2px 0 #000, 0 4px 0 rgba(255, 255, 255, 0.05);
+  z-index: 50;
+}
+.hud .stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  text-shadow: 2px 2px 0 #000;
+}
+.hud .sep {
+  width: 2px;
+  height: 34px;
+  background: #2b2532;
+}
+.hud .cmd-face {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  object-position: top;
+  background: #221d28;
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #4b4257;
+}
+.hearts {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.relic-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.relic-slot {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #1d1922;
+  box-shadow:
+    inset 2px 2px 0 #0d0b10,
+    inset -2px -2px 0 #3a3344;
+  cursor: help;
+}
+.relic-slot img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+.slot {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  background: #8b8b8b;
+  box-shadow:
+    inset 2px 2px 0 #373737,
+    inset -2px -2px 0 #fff;
+}
+.slot.dark {
+  background: #1d1922;
+  box-shadow:
+    inset 2px 2px 0 #0b090e,
+    inset -2px -2px 0 #3a3344;
+}
+.slot img {
+  width: 38px;
+  height: 38px;
+  image-rendering: pixelated;
+}
+.slot.armed {
+  background: #2a5a2a;
+  box-shadow:
+    inset 2px 2px 0 #123012,
+    inset -2px -2px 0 #6ad46a,
+    0 0 12px rgba(100, 255, 100, 0.5);
+}
+
+/* ───────── Toasts ───────── */
+.toasts {
+  position: absolute;
+  top: 78px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 900;
+  pointer-events: none;
+}
+.toast {
+  min-width: 260px;
+  padding: 10px 14px;
+  font-size: 16px;
+  background: rgba(16, 12, 20, 0.95);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #3a3344;
+  animation:
+    toast-in 0.25s ease-out,
+    toast-out 0.4s ease-in 2.8s forwards;
+  border-left: 4px solid var(--ink-dim);
+}
+.toast.good {
+  border-left-color: var(--good);
+}
+.toast.bad {
+  border-left-color: var(--bad);
+}
+.toast.gold {
+  border-left-color: var(--gold);
+  color: #ffe9a8;
+}
+@keyframes toast-in {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+@keyframes toast-out {
+  to {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+/* ───────── Modal ───────── */
+.modal-back {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 3, 8, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 500;
+  animation: fade-in 0.2s;
+  backdrop-filter: blur(2px);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+.modal {
+  max-width: 1400px;
+  max-height: 820px;
+  overflow: auto;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #120f16;
+}
+::-webkit-scrollbar-thumb {
+  background: #4b4257;
+  box-shadow:
+    inset 2px 2px 0 #6a5f78,
+    inset -2px -2px 0 #2a2431;
+}
+
+/* ───────── Misc ───────── */
+.row {
+  display: flex;
+  align-items: center;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+}
+.gap4 {
+  gap: 4px;
+}
+.gap8 {
+  gap: 8px;
+}
+.gap12 {
+  gap: 12px;
+}
+.gap16 {
+  gap: 16px;
+}
+.gap24 {
+  gap: 24px;
+}
+.center {
+  justify-content: center;
+}
+.between {
+  justify-content: space-between;
+}
+.wrap {
+  flex-wrap: wrap;
+}
+.grow {
+  flex: 1;
+}
+.em {
+  color: #7dff9f;
+}
+.gold-t {
+  color: var(--gold);
+}
+.red-t {
+  color: var(--bad);
+}
+.title-shadow {
+  text-shadow:
+    3px 3px 0 #000,
+    0 0 20px rgba(0, 0, 0, 0.6);
+}
+.blink {
+  animation: blink 1.2s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.float {
+  animation: floaty 3s ease-in-out infinite;
+}
+@keyframes floaty {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.shake {
+  animation: shake 0.4s;
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 13px;
+  background: #2b2633;
+  box-shadow: 0 0 0 1px #000;
+  color: var(--ink-dim);
+}
+.divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #4b4257, transparent);
+  margin: 10px 0;
+}
+.kbd {
+  display: inline-block;
+  padding: 0 6px;
+  font-size: 13px;
+  background: #3a3344;
+  box-shadow: 0 2px 0 #000;
+}

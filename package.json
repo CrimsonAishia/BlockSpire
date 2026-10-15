@@ -1,0 +1,34 @@
+{
+  "name": "mob-crate-arena",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/subset-font.mjs && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "gen:images": "node scripts/gen-images.mjs",
+    "process:images": "node scripts/process-images.mjs",
+    "gen:frames": "node scripts/gen-frames.mjs",
+    "process:frames": "node scripts/process-frames.mjs",
+    "sim": "node --experimental-strip-types --no-warnings scripts/balance-sim.ts",
+    "font": "node scripts/subset-font.mjs",
+    "bot": "node --experimental-strip-types --no-warnings scripts/bot.ts",
+    "aibench": "node --experimental-strip-types --no-warnings scripts/aibench.ts"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.11.3",
+    "preact": "^10.29.8",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.5",
+    "@types/three": "^0.186.0",
+    "sharp": "^0.35.5",
+    "subset-font": "^2.9.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

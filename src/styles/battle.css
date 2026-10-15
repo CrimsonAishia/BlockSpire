@@ -1,0 +1,736 @@
+/* ───────── Battle view ───────── */
+.battle {
+  background: #000;
+}
+.battle-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1600px;
+  height: 900px;
+  display: block;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.bhud-top {
+  position: absolute;
+  top: 14px;
+  left: 24px;
+  right: 24px;
+  display: grid;
+  grid-template-columns: 1fr 240px 1fr;
+  align-items: center;
+  gap: 20px;
+  pointer-events: none;
+}
+.bhud-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bhud-side.right {
+  align-items: flex-end;
+}
+.bhud-label {
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+}
+.bhud-side.left .bhud-label {
+  color: #7cc4ff;
+}
+.bhud-side.right .bhud-label {
+  color: #ff8a8a;
+}
+.bhud-bar {
+  width: 100%;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #2c2633;
+  position: relative;
+  overflow: hidden;
+}
+.bhud-side.right .bhud-bar {
+  transform: scaleX(-1);
+}
+.bhud-bar .fill {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  transition: width 0.15s linear;
+  max-width: calc(100% - 4px);
+}
+.fill.blue {
+  background: linear-gradient(#5ab8ff, #2d74d6);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.fill.red {
+  background: linear-gradient(#ff7070, #c92e2e);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.bhud-center {
+  text-align: center;
+}
+.bhud-time {
+  font-size: 32px;
+  line-height: 1;
+  text-shadow: 3px 3px 0 #000;
+}
+.bhud-title {
+  font-size: 14px;
+  color: var(--ink-dim);
+  text-shadow: 2px 2px 0 #000;
+}
+.boss-bar {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  text-align: center;
+  pointer-events: none;
+}
+.boss-name {
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+}
+.boss-armor {
+  color: #9fd4ff;
+}
+.boss-track {
+  height: 14px;
+  background: #2a0f2e;
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #4a1f50;
+  position: relative;
+}
+.boss-fill {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  max-width: calc(100% - 4px);
+  background: linear-gradient(#ff5cf0, #b01ea8);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  transition: width 0.2s;
+}
+.sudden {
+  position: absolute;
+  top: 116px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff9cf0;
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+}
+.bhud-cards {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+.bhud-cards.left {
+  left: 16px;
+}
+.bhud-cards.right {
+  right: 16px;
+  flex-direction: row-reverse;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  background: rgba(10, 8, 14, 0.82);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 -3px 0 var(--rc);
+  min-width: 132px;
+  transition: opacity 0.3s;
+}
+.chip.dead {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.chip img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+.chip-name {
+  font-size: 14px;
+  color: var(--rc);
+  text-shadow: 1px 1px 0 #000;
+  white-space: nowrap;
+}
+.chip-name .stars {
+  font-size: 11px;
+}
+.chip-stat {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: #ddd;
+}
+.chip-dmg {
+  color: #ffb4a2;
+}
+.bhud-ctrl {
+  position: absolute;
+  right: 16px;
+  top: 64px;
+  display: flex;
+  gap: 4px;
+}
+.spd {
+  min-width: 44px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 15px;
+  background: rgba(20, 16, 26, 0.85);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #3a3344;
+  color: var(--ink-dim);
+}
+.spd:hover {
+  color: #ffffa0;
+}
+.spd.on {
+  background: #3d8b3d;
+  color: #fff;
+}
+.spd:disabled {
+  opacity: 0.4;
+}
+.spd.skip {
+  margin-left: 6px;
+}
+.b-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35), transparent 70%);
+}
+.b-sub {
+  font-size: 20px;
+  color: var(--ink-dim);
+  text-shadow: 2px 2px 0 #000;
+}
+.b-title {
+  font-size: 56px;
+  text-shadow:
+    4px 4px 0 #000,
+    0 0 30px rgba(0, 0, 0, 0.8);
+  letter-spacing: 4px;
+}
+.b-count {
+  margin-top: 10px;
+  font-size: 96px;
+  color: #ffe14a;
+  text-shadow:
+    5px 5px 0 #000,
+    0 0 40px rgba(255, 200, 0, 0.5);
+  animation: count-pop 0.5s ease-out;
+}
+@keyframes count-pop {
+  from {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.b-result {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: fade-in 0.3s;
+}
+.b-result.win {
+  background: radial-gradient(ellipse at center, rgba(255, 200, 50, 0.25), transparent 60%);
+}
+.b-result.lose {
+  background: radial-gradient(ellipse at center, rgba(150, 0, 0, 0.35), rgba(0, 0, 0, 0.3) 70%);
+}
+.b-result-text {
+  font-size: 120px;
+  letter-spacing: 16px;
+  animation: result-in 0.6s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.b-result.win .b-result-text {
+  color: #ffd84a;
+  text-shadow:
+    6px 6px 0 #6b4a08,
+    0 0 60px rgba(255, 200, 50, 0.6);
+}
+.b-result.lose .b-result-text {
+  color: #ff5050;
+  text-shadow:
+    6px 6px 0 #3a0808,
+    0 0 50px rgba(255, 0, 0, 0.5);
+}
+@keyframes result-in {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+.b-paused {
+  position: absolute;
+  top: 46%;
+  width: 100%;
+  text-align: center;
+  font-size: 48px;
+  text-shadow: 4px 4px 0 #000;
+  pointer-events: none;
+}
+.fps {
+  position: absolute;
+  left: 8px;
+  bottom: 4px;
+  font-size: 12px;
+  color: #9f9;
+  text-shadow: 1px 1px 0 #000;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+/* ───────── 3D arena ───────── */
+.arena-screen {
+  background: #000;
+}
+.arena-host {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.arena-screen.dragging .arena-host {
+  cursor: grabbing;
+}
+.arena-gl,
+.arena-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+.arena-overlay {
+  pointer-events: none;
+}
+.arena-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-px);
+  font-size: 28px;
+  color: #ddd;
+  background: #0b090e;
+}
+.cam-hint {
+  position: absolute;
+  right: 16px;
+  top: 104px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 1px 1px 0 #000;
+  pointer-events: none;
+}
+.terrain-tip {
+  position: absolute;
+  z-index: 40;
+  pointer-events: none;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(10, 8, 14, 0.9);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 1px #4b4257;
+  color: #ddd;
+}
+.terrain-tip .tt-head {
+  font-family: var(--font-px);
+  font-size: 15px;
+  color: #ffe9a8;
+}
+.b-terrain {
+  margin-top: 6px;
+  font-size: 18px;
+  color: #ffe9a8;
+  text-align: center;
+  text-shadow: 2px 2px 0 #000;
+}
+.b-terrain-fx {
+  font-size: 15px;
+  color: #e6e1d6;
+}
+
+/* Deploy HUD (pointer-events only on panels so the 3D view stays interactive) */
+.deploy-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.deploy-hud > * {
+  pointer-events: auto;
+}
+.dh-top {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  text-align: center;
+  pointer-events: none;
+}
+.dh-title {
+  font-size: 40px;
+  line-height: 1.15;
+}
+.dh-terrain {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  pointer-events: auto;
+}
+.dh-tname {
+  font-family: var(--font-px);
+  padding: 2px 10px;
+  background: rgba(40, 70, 30, 0.85);
+  box-shadow: 0 0 0 2px #000;
+  color: #c8ffb0;
+  font-size: 15px;
+}
+.dh-tfx {
+  padding: 2px 10px;
+  background: rgba(10, 8, 14, 0.8);
+  box-shadow: 0 0 0 2px #000;
+  font-size: 13px;
+  color: #e6e1d6;
+}
+.dh-panel {
+  position: absolute;
+  top: 150px;
+  width: 260px;
+  padding: 10px 12px;
+  background: rgba(14, 11, 18, 0.86);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #3a3344;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dh-panel.left {
+  left: 14px;
+}
+.dh-panel.right {
+  right: 14px;
+}
+.dh-ptitle {
+  font-family: var(--font-px);
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+}
+.red-t {
+  color: #ff8a8a;
+}
+.dh-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 22%, transparent), transparent);
+  box-shadow: inset 3px 0 0 var(--rc);
+}
+.dh-row img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.dh-rname {
+  font-family: var(--font-px);
+  font-size: 15px;
+  text-shadow: 1px 1px 0 #000;
+}
+.dh-rname .stars {
+  font-size: 12px;
+}
+.dh-rsub {
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.dh-bottom {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 14px;
+  background: rgba(14, 11, 18, 0.86);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #3a3344;
+}
+.dh-bottom .potion-bar {
+  flex: 0 0 auto;
+}
+.dh-hint {
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-align: center;
+}
+.power {
+  width: 240px;
+}
+.power-bar {
+  height: 10px;
+  background: #b93a3a;
+  box-shadow: 0 0 0 2px #000;
+}
+.pb-me {
+  height: 100%;
+  background: linear-gradient(#5ab8ff, #2d74d6);
+  transition: width 0.3s;
+}
+.power-text {
+  font-size: 13px;
+  margin-top: 3px;
+  text-align: center;
+}
+
+/* Keywords & hints */
+.kw {
+  font-weight: 700;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+.kw-box {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  color: #bdb6c8;
+  line-height: 1.5;
+}
+.kw-def + .kw-def {
+  margin-top: 3px;
+}
+.hint {
+  position: absolute;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 620px;
+  padding: 12px 14px;
+  background: rgba(24, 40, 22, 0.96);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #6ad46a,
+    0 10px 30px rgba(0, 0, 0, 0.5);
+  font-size: 15px;
+  line-height: 1.6;
+  animation: hint-in 0.35s ease-out;
+  pointer-events: auto;
+}
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--hx, -50%), 12px);
+  }
+}
+.hint-bottom {
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%);
+  --hx: -50%;
+}
+.hint-top {
+  left: 50%;
+  top: 150px;
+  transform: translateX(-50%);
+  --hx: -50%;
+}
+.hint-center {
+  left: 50%;
+  top: 46%;
+  transform: translateX(-50%);
+  --hx: -50%;
+}
+.hint-left {
+  left: 300px;
+  top: 160px;
+  --hx: 0;
+}
+.hint-right {
+  right: 300px;
+  top: 160px;
+  --hx: 0;
+}
+.hint-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-px);
+  font-size: 22px;
+  color: #1a3a10;
+  background: #8dff7a;
+  box-shadow: 0 0 0 2px #000;
+}
+.hint-body b {
+  color: #b8ff9a;
+}
+
+/* ───────── Item hotbar (Minecraft style) ───────── */
+.hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+.hb-row {
+  display: flex;
+  padding: 3px;
+  background: rgba(12, 10, 16, 0.78);
+  box-shadow: 0 0 0 2px #000, inset 0 0 0 2px #4a4452;
+}
+.hb-slot {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  background: rgba(70, 64, 78, 0.55);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(255, 255, 255, 0.12);
+  margin: 2px;
+  transition: transform 0.08s;
+}
+.hb-slot img {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.5));
+}
+.hb-slot:hover:not(:disabled) {
+  transform: translateY(-3px);
+  background: rgba(110, 100, 120, 0.7);
+}
+.hb-slot.aim {
+  background: rgba(120, 220, 120, 0.35);
+  box-shadow: 0 0 0 3px #f4f4f4, 0 0 14px rgba(140, 255, 140, 0.6);
+}
+.hb-slot.used img {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+.hb-slot:disabled {
+  cursor: default;
+}
+.hb-key {
+  position: absolute;
+  left: 4px;
+  top: 2px;
+  font-family: var(--font-px);
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+.hb-hint {
+  padding: 4px 12px;
+  font-size: 14px;
+  color: #eaffea;
+  background: rgba(10, 30, 12, 0.85);
+  box-shadow: 0 0 0 2px #000;
+}
+
+/* ── Commander skills & brewed items on the hotbar ── */
+.hotbar.deploy {
+  bottom: 104px;
+}
+.hb-skills {
+  display: flex;
+  margin-right: 6px;
+  padding-right: 6px;
+  box-shadow: 2px 0 0 #4a4452;
+}
+.hb-slot.skill {
+  background: rgba(96, 70, 34, 0.6);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(255, 220, 140, 0.18), 0 0 0 1px #c8963a;
+}
+.hb-slot.skill.aim {
+  background: rgba(255, 190, 90, 0.4);
+  box-shadow: 0 0 0 3px #ffe7a8, 0 0 14px rgba(255, 200, 100, 0.6);
+}
+.hb-count {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  font-family: var(--font-px);
+  font-size: 16px;
+  color: #ffe08a;
+  text-shadow: 1px 1px 0 #000;
+}
+.hb-cost {
+  position: absolute;
+  left: 3px;
+  bottom: 1px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  color: #7dff9f;
+  text-shadow: 1px 1px 0 #000;
+}
+.hb-slot.temp {
+  background: rgba(110, 60, 140, 0.5);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(230, 180, 255, 0.18), 0 0 0 1px #b07ae0;
+}
+.hb-temp {
+  position: absolute;
+  right: 2px;
+  top: 1px;
+  font-size: 10px;
+  color: #f0d0ff;
+  text-shadow: 1px 1px 0 #000;
+}
+.hb-undo {
+  width: 58px;
+  margin: 2px 2px 2px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #ffd0d0;
+  background: rgba(120, 40, 40, 0.55);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(255, 255, 255, 0.12);
+}
+.hb-undo:hover {
+  background: rgba(160, 50, 50, 0.7);
+}
+.hb-hint.warn {
+  color: #ffd6d6;
+  background: rgba(50, 10, 10, 0.88);
+}
+.slot.brew {
+  box-shadow: inset 0 0 0 2px #b07ae0;
+}
