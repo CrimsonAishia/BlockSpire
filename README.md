@@ -16,7 +16,7 @@
 
 每赢一场，挑一个补给箱开启。生物分五档品质，从蓝到金，越稀有越强；重复开到同一种生物，它就会升星变强。
 
-<p align="center"><img src="screenshots/crate-roll.jpg" width="100%"></p>
+<p align="center"><img src="screenshots/crate-open.webp" width="100%" alt="开箱：滚动停在凋灵"></p>
 <table>
   <tr>
     <td width="50%"><img src="screenshots/crate-choice.jpg"></td>
@@ -33,6 +33,8 @@
 ### 布阵与混战
 
 战前在 3D 战场上摆好阵型，开战后双方全自动混战。地形、站位和时机都可能左右胜负，关键时刻也可以亲自出手。
+
+<p align="center"><img src="screenshots/battle-boss.webp" width="100%" alt="首领战：末影龙"></p>
 
 <table>
   <tr>
