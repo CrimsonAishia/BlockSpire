@@ -87,6 +87,10 @@ npm run build    # 生成纯静态文件到 dist/，可部署到任意静态托�
 
 排行榜是 `api/leaderboard.ts` 里的 Vercel Function，数据存在 Redis：在 Vercel 项目里添加 Upstash for Redis 存储，它会自动配置 `KV_REST_API_URL` 和 `KV_REST_API_TOKEN`。没有配置时游戏照常运行，只是排行榜不可用；`npm run dev` 会用内存版接口代替。
 
+## 许可
+
+本项目的代码与原创美术采用 [CC BY-NC-SA 4.0](LICENSE) 协议：可以自由分享和修改，但须注明出处、**不得用于商业用途**，基于本项目修改后再发布的作品也必须使用相同协议。字体等第三方组件沿用各自的协议。
+
 ## 说明
 
 - 非 Mojang / Microsoft 官方作品，与其无关联；Minecraft 是 Mojang 的商标。

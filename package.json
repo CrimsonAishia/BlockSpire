@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "方块尖塔 · Block Spire：开箱组军，以怪斗怪，登塔屠龙的网页游戏",
+  "license": "CC-BY-NC-SA-4.0",
   "homepage": "https://blockspire.app",
   "repository": {
     "type": "git",
