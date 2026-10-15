@@ -784,9 +784,15 @@ export function generateTerrain(biomeId: string, seed: number): Terrain {
 // ───────────────────────── Destruction ─────────────────────────
 
 /** Craters (lowered cells) allowed per battle; features can always be blown away. */
-export const MAX_CRATERS = 24;
+export const MAX_CRATERS = 36;
 /** Surfaces left behind when the top block is blown off. */
 const EXPOSED: Record<number, number> = { [S.GRASS]: S.DIRT, [S.PATH]: S.DIRT, [S.MOSS]: S.DIRT, [S.SNOW]: S.DIRT, [S.NYLIUM]: S.NETHERRACK, [S.SIFT_GRASS]: S.SIFT_STONE };
+
+/** What any explosion leaves on the ground around it (scorch marks; looks only, same footing). */
+const SCORCHED: Record<number, number> = {
+  [S.GRASS]: S.DIRT, [S.PATH]: S.DIRT, [S.MOSS]: S.DIRT, [S.SNOW]: S.DIRT, [S.NYLIUM]: S.NETHERRACK, [S.SIFT_GRASS]: S.SIFT_STONE,
+  [S.STONE]: S.GRAVEL, [S.COBBLE]: S.GRAVEL,
+};
 
 /** Obsidian (the dragon's platform, pillars and the End's obsidian rocks) never breaks. */
 export function isIndestructible(t: Terrain, i: number) {
@@ -892,7 +898,8 @@ export function applyBuild(t: Terrain, team: 0 | 1, kind: BuildKind, x: number, 
 
 export interface BlastChange {
   i: number;
-  kind: 'feature' | 'block';
+  /** A feature blown away, a block blown off the top, or a scorched surface. */
+  kind: 'feature' | 'block' | 'scorch';
   s: number;
   f: number;
   /** Height of the removed thing's top (blocks), for debris. */
@@ -900,39 +907,63 @@ export interface BlastChange {
 }
 
 /**
- * Explosion damage to the battlefield. Deliberately limited: radius at most 2 blocks, the
- * arena's outer ring never changes, at most 3 blocks are lowered per blast and MAX_CRATERS
- * per battle, ground never goes below level 0, liquids and obsidian are untouched. Lowering
- * ground and removing obstacles can only make the field more open, never disconnect it.
+ * Explosion damage to the battlefield, by size:
+ * - every blast (r ≥ 30) scorches the ground around it and blows away small decorations;
+ * - small ones (wither skulls) sometimes knock 1 block off the centre while few craters exist;
+ * - medium ones (r ≥ 55: fireballs, blue skulls, end crystals) also destroy trees and rocks and
+ *   lower up to 2 blocks; big ones (r ≥ 80: creepers, TNT) up to 3.
+ * Deliberately limited: lowering radius at most 2 blocks, MAX_CRATERS lowered blocks per battle,
+ * ground never below level 0, the outer ring, liquids and obsidian untouched. Lowering ground
+ * and removing obstacles can only make the field more open, never disconnect it.
  */
 export function blastTerrain(t: Terrain, x: number, y: number, r: number): BlastChange[] {
-  if (r < 55) return [];
-  const rb = Math.min(2, (r / BLOCK) * 0.55);
+  if (r < 30) return [];
+  const big = r >= 55;
+  const rb = big ? Math.min(2, (r / BLOCK) * 0.55) : 0;
+  const rs = Math.min(2.4, (r / BLOCK) * 0.7);
   const fx = x / BLOCK;
   const fy = y / BLOCK;
   const out: BlastChange[] = [];
   const lower: [number, number][] = [];
-  for (let cy = Math.floor(fy - rb); cy <= Math.floor(fy + rb); cy++)
-    for (let cx = Math.floor(fx - rb); cx <= Math.floor(fx + rb); cx++) {
+  const scorch: number[] = [];
+  for (let cy = Math.floor(fy - rs); cy <= Math.floor(fy + rs); cy++)
+    for (let cx = Math.floor(fx - rs); cx <= Math.floor(fx + rs); cx++) {
       if (cx <= 0 || cy <= 0 || cx >= GW - 1 || cy >= GD - 1) continue;
       const d = Math.hypot(cx + 0.5 - fx, cy + 0.5 - fy);
-      if (d > rb) continue;
+      if (d > rs) continue;
       const i = idx(cx, cy);
       if (isIndestructible(t, i)) continue;
-      if (t.f[i]) {
+      if (t.f[i] && (DECOR.has(t.f[i]) || d <= rb)) {
         out.push({ i, kind: 'feature', s: t.s[i], f: t.f[i], h: t.h[i] + Math.max(1, t.fh[i]) });
         t.f[i] = F.NONE;
         t.fh[i] = 0;
       }
-      if (t.h[i] >= 1 && d <= rb * 0.75 && !SURFACE_INFO[t.s[i]]?.liquid) lower.push([i, d]);
+      if (SURFACE_INFO[t.s[i]]?.liquid) continue;
+      if (t.h[i] >= 1 && d <= rb * 0.75) lower.push([i, d]);
+      else if (SCORCHED[t.s[i]] !== undefined) scorch.push(i);
     }
+  // Small blasts: now and then the block right under the impact goes too (hash, not the battle RNG).
+  if (!big && t.broken < MAX_CRATERS / 2) {
+    const i = idx(Math.floor(fx), Math.floor(fy));
+    const roll = (Math.imul(i * 2654435761 + t.ver * 40503 + t.broken, 0x01000193) >>> 0) / 4294967296;
+    if (roll < 0.35 && t.h[i] >= 1 && !isIndestructible(t, i) && !SURFACE_INFO[t.s[i]]?.liquid && !isBorder(i)) lower.push([i, 0]);
+  }
   lower.sort((a, b) => a[1] - b[1]);
-  for (const [i] of lower.slice(0, 3)) {
-    if (t.broken >= MAX_CRATERS) break;
+  for (const [i] of lower.slice(0, r >= 80 ? 3 : big ? 2 : 1)) {
+    if (t.broken >= MAX_CRATERS) {
+      if (SCORCHED[t.s[i]] !== undefined) scorch.push(i);
+      continue;
+    }
     out.push({ i, kind: 'block', s: t.s[i], f: 0, h: t.h[i] });
     t.h[i]--;
     t.s[i] = EXPOSED[t.s[i]] ?? t.s[i];
     t.broken++;
+  }
+  for (const i of scorch) {
+    const to = SCORCHED[t.s[i]];
+    if (to === undefined) continue;
+    out.push({ i, kind: 'scorch', s: t.s[i], f: 0, h: t.h[i] });
+    t.s[i] = to;
   }
   if (out.length) {
     t.ver++;
@@ -940,6 +971,12 @@ export function blastTerrain(t: Terrain, x: number, y: number, r: number): Blast
   }
   return out;
 }
+
+const isBorder = (i: number) => {
+  const cx = i % GW;
+  const cy = Math.floor(i / GW);
+  return cx <= 0 || cy <= 0 || cx >= GW - 1 || cy >= GD - 1;
+};
 
 /**
  * Every bit of high ground gets a walkable approach: cells reachable from the lowest ground

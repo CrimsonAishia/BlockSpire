@@ -708,7 +708,19 @@ export class Arena3D {
             P.add(x + (Math.random() - 0.5) * r, y + 0.5, z + (Math.random() - 0.5) * r, 0, 1 + Math.random(), 0, 0.9 + Math.random() * 0.6, 0.35 + Math.random() * 0.25, this.color('#3d3d3d'), -0.5, 1);
           for (let i = 0; i < n(e.big ? 14 : 5); i++) A.add(x, y + 0.4, z, (Math.random() - 0.5) * 6, Math.random() * 5, (Math.random() - 0.5) * 6, 0.35, 0.22, c, 4, 3);
           if (e.big) {
-            this.flash = Math.max(this.flash, 0.3);
+            // Minecraft-style blast: a cloud of big pale puffs filling the radius around a hot core,
+            // so the explosion reads at a distance (small debris alone vanished in wide shots).
+            const k = Math.min(1.4, Math.max(0.7, r / 2.6));
+            // Tinted towards the blast colour: white smoke for creepers, dust for a giant's stomp...
+            const puffs = ['#ffffff', '#ececec', '#d2d2d2', '#b4b4b4'].map((g) => this.color(g).clone().lerp(c, 0.3));
+            for (let i = 0; i < n(24); i++) {
+              const a = Math.random() * Math.PI * 2;
+              const d = Math.sqrt(Math.random()) * r * 0.75;
+              P.add(x + Math.cos(a) * d, y + 0.3 + Math.random() * r * 0.55, z + Math.sin(a) * d, Math.cos(a) * 1.2, 0.6 + Math.random(), Math.sin(a) * 1.2, 0.55 + Math.random() * 0.45, (0.55 + Math.random() * 0.55) * k, puffs[i % 4], -0.8, 3);
+            }
+            const hot = this.color('#fff3c4');
+            for (let i = 0; i < n(7); i++) A.add(x + (Math.random() - 0.5) * r * 0.6, y + 0.4 + Math.random() * r * 0.4, z + (Math.random() - 0.5) * r * 0.6, 0, 0.5, 0, 0.12 + Math.random() * 0.1, (1.1 + Math.random() * 0.7) * k, i % 2 ? hot : c, 0, 0);
+            this.flash = Math.max(this.flash, 0.16);
             this.flashColor = e.color;
             if (this.sfxEnabled) sfx('explode', { vol: 0.6, pan: pan(e.x) });
           }

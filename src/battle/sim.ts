@@ -761,7 +761,10 @@ export class Battle {
 
   /** Explosion that can reshape the battlefield (see blastTerrain for the limits). */
   blast(x: number, y: number, r: number) {
+    let scorched = 0;
     for (const c of blastTerrain(this.terrain, x, y, r)) {
+      // Scorch marks only kick up a little dust from a few of their cells.
+      if (c.kind === 'scorch' && ++scorched > 3) continue;
       const cx = c.i % TGW;
       const cy = Math.floor(c.i / TGW);
       this.emit({ k: 'debris', x: (cx + 0.5) * BLOCK, y: (cy + 0.5) * BLOCK, z: c.h * BLOCK, s: c.s, f: c.f, block: c.kind === 'block' });
@@ -1320,7 +1323,7 @@ export class Battle {
       if (p.knock > 0) this.knock(e, x, y, p.knock * (1 - 0.5 * f));
     });
     this.beh(src).onProjExplode?.(src, p, x, y, this);
-    if (p.kind === 'big_fireball' || p.kind === 'blue_skull') this.blast(x, y, r);
+    if (EXPLOSIVE.has(p.kind)) this.blast(x, y, r);
   }
 
   private projHit(p: Proj, t: Unit) {
