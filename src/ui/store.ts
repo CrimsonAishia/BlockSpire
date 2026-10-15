@@ -5,7 +5,8 @@ import { signal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import type { RunState } from '../run/run.ts';
 import {
-  type Profile, type Settings, ACHIEVEMENT_MAP, checkProgress, grant, loadProfile, loadSettings, saveProfile, saveRun, saveSettings,
+  type Profile, type Settings, ACHIEVEMENT_MAP, checkProgress, grant, loadProfile, loadSettings,
+  saveProfile as storeProfile, saveRun as storeRun, saveSettings as storeSettings,
 } from '../meta/profile.ts';
 import { setVolumes, sfx } from '../audio/audio.ts';
 
@@ -37,6 +38,19 @@ export function hideTips() {
   tooltip.value = null;
 }
 export const stageScale = signal(1);
+
+/** Set while a backup import replaces the stored data: nothing may write over it before the reload. */
+let frozen = false;
+const saveRun = (r: RunState | null) => !frozen && storeRun(r);
+const saveProfile = (p: Profile) => !frozen && storeProfile(p);
+const saveSettings = (s: Settings) => !frozen && storeSettings(s);
+
+/** Writes the run in progress now and stops all further saves (an import or undo follows, then a reload). */
+export function freezeStorage() {
+  clearTimeout(saveTimer);
+  saveRun(runRef);
+  frozen = true;
+}
 
 export function getRun(): RunState | null {
   return runRef;

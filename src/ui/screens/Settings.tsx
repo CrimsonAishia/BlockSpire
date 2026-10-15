@@ -1,9 +1,11 @@
 import { useState } from 'preact/hooks';
 import { Btn, GitHubLink, Modal, Tip } from '../components/common.tsx';
-import { overlay, settings, updateSettings, setRun } from '../store.ts';
+import { freezeStorage, overlay, settings, updateSettings } from '../store.ts';
 import { wipeAll } from '../../meta/profile.ts';
 import { sfx } from '../../audio/audio.ts';
 import { resetHints } from '../components/hints.tsx';
+import { BackupRow, CodeView, ImportView } from './BackupPanel.tsx';
+import { keepUndo } from '../../meta/backup.ts';
 
 function Slider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
@@ -32,6 +34,13 @@ function Toggle({ label, value, onChange, hint }: { label: string; value: boolea
 export function SettingsModal() {
   const s = settings.value;
   const [wipe, setWipe] = useState(false);
+  const [view, setView] = useState<'main' | 'import' | { code: string }>('main');
+  if (view !== 'main')
+    return (
+      <Modal onClose={() => (overlay.value = null)} width={640}>
+        {view === 'import' ? <ImportView onBack={() => setView('main')} /> : <CodeView code={view.code} onBack={() => setView('main')} />}
+      </Modal>
+    );
   return (
     <Modal onClose={() => (overlay.value = null)} width={640}>
       <div class="panel-title">设置</div>
@@ -116,16 +125,19 @@ export function SettingsModal() {
         <GitHubLink />
       </div>
       <div class="divider" />
+      <BackupRow onImport={() => setView('import')} onShowCode={(code) => setView({ code })} />
+      <div class="divider" />
       <div class="row between">
         {wipe ? (
           <div class="row gap8">
-            <span class="red-t">将删除所有存档、成就与图鉴！</span>
+            <span class="red-t">将删除所有存档、成就与图鉴（可在设置里撤销）</span>
             <Btn
               size="small"
               variant="red"
               onClick={() => {
+                freezeStorage();
+                keepUndo();
                 wipeAll();
-                setRun(null);
                 location.reload();
               }}
             >
