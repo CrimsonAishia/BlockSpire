@@ -342,7 +342,7 @@ export class Arena3D {
   height = 900;
   dpr = 1;
   // Camera state
-  cam = { yaw: 0, pitch: 0.66, dist: 31, x: 0, y: 0, z: 1, zoom: 1, userYaw: 0, userPitch: 0.66, mode: 'battle' as 'battle' | 'deploy' };
+  cam = { yaw: 0, pitch: 0.66, dist: 31, x: 0, y: 0, z: 1, zoom: 1, userYaw: 0, userPitch: 0.66, mode: 'battle' as 'battle' | 'deploy', side: 0 as 0 | 1 };
   deployGroup = new THREE.Group();
   hoverBox: THREE.LineSegments;
   private tmpV = new THREE.Vector3();
@@ -1040,7 +1040,7 @@ export class Arena3D {
     let ty0 = 0.5;
     let dist = 31;
     if (c.mode === 'deploy') {
-      tx0 = -8.5;
+      tx0 = c.side === 0 ? -8.5 : 8.5;
       tz0 = 0.8;
       ty0 = 0.5;
       dist = 22;
@@ -1956,7 +1956,15 @@ export class Arena3D {
 
   // ───────────────────────── deployment helpers ─────────────────────────
 
-  /** Shows the deploy zones as tinted cell overlays. */
+  /** Frames the side that is deploying (two players take turns) and brightens its zone. */
+  setDeploySide(side: 0 | 1) {
+    if (this.cam.side === side) return;
+    this.cam.side = side;
+    this.cam.userYaw = 0;
+    this.showDeployZones();
+  }
+
+  /** Shows the deploy zones as tinted cell overlays; the deploying side's is the brighter one. */
   showDeployZones() {
     this.deployGroup.clear();
     const terrain = this.b.terrain;
@@ -1975,8 +1983,9 @@ export class Arena3D {
       m.renderOrder = 2;
       this.deployGroup.add(m);
     };
-    mk(0x3d8bff, 0, DEPLOY_COLS, 0.16);
-    mk(0xff3b3b, GW - DEPLOY_COLS, GW, 0.12);
+    const side = this.cam.side;
+    mk(0x3d8bff, 0, DEPLOY_COLS, side === 0 ? 0.16 : 0.06);
+    mk(0xff3b3b, GW - DEPLOY_COLS, GW, side === 1 ? 0.18 : 0.12);
   }
 
   /** Terrain cell under a screen point (stage CSS px), or null. */

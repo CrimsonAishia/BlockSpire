@@ -734,3 +734,33 @@
 .slot.brew {
   box-shadow: inset 0 0 0 2px #b07ae0;
 }
+/* Spectating (classic): the winning side's colour instead of victory / defeat. */
+.b-result.side .b-result-text {
+  font-size: 96px;
+  letter-spacing: 8px;
+}
+.b-result.side0 {
+  background: radial-gradient(ellipse at center, rgba(60, 140, 255, 0.28), transparent 60%);
+}
+.b-result.side0 .b-result-text {
+  color: #8fd0ff;
+  text-shadow:
+    6px 6px 0 #0c2c5c,
+    0 0 60px rgba(70, 150, 255, 0.6);
+}
+.b-result.side1 {
+  background: radial-gradient(ellipse at center, rgba(255, 70, 70, 0.28), transparent 60%);
+}
+.b-result.side1 .b-result-text {
+  color: #ff9a9a;
+  text-shadow:
+    6px 6px 0 #5c0c0c,
+    0 0 60px rgba(255, 70, 70, 0.6);
+}
+.b-result.sided {
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.3) 70%);
+}
+.b-result.sided .b-result-text {
+  color: #e8e8e8;
+  text-shadow: 6px 6px 0 #222;
+}

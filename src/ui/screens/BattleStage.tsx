@@ -226,7 +226,7 @@ function DeployHud({
   );
 }
 
-function SynRow({ syn }: { syn: ReturnType<typeof sideSynergies> }) {
+export function SynRow({ syn }: { syn: ReturnType<typeof sideSynergies> }) {
   const entries = Object.entries(syn.counts).filter(([f]) => syn.active[f as Family] >= 0);
   if (!entries.length) return <div class="faint" style={{ fontSize: 12 }}>无激活羁绊</div>;
   return (

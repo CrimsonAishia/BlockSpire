@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { Battle, DT, type BattleConfig, type BattleResult } from '../../battle/sim.ts';
 import type { Arena3D } from '../../battle3d/arena3d.ts';
-import { BLOCK, FEATURE_NAME, GW, SURFACE_INFO, applyBuild, buildCells, clampToDeploy, cloneTerrain, isBlocked, isIndestructible, type BuildOrder, type Terrain } from '../../battle/terrain.ts';
+import { BLOCK, DEPLOY_COLS, FEATURE_NAME, GW, SURFACE_INFO, applyBuild, buildCells, clampToDeploy, cloneTerrain, isBlocked, isIndestructible, type BuildOrder, type Terrain } from '../../battle/terrain.ts';
 import { ARENA_W } from '../../battle/unit.ts';
 import { canTame, type SkillKind } from '../../battle/skills.ts';
 import { itemRadius } from '../../battle/items.ts';
@@ -26,6 +26,10 @@ interface Props {
   boss?: boolean;
   leftLabel?: string;
   rightLabel?: string;
+  /** Neutral end banner per winning side (spectating), instead of victory / defeat. */
+  endText?: [string, string];
+  /** Which side's squads can be dragged while deploying (two players take turns). */
+  deploySide?: 0 | 1;
   onDeployMove?: (uid: string, pos: [number, number]) => void;
   onFinish: (r: BattleResult) => void;
   /** Battle items available on the hotbar (player side). */
@@ -40,6 +44,9 @@ interface Props {
   onBuild?: (builds: BuildOrder[]) => void;
   children?: ComponentChildren;
 }
+
+/** A column inside a side's deployment zone. */
+const inZone = (side: 0 | 1, cx: number) => (side === 0 ? cx < DEPLOY_COLS : cx >= GW - DEPLOY_COLS);
 
 /** What a click on the battlefield will do. */
 type Aim = { k: 'item'; i: number } | { k: 'skill'; s: SkillKind } | null;
@@ -89,7 +96,7 @@ function maxHp(b: Battle): [number, number] {
 }
 
 export function Arena3DView({
-  terrain, config, configKey, phase, title, subtitle, boss, leftLabel = '我方', rightLabel = '敌方', onDeployMove, onFinish, items = [], temp = [],
+  terrain, config, configKey, phase, title, subtitle, boss, leftLabel = '我方', rightLabel = '敌方', endText, deploySide = 0, onDeployMove, onFinish, items = [], temp = [],
   golemCost = 0, canPay = true, builds = [], onBuild, children,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -98,6 +105,7 @@ export function Arena3DView({
   const [stage, setStage] = useState<'intro' | 'fight' | 'end'>('intro');
   const [count, setCount] = useState(3);
   const [winner, setWinner] = useState<0 | 1 | null>(null);
+  const [draw, setDraw] = useState(false);
   const [paused, setPaused] = useState(false);
   const [hover, setHover] = useState<{ x: number; y: number; text: string[] } | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -125,7 +133,9 @@ export function Arena3DView({
     configKey,
     aim: null as Aim,
     canUse: false,
+    side: deploySide,
   });
+  R.current.side = deploySide;
   R.current.paused = paused;
   R.current.speed = speed;
   R.current.phase = phase;
@@ -254,6 +264,7 @@ export function Arena3DView({
       R.current.arena = arena;
       arena.resize(1600, 900, stageScale.value);
       arena.setMode(phase === 'deploy' ? 'deploy' : 'battle');
+      arena.setDeploySide(R.current.side);
       if (phase === 'deploy') arena.showDeployZones();
       if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__arena = { arena, R: R.current };
       setReady(true);
@@ -298,8 +309,9 @@ export function Arena3DView({
             endT = 0.0001;
             setStage('end');
             setWinner(b.winner);
+            setDraw(b.draw);
             setHud(snapshot(b, c.max));
-            sfx(b.winner === 0 ? 'victory' : 'defeat', { vol: 0.7 });
+            sfx(b.winner === 0 || endText ? 'victory' : 'defeat', { vol: 0.7 });
           }
           if (endT > 0) {
             endT += dt;
@@ -335,6 +347,11 @@ export function Arena3DView({
       R.current.arena = null;
     };
   }, []);
+
+  // ── two players take turns deploying: frame the side whose turn it is ──
+  useEffect(() => {
+    R.current.arena?.setDeploySide(deploySide);
+  }, [deploySide]);
 
   // ── rebuild preview battle when the deployment changes ──
   useEffect(() => {
@@ -410,7 +427,7 @@ export function Arena3DView({
     c.pointer = { x: p.x, y: p.y, moved: false, button: e.button };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     if (c.phase === 'deploy' && e.button === 0 && c.arena && onDeployMove) {
-      const u = c.arena.pickUnit(p.x, p.y, 0);
+      const u = c.arena.pickUnit(p.x, p.y, c.side);
       if (u) {
         const plan = c.battle!.plans[u.card];
         if (plan?.uid) {
@@ -468,15 +485,17 @@ export function Arena3DView({
     const cell = a.pickCell(p.x, p.y);
     if (c.drag) {
       if (!cell) return;
-      const [x, y] = clampToDeploy(0, cell.x, cell.y);
-      const ok = cell.cx < 15 && !isBlocked(terrain, cell.cx, cell.cy);
-      a.setHover({ cx: Math.min(14, cell.cx), cy: cell.cy }, ok);
+      const [x, y] = clampToDeploy(c.side, cell.x, cell.y);
+      const ok = inZone(c.side, cell.cx) && !isBlocked(terrain, cell.cx, cell.cy);
+      a.setHover({ cx: c.side === 0 ? Math.min(DEPLOY_COLS - 1, cell.cx) : Math.max(GW - DEPLOY_COLS, cell.cx), cy: cell.cy }, ok);
       c.drag.pos = [x, y];
       // Live preview: move this squad's units (throttled rebuild).
       const now = performance.now();
       if (now - c.lastPreview > 90) {
         c.lastPreview = now;
-        const cfg: BattleConfig = { ...config, sides: [{ ...config.sides[0], cards: config.sides[0].cards.map((k) => (k.uid === c.drag!.uid ? { ...k, anchor: [x, y] } : k)) }, config.sides[1]] };
+        const sides = config.sides.slice() as BattleConfig['sides'];
+        sides[c.side] = { ...sides[c.side], cards: sides[c.side].cards.map((k) => (k.uid === c.drag!.uid ? { ...k, anchor: [x, y] } : k)) };
+        const cfg: BattleConfig = { ...config, sides };
         const b = new Battle(cfg);
         c.battle = b;
         a.setBattle(b);
@@ -484,7 +503,7 @@ export function Arena3DView({
       return;
     }
     if (cell) {
-      a.setHover(cell, cell.cx < 15);
+      a.setHover(cell, inZone(c.side, cell.cx));
       const i = cell.cy * GW + cell.cx;
       const T = c.battle?.terrain ?? terrain;
       const s = T.s[i];
@@ -500,7 +519,7 @@ export function Arena3DView({
         lines.push(isIndestructible(T, i) ? '坚不可摧' : '可被爆炸摧毁');
       }
       if (T.h[i] > 0) lines.push(`高地：远程射程与伤害提升${T.h[i] >= 2 ? '；被撞下去会摔伤' : ''}`);
-      lines.push(cell.cx < 15 ? '我方部署区' : cell.cx >= GW - 15 ? '敌方区域' : '中立区域');
+      lines.push(cell.cx < DEPLOY_COLS ? `${leftLabel}部署区` : cell.cx >= GW - DEPLOY_COLS ? `${rightLabel}${deploySide === 1 ? '部署区' : '区域'}` : '中立区域');
       setHover({ x: p.x, y: p.y, text: lines });
     } else {
       a.setHover(null);
@@ -707,9 +726,14 @@ export function Arena3DView({
           </div>
         </div>
       )}
-      {fighting && stage === 'end' && winner !== null && (
+      {fighting && stage === 'end' && winner !== null && !endText && (
         <div class={`b-result ${winner === 0 ? 'win' : 'lose'}`}>
           <div class="b-result-text">{winner === 0 ? '胜 利' : '失 败'}</div>
+        </div>
+      )}
+      {fighting && stage === 'end' && winner !== null && endText && (
+        <div class={`b-result side side${draw ? 'd' : winner}`}>
+          <div class="b-result-text">{draw ? '平 局' : endText[winner]}</div>
         </div>
       )}
       {paused && stage === 'fight' && <div class="b-paused">已暂停</div>}

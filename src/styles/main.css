@@ -973,3 +973,10 @@ a.mc-btn {
     inset 0 0 0 1px rgba(61, 220, 132, 0.5);
   animation: screen-in 0.35s ease-out;
 }
+.mc-btn.blue {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.2)),
+    linear-gradient(#3a72c9, #24509a);
+  color: #eef6ff;
+  text-shadow: 2px 2px 0 #10285a;
+}

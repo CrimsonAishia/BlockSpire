@@ -20,7 +20,7 @@ const SPLASHES = [
   '僵尸也能升三星！',
   '史莱姆越打越多！',
   '蠹虫一窝端！',
-  '也试试经典对决！',
+  '也去竞技场看看！',
   '欧皇附体！',
 ];
 
@@ -71,7 +71,8 @@ export function Title() {
             </span>
           </Btn>
           <Btn size="big" wide onClick={() => go('classic')}>
-            经典对决 3V3
+            竞技场
+            <span class="menu-note">自选 · 随机 · 双人同屏</span>
           </Btn>
           <Btn size="big" wide disabled>
             联机对战 <span class="menu-note">敬请期待</span>

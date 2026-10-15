@@ -13,7 +13,7 @@ import { CHARGE_RULE, combosOf, countersOf } from '../../data/combos.ts';
 // ───────────────────────── Button ─────────────────────────
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'green' | 'gold' | 'red' | 'purple' | '';
+  variant?: 'green' | 'gold' | 'red' | 'purple' | 'blue' | '';
   size?: 'small' | 'tiny' | 'big' | '';
   wide?: boolean;
   sound?: string;

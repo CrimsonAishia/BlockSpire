@@ -48,6 +48,7 @@ export const url = {
   cmd: (id: string) => `${BASE}assets/commanders/${id}.webp`,
   bg: (id: string) => `${BASE}assets/bg/${id}.jpg`,
   event: (id: string) => `${BASE}assets/events/${id}.jpg`,
+  arena: (id: string) => `${BASE}assets/arena/${id}.jpg`,
   tex: (id: string) => `${BASE}assets/tex/${id}.png`,
 };
 

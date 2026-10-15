@@ -1,5 +1,6 @@
 // Persistent meta-progression: unlocks, codex discovery, achievements, settings.
 import type { RunState } from '../run/run.ts';
+import type { Rules, Teams } from '../classic/match.ts';
 import { PLAYABLE_MOBS } from '../data/mobs.ts';
 import { computeSynergies } from '../data/families.ts';
 import { mobDef } from '../data/mobs.ts';
@@ -27,7 +28,8 @@ export interface Profile {
   totalEmeralds: number;
   flags: Record<string, boolean>;
   achievements: Record<string, number>;
-  classic: { played: number; guesses: number; correct: number; streak: number; best: number };
+  /** 竞技场 (classic): series watched, predictions (one per series), correct calls on the underdog, two-player series. */
+  classic: { played: number; guesses: number; correct: number; streak: number; best: number; upsets?: number; duels?: number };
   history: HistoryEntry[];
   /** 2 once old unlock flags were carried over to the commander chain. */
   unlockV?: number;
@@ -61,6 +63,8 @@ export interface Settings {
   hints: boolean;
   /** Battlefield animation frames: high = 7 per mob, medium = 3, low = the card art alone. */
   frames: 'high' | 'medium' | 'low';
+  /** 竞技场: the last rules used and the last hand-picked squads (one player). */
+  classic?: { rules?: Partial<Rules>; lab?: Teams };
 }
 
 const PK = 'mca.profile.v1';
@@ -216,6 +220,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     ['cmd_all', '群英汇聚', '解锁全部统领。'],
     ['runs_10', '身经百战', '完成 10 局爬塔（胜负不限）。'],
     ['daily_1', '每日一塔', '完成一次每日挑战。'],
+    ['classic_decider', '巅峰对决', '在竞技场看完一场打满五局的五局三胜。'],
   ]),
   ...A('challenge', [
     ['elite5', '精英猎人', '单局击败 5 场精英战斗。'],
@@ -241,8 +246,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     ['omen4', '不祥之兆 IV', '在不祥之兆 IV 难度下通关。'],
     ['omen5', '不祥之兆 V', '在不祥之兆 V 难度下通关。'],
     ['omen5_all', '末日行者', '用每一位统领在不祥之兆 V 难度下通关。'],
-    ['classic_5', '神预言家', '经典对决中连续猜对 5 次。'],
-    ['classic_10', '未卜先知', '经典对决中连续猜对 10 次。'],
+    ['classic_5', '神预言家', '竞技场竞猜连续猜对 5 次。'],
+    ['classic_10', '未卜先知', '竞技场竞猜连续猜对 10 次。'],
+    ['classic_upset', '慧眼识珠', '竞技场竞猜押中赛前推演胜率不到 30% 的一方。'],
     ['daily_top10', '每日十强', '在至少 20 人参加的每日挑战中进入前 10 名。'],
   ]),
   ...A('collection', [
@@ -265,6 +271,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     ['night_owl', '夜猫子', '在凌晨 0 点到 5 点之间结束一局爬塔。', '屠龙不分昼夜。'],
     ['reach_sift', '裂隙另一边', '踏入第四幕：筛界。', '末影龙倒下之后，故事还没有结束。'],
     ['beat_sift', '筛界征服者', '在第四幕击败幽匿巨像。', '去裂隙的尽头看看。'],
+    ['classic_reverse', '让二追三', '竞技场五局三胜中，一方在 0 : 2 落后时连赢三局。', '0 : 2 落后，也别急着离场。'],
+    ['classic_gods', '神仙打架', '竞技场随机抽取时，红蓝双方都开出了罕见特殊（金色）生物。', '一方开出金色已经很难得了，如果两边都……'],
   ]),
 ];
 export const ACHIEVEMENT_MAP: Record<string, AchievementDef> = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

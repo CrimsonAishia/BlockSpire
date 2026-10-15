@@ -174,7 +174,8 @@ export function Codex() {
                   );
                 })}
                 <div class="es-row"><span>累计绿宝石</span><span class="em">{p.totalEmeralds}</span></div>
-                <div class="es-row"><span>经典对决竞猜</span><span>{p.classic.correct}/{p.classic.guesses}（最高连胜 {p.classic.best}）</span></div>
+                <div class="es-row"><span>竞技场</span><span>{p.classic.played} 场{p.classic.duels ? `（另有双人对战 ${p.classic.duels} 场）` : ''}</span></div>
+                <div class="es-row"><span>竞技场竞猜</span><span>{p.classic.correct}/{p.classic.guesses}（最高连胜 {p.classic.best}{p.classic.upsets ? ` · 爆冷命中 ${p.classic.upsets}` : ''}）</span></div>
               </div>
               <div>
                 <div class="tp-sec">最近对局</div>
