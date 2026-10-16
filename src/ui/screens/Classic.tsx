@@ -431,7 +431,7 @@ function DeployBar(p: { name: string; side: 0 | 1; step: number; other: string; 
         第 {p.game} 局 · <b>{p.name}</b> 布阵（{p.step + 1}/2）
       </div>
       <div class="faint" style={{ fontSize: 14 }}>
-        把{p.side === 0 ? '蓝' : '红'}色区域里你的生物拖到想要的位置；拖动空白处旋转视角，滚轮缩放。
+        把{p.side === 0 ? '蓝' : '红'}色区域里你的生物拖到想要的位置。
         {p.step === 1 ? (p.second ? `上一局输了，你后布阵，可以针对${p.other}的站位。` : `你后布阵，可以针对${p.other}的站位。`) : `布完交给${p.other}。`}
       </div>
       <div class="row gap8 center">

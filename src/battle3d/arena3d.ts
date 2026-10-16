@@ -341,8 +341,14 @@ export class Arena3D {
   width = 1600;
   height = 900;
   dpr = 1;
-  // Camera state
-  cam = { yaw: 0, pitch: 0.66, dist: 31, x: 0, y: 0, z: 1, zoom: 1, userYaw: 0, userPitch: 0.66, mode: 'battle' as 'battle' | 'deploy', side: 0 as 0 | 1 };
+  // Camera state. It follows the fight (or the deploying side) until the player pans it: then `free`
+  // holds the focus at fx/fz and the distance at fdist until resetView().
+  cam = {
+    yaw: 0, pitch: 0.66, dist: 31, x: 0, y: 0, z: 1, zoom: 1, userYaw: 0, userPitch: 0.66, mode: 'battle' as 'battle' | 'deploy', side: 0 as 0 | 1,
+    free: false, fx: 0, fz: 0, fdist: 31, zs: 1, ease: 0,
+  };
+  /** Held keyboard pan direction (-1..1 each): x to the right, y forward, as seen from the camera. */
+  keyPan = { x: 0, y: 0 };
   deployGroup = new THREE.Group();
   hoverBox: THREE.LineSegments;
   private tmpV = new THREE.Vector3();
@@ -848,20 +854,19 @@ export class Arena3D {
     return this.b.terrain.h[cy * GW + cx];
   }
 
-  /** Tree tops over any part of the field with units under them fade almost clear. */
+  /** Tree tops over any part of the field with units under them fade almost clear (also while deploying). */
   private fadeCanopies(dt: number) {
     for (const c of this.world.canopies) {
       let busy = false;
-      if (this.cam.mode === 'battle')
-        for (const u of this.b.units) {
-          if (!u.alive) continue;
-          const cx = u.x / BLOCK;
-          if (cx >= c.x0 && cx < c.x1) {
-            busy = true;
-            break;
-          }
+      for (const u of this.b.units) {
+        if (!u.alive) continue;
+        const cx = u.x / BLOCK;
+        if (cx >= c.x0 && cx < c.x1) {
+          busy = true;
+          break;
         }
-      const want = busy ? 0.1 : 0.4;
+      }
+      const want = busy ? 0.12 : 0.4;
       c.mat.opacity += (want - c.mat.opacity) * Math.min(1, dt * 4);
     }
   }
@@ -1019,7 +1024,8 @@ export class Arena3D {
     this.syncTerrain(dt);
     this.world.update(dt);
     this.fadeCanopies(dt);
-    this.updateCamera(dt, alpha);
+    // Real time: the camera keeps moving while paused and isn't sped up by the battle speed.
+    this.updateCamera(real, alpha);
     this.updateUnits(alpha, dt);
     this.updateProjectiles(alpha);
     this.updateZones();
@@ -1035,11 +1041,20 @@ export class Arena3D {
 
   private updateCamera(dt: number, alpha: number) {
     const c = this.cam;
+    if (this.keyPan.x || this.keyPan.y) {
+      const v = c.dist * c.zs * 0.55 * dt;
+      this.move(this.keyPan.x * v, this.keyPan.y * v);
+    }
     let tx0 = 0;
     let tz0 = 0;
     let ty0 = 0.5;
     let dist = 31;
-    if (c.mode === 'deploy') {
+    if (c.free) {
+      tx0 = c.fx;
+      tz0 = c.fz;
+      ty0 = this.groundAt(c.fx, c.fz) + 0.6;
+      dist = c.fdist;
+    } else if (c.mode === 'deploy') {
       tx0 = c.side === 0 ? -8.5 : 8.5;
       tz0 = 0.8;
       ty0 = 0.5;
@@ -1069,12 +1084,15 @@ export class Arena3D {
         dist = Math.max(11, Math.min(31, span + 7));
       }
     }
-    dist *= c.zoom;
-    const f = Math.min(1, dt * (c.mode === 'deploy' ? 4 : 1.4));
+    // A panned camera tracks the player's hand closely; following eases in (faster right after a reset).
+    c.ease = Math.max(0, c.ease - dt);
+    const rate = c.free ? 14 : c.mode === 'deploy' || c.ease > 0 ? 4 : 1.4;
+    const f = Math.min(1, dt * rate);
     c.x += (tx0 - c.x) * f;
     c.z += (tz0 - c.z) * f;
-    c.y += (ty0 - c.y) * f;
+    c.y += (ty0 - c.y) * Math.min(1, dt * (c.free ? 5 : rate));
     c.dist += (dist - c.dist) * f;
+    c.zs += (c.zoom - c.zs) * Math.min(1, dt * 10);
     c.yaw += (c.userYaw - c.yaw) * Math.min(1, dt * 8);
     c.pitch += (c.userPitch - c.pitch) * Math.min(1, dt * 8);
     let sx = 0;
@@ -1085,17 +1103,27 @@ export class Arena3D {
       this.shake *= Math.exp(-dt * 10);
     } else this.shake = 0;
     const cp = Math.cos(c.pitch);
-    this.camera.position.set(c.x + Math.sin(c.yaw) * cp * c.dist + sx, c.y + Math.sin(c.pitch) * c.dist + sy, c.z + Math.cos(c.yaw) * cp * c.dist);
+    const d = c.dist * c.zs;
+    this.camera.position.set(c.x + Math.sin(c.yaw) * cp * d + sx, c.y + Math.sin(c.pitch) * d + sy, c.z + Math.cos(c.yaw) * cp * d);
     this.camera.lookAt(c.x + sx, c.y + sy, c.z);
+  }
+
+  /** Ground height (blocks) under a world point. */
+  private groundAt(x: number, z: number) {
+    const cx = Math.max(0, Math.min(GW - 1, Math.floor(x + GW / 2)));
+    const cy = Math.max(0, Math.min(GD - 1, Math.floor(z + GD / 2)));
+    return this.b.terrain.h[cy * GW + cx];
+  }
+
+  private defaultPitch() {
+    return this.cam.mode === 'deploy' ? 0.92 : 0.62;
   }
 
   setMode(mode: 'battle' | 'deploy') {
     this.cam.mode = mode;
-    this.cam.userPitch = mode === 'deploy' ? 0.92 : 0.62;
-    this.cam.userYaw = 0;
-    this.cam.zoom = 1;
     this.deployGroup.visible = mode === 'deploy';
     this.hoverBox.visible = false;
+    this.resetView();
   }
 
   orbit(dx: number, dy: number) {
@@ -1104,14 +1132,44 @@ export class Arena3D {
     c.userPitch = Math.max(0.28, Math.min(1.35, c.userPitch + dy * 0.005));
   }
 
-  zoomBy(k: number) {
-    this.cam.zoom = Math.max(0.5, Math.min(1.5, this.cam.zoom * k));
+  /** Drags the ground under the pointer by a screen delta (stage px), leaving follow mode. */
+  pan(dx: number, dy: number) {
+    const c = this.cam;
+    const perPx = (2 * c.dist * c.zs * Math.tan((this.camera.fov * Math.PI) / 360)) / this.height;
+    this.move(-dx * perPx, (dy * perPx) / Math.max(0.45, Math.sin(c.pitch)));
   }
 
+  /** Moves the camera focus along the ground (blocks): right and forward as seen from the camera. */
+  move(right: number, fwd: number) {
+    const c = this.cam;
+    if (!c.free) {
+      c.free = true;
+      c.fx = c.x;
+      c.fz = c.z;
+      c.fdist = c.dist;
+    }
+    c.fx = Math.max(-GW / 2 - 2, Math.min(GW / 2 + 2, c.fx + Math.cos(c.yaw) * right - Math.sin(c.yaw) * fwd));
+    c.fz = Math.max(-GD / 2 - 2, Math.min(GD / 2 + 2, c.fz - Math.sin(c.yaw) * right - Math.cos(c.yaw) * fwd));
+  }
+
+  zoomBy(k: number) {
+    this.cam.zoom = Math.max(0.45, Math.min(1.5, this.cam.zoom * k));
+  }
+
+  /** Back to the default angle, zoom and following the fight. */
   resetView() {
-    this.cam.userYaw = 0;
-    this.cam.userPitch = this.cam.mode === 'deploy' ? 0.92 : 0.62;
-    this.cam.zoom = 1;
+    const c = this.cam;
+    if (c.free) c.ease = 0.8;
+    c.free = false;
+    c.userYaw = 0;
+    c.userPitch = this.defaultPitch();
+    c.zoom = 1;
+  }
+
+  /** Whether the player has moved the camera away from the default view. */
+  viewChanged() {
+    const c = this.cam;
+    return c.free || Math.abs(c.zoom - 1) > 0.02 || Math.abs(c.userYaw) > 0.03 || Math.abs(c.userPitch - this.defaultPitch()) > 0.03;
   }
 
   private updateUnits(alpha: number, dt: number) {
@@ -1960,7 +2018,7 @@ export class Arena3D {
   setDeploySide(side: 0 | 1) {
     if (this.cam.side === side) return;
     this.cam.side = side;
-    this.cam.userYaw = 0;
+    this.resetView();
     this.showDeployZones();
   }
 
@@ -1988,10 +2046,16 @@ export class Arena3D {
     mk(0xff3b3b, GW - DEPLOY_COLS, GW, side === 1 ? 0.18 : 0.12);
   }
 
-  /** Terrain cell under a screen point (stage CSS px), or null. */
-  pickCell(px: number, py: number): { cx: number; cy: number; x: number; y: number } | null {
+  /**
+   * Terrain cell under a screen point (stage CSS px), or null. By default the ray goes through trees,
+   * fungi, pillars and other features to the ground behind them (what you aim at); `solid` stops at them.
+   */
+  pickCell(px: number, py: number, solid = false): { cx: number; cy: number; x: number; y: number } | null {
     const ndc = new THREE.Vector2((px / this.width) * 2 - 1, -(py / this.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
+    // Past the arena's far edge there is no ground behind: fall back to the feature in the way.
+    const ground = solid ? null : this.groundHit(this.raycaster.ray);
+    if (ground) return ground;
     const hit = this.raycaster.intersectObjects(this.world.terrainMeshes, false)[0];
     if (!hit) return null;
     const p = hit.point.clone().addScaledVector(hit.face?.normal ?? new THREE.Vector3(0, 1, 0), -0.01);
@@ -1999,6 +2063,61 @@ export class Arena3D {
     const cy = Math.floor(p.z + GD / 2);
     if (cx < 0 || cy < 0 || cx >= GW || cy >= GD) return null;
     return { cx, cy, x: (p.x + GW / 2) * BLOCK, y: (p.z + GD / 2) * BLOCK };
+  }
+
+  /** First arena cell whose ground column a ray meets, walking the grid cell by cell (features ignored). */
+  private groundHit(ray: THREE.Ray): { cx: number; cy: number; x: number; y: number } | null {
+    const h = this.b.terrain.h;
+    const o = ray.origin;
+    const d = ray.direction;
+    // Where the ray is over the arena rectangle.
+    let t = 0;
+    let tEnd = Infinity;
+    for (const [oc, dc, half] of [[o.x, d.x, GW / 2], [o.z, d.z, GD / 2]]) {
+      if (Math.abs(dc) < 1e-9) {
+        if (Math.abs(oc) > half) return null;
+        continue;
+      }
+      const a = (-half - oc) / dc;
+      const b = (half - oc) / dc;
+      t = Math.max(t, Math.min(a, b));
+      tEnd = Math.min(tEnd, Math.max(a, b));
+    }
+    if (t > tEnd) return null;
+    const at = (tt: number, cx: number, cy: number) => {
+      // Keep the point inside the cell (a side hit lies on its border).
+      const x = Math.min(cx + 0.999, Math.max(cx + 0.001, o.x + d.x * tt + GW / 2));
+      const y = Math.min(cy + 0.999, Math.max(cy + 0.001, o.z + d.z * tt + GD / 2));
+      return { cx, cy, x: x * BLOCK, y: y * BLOCK };
+    };
+    const enter = t + 1e-6;
+    let cx = Math.max(0, Math.min(GW - 1, Math.floor(o.x + d.x * enter + GW / 2)));
+    let cy = Math.max(0, Math.min(GD - 1, Math.floor(o.z + d.z * enter + GD / 2)));
+    const stepX = Math.sign(d.x);
+    const stepZ = Math.sign(d.z);
+    const dtX = Math.abs(1 / d.x);
+    const dtZ = Math.abs(1 / d.z);
+    let nextX = d.x > 0 ? (cx + 1 - GW / 2 - o.x) / d.x : d.x < 0 ? (cx - GW / 2 - o.x) / d.x : Infinity;
+    let nextZ = d.z > 0 ? (cy + 1 - GD / 2 - o.z) / d.z : d.z < 0 ? (cy - GD / 2 - o.z) / d.z : Infinity;
+    for (let n = 0; n < GW + GD + 2; n++) {
+      const top = h[cy * GW + cx];
+      // Entering the column below its top is a side hit; leaving it below the top crossed the top face.
+      if (o.y + d.y * t <= top) return at(t, cx, cy);
+      const out = Math.min(nextX, nextZ, tEnd);
+      if (o.y + d.y * out <= top) return at((top - o.y) / d.y, cx, cy);
+      if (out >= tEnd) return null;
+      if (nextX < nextZ) {
+        cx += stepX;
+        t = nextX;
+        nextX += dtX;
+      } else {
+        cy += stepZ;
+        t = nextZ;
+        nextZ += dtZ;
+      }
+      if (cx < 0 || cy < 0 || cx >= GW || cy >= GD) return null;
+    }
+    return null;
   }
 
   /** Nearest living unit of a team to a screen point within a radius. */

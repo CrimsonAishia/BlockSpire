@@ -398,11 +398,13 @@ export function buildWorld(t: Terrain): World {
         solid.box(x0 + 0.04, h, z0 + 0.04, x0 + 0.96, h + th, z0 + 0.96, { top: 'cactus_top', side: 'cactus_side' });
         break;
       case F.FUNGUS: {
+        // The wart cap is a canopy too, so it fades over the fight instead of hiding units under it.
+        const lg = grid.outer[i] ? solid : canopy;
         solid.box(x0 + 0.15, h, z0 + 0.15, x0 + 0.85, h + th, z0 + 0.85, { top: 'fungus_stem', side: 'fungus_stem' });
         for (let lz = -1; lz <= 1; lz++)
-          for (let lx = -1; lx <= 1; lx++) solid.box(x0 + lx, h + th, z0 + lz, x0 + lx + 1, h + th + 1, z0 + lz + 1, { top: 'wart', side: 'wart', bottom: 'wart' });
-        solid.box(x0, h + th + 1, z0, x0 + 1, h + th + 2, z0 + 1, { top: 'wart', side: 'wart' });
-        if (r > 0.4) solid.box(x0 - 1, h + th - 1, z0, x0, h + th, z0 + 1, { top: 'wart', side: 'wart', bottom: 'wart' });
+          for (let lx = -1; lx <= 1; lx++) lg.box(x0 + lx, h + th, z0 + lz, x0 + lx + 1, h + th + 1, z0 + lz + 1, { top: 'wart', side: 'wart', bottom: 'wart' });
+        lg.box(x0, h + th + 1, z0, x0 + 1, h + th + 2, z0 + 1, { top: 'wart', side: 'wart' });
+        if (r > 0.4) lg.box(x0 - 1, h + th - 1, z0, x0, h + th, z0 + 1, { top: 'wart', side: 'wart', bottom: 'wart' });
         break;
       }
       case F.BASALT_COL:
@@ -502,7 +504,8 @@ export function buildWorld(t: Terrain): World {
   const group = new THREE.Group();
   const solidMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
   const cutMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
-  const canopyMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true, alphaTest: 0.4, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
+  // alphaTest only cuts the leaf texture's holes: it is compared after opacity, so it must stay below the faded opacity.
+  const canopyMat = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true, alphaTest: 0.05, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
   interface Layer {
     solid: THREE.Mesh;
     cut: THREE.Mesh;

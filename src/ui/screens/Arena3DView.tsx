@@ -50,6 +50,13 @@ const inZone = (side: 0 | 1, cx: number) => (side === 0 ? cx < DEPLOY_COLS : cx 
 
 /** What a click on the battlefield will do. */
 type Aim = { k: 'item'; i: number } | { k: 'skill'; s: SkillKind } | null;
+/** Where an aimed item or skill would land: a battlefield point, or the enemy to tame. */
+type AimTarget = { x: number; y: number; unit?: NonNullable<ReturnType<Arena3D['pickUnit']>> };
+
+/** Keyboard camera pan: [right, forward] as seen from the camera. */
+const PAN_KEYS: Record<string, [number, number]> = {
+  KeyW: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0],
+};
 
 /** Hotbar entries for a commander skill. */
 const SKILL_SLOTS: Record<SkillId, SkillKind[]> = { build: ['wall', 'platform'], tame: ['tame'], golem: ['golem'], brew: [] };
@@ -113,6 +120,11 @@ export function Arena3DView({
   const [used, setUsed] = useState<boolean[]>([]);
   const [aim, setAim] = useState<Aim>(null);
   const [note, setNote] = useState<string | null>(null);
+  /** Touch controls (hints and two-tap aiming); follows the last pointer used on the battlefield. */
+  const [touchUI, setTouchUI] = useState(() => !!window.matchMedia?.('(pointer: coarse)').matches);
+  /** Touch aiming: a first tap placed the preview ring and waits for a confirming tap. */
+  const [pending, setPending] = useState(false);
+  const [camMoved, setCamMoved] = useState(false);
   const slots = [...items, ...temp];
   const skill = config.sides[0].skill;
   const skillKinds = skill ? SKILL_SLOTS[skill.id] : [];
@@ -128,7 +140,14 @@ export function Arena3DView({
     finished: false,
     max: [1, 1] as [number, number],
     drag: null as null | { uid: string; card: number; pos: [number, number] | null },
-    pointer: null as null | { x: number; y: number; moved: boolean; button: number },
+    /** The pressed pointer: where it was last (stage px) and where it went down (client px). */
+    pointer: null as null | { id: number; x: number; y: number; sx: number; sy: number; moved: boolean; button: number },
+    /** Fingers on the battlefield, and the two-finger gesture (spread and midpoint, stage px). */
+    touches: new Map<number, { x: number; y: number }>(),
+    pinch: null as null | { d: number; x: number; y: number; sx: number; sy: number; panning: boolean },
+    pending: null as AimTarget | null,
+    keys: new Set<string>(),
+    camMoved: false,
     lastPreview: 0,
     configKey,
     aim: null as Aim,
@@ -150,6 +169,8 @@ export function Arena3DView({
 
   const clearAim = () => {
     setAim(null);
+    R.current.pending = null;
+    setPending(false);
     const a = R.current.arena;
     if (!a) return;
     a.setAim(null);
@@ -221,17 +242,52 @@ export function Arena3DView({
   };
 
   // Number keys pick item slots, Q/E the commander skill; Esc cancels aiming.
+  // WASD / arrows pan the camera, Space puts it back to following the fight.
   useEffect(() => {
+    const c = R.current;
+    const syncPan = () => {
+      let x = 0;
+      let y = 0;
+      for (const k of c.keys) {
+        x += PAN_KEYS[k][0];
+        y += PAN_KEYS[k][1];
+      }
+      if (c.arena) c.arena.keyPan = { x: Math.sign(x), y: Math.sign(y) };
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return clearAim();
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (PAN_KEYS[e.code]) {
+        e.preventDefault();
+        c.keys.add(e.code);
+        return syncPan();
+      }
+      if (e.code === 'Space') {
+        // Also keeps Space from pressing a focused button.
+        e.preventDefault();
+        return c.arena?.resetView();
+      }
       const up = e.key.toUpperCase();
       const si = SKILL_KEYS.indexOf(up);
       if (si >= 0 && skillKinds[si]) return pickSkill(skillKinds[si]);
       const k = Number(e.key);
       if (k >= 1 && k <= slots.length) pickSlot(k - 1);
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (c.keys.delete(e.code)) syncPan();
+    };
+    const onBlur = () => {
+      c.keys.clear();
+      syncPan();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
   });
 
   // Stage-space pointer coordinates.
@@ -322,6 +378,11 @@ export function Arena3DView({
           }
         }
         arena.frame(c.fightStarted && !c.paused ? Math.min(1, acc / DT) : 1, c.fightStarted ? (c.paused ? 0 : dt * Math.min(c.speed, 2) * arena.timeScale()) : dt);
+        const moved = arena.viewChanged();
+        if (moved !== c.camMoved) {
+          c.camMoved = moved;
+          setCamMoved(moved);
+        }
         frames++;
         fpsT += dt;
         if (fpsT >= 0.5) {
@@ -398,34 +459,132 @@ export function Arena3DView({
     return () => timers.forEach(clearTimeout);
   }, [phase, ready]);
 
+  // ── aiming ──
+  /** What the current aim would hit under a stage point. */
+  const aimAt = (p: { x: number; y: number }): AimTarget | null => {
+    const c = R.current;
+    const a = c.arena;
+    if (!a || c.aim === null) return null;
+    if (c.aim.k === 'skill' && c.aim.s === 'tame') {
+      const u = a.pickUnit(p.x, p.y, 1, 60);
+      return u ? { x: u.x, y: u.y, unit: u } : null;
+    }
+    const cell = a.pickCell(p.x, p.y);
+    return cell ? { x: cell.x, y: cell.y } : null;
+  };
+
+  /** Preview ring (or wall cells) for a target; null hides it. */
+  const showAim = (t: AimTarget | null) => {
+    const c = R.current;
+    const a = c.arena;
+    const A = c.aim;
+    if (!a || A === null || !c.battle) return;
+    if (A.k === 'item') {
+      const id = slots[A.i];
+      const def = ITEM_MAP[id];
+      if (!t || !def) a.setAim(null);
+      else a.setAim(t, itemRadius(c.battle, 0, id), def.target !== 'own' || t.x < ARENA_W / 2, def.color);
+    } else if (A.s === 'wall' || A.s === 'platform') {
+      if (!t) a.setCells(null);
+      else {
+        const cells = buildCells(c.battle.terrain, 0, A.s, t.x, t.y);
+        let ok = cells.length > 0;
+        if (ok && A.s === 'wall') ok = !!applyBuild(cloneTerrain(c.battle.terrain), 0, 'wall', t.x, t.y);
+        a.setCells(cells.length ? cells : null, ok, A.s === 'wall' ? 2 : c.battle.has(0, 'obsidian') ? 2 : 1);
+      }
+    } else if (A.s === 'golem') {
+      if (!t) a.setAim(null);
+      else a.setAim(t, 1.2, t.x < ARENA_W / 2, '#e8e4dc');
+    } else if (A.s === 'tame') {
+      const u = t?.unit;
+      if (!u) a.setAim(null);
+      else a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), canTame(c.battle, 0, u), '#ff9a3d');
+    }
+  };
+
+  /** Uses the aimed item or skill on a target. */
+  const fireAim = (t: AimTarget | null) => {
+    const c = R.current;
+    const A = c.aim;
+    if (A === null || !c.battle) return;
+    if (A.k === 'skill' && A.s === 'tame') {
+      const u = t?.unit;
+      if (!u || !u.alive || !canTame(c.battle, 0, u)) return flash(u ? `${u.mob.name} 的生命还太高（门槛见按钮说明）` : '点一个敌人');
+      c.battle.useSkill(0, 'tame', 0, 0, u);
+      clearAim();
+      return;
+    }
+    if (!t) return;
+    if (A.k === 'item') useSlot(A.i, t.x, t.y);
+    else if (A.s === 'wall' || A.s === 'platform') doBuild(A.s, t.x, t.y);
+    else if (A.s === 'golem') {
+      if (!c.battle.useSkill(0, 'golem', t.x, t.y)) flash('只能召唤在我方半场');
+      else clearAim();
+    }
+  };
+
+  /** Touch has no hover: the first tap shows where it lands, a second tap inside the ring confirms. */
+  const tapAim = (p: { x: number; y: number }) => {
+    const c = R.current;
+    const A = c.aim;
+    const t = aimAt(p);
+    if (A === null) return;
+    if (A.k === 'skill' && A.s === 'tame') return fireAim(t);
+    const P = c.pending;
+    const reach = Math.max(1.5, A.k === 'item' && c.battle ? itemRadius(c.battle, 0, slots[A.i]) : 0) * BLOCK;
+    if (P && t && Math.hypot(t.x - P.x, t.y - P.y) <= reach) {
+      c.pending = null;
+      setPending(false);
+      return fireAim(P);
+    }
+    c.pending = t;
+    setPending(!!t);
+    showAim(t);
+  };
+
   // ── pointer input ──
+  // Mouse: left drag rotates, right or middle drag pans, wheel zooms, double click resets.
+  // Touch: one finger rotates, two fingers pan and pinch-zoom. A drag never uses an aimed item.
+  const pinchOf = (m: Map<number, { x: number; y: number }>) => {
+    const [a, b] = [...m.values()];
+    const x = (a.x + b.x) / 2;
+    const y = (a.y + b.y) / 2;
+    return { d: Math.hypot(a.x - b.x, a.y - b.y), x, y, sx: x, sy: y, panning: false };
+  };
+
   const onPointerDown = (e: PointerEvent) => {
     const c = R.current;
     const p = local(e);
-    if (c.aim !== null && c.arena) {
-      // Aiming: left click uses it, right click cancels.
-      if (e.button === 2) return clearAim();
-      if (e.button !== 0) return;
-      const A = c.aim;
-      if (A.k === 'skill' && A.s === 'tame') {
-        const u = c.arena.pickUnit(p.x, p.y, 1, 60);
-        if (!u || !c.battle || !canTame(c.battle, 0, u)) return flash(u ? `${u.mob.name} 的生命还太高（门槛见按钮说明）` : '点一个敌人');
-        c.battle.useSkill(0, 'tame', 0, 0, u);
-        clearAim();
+    const el = e.currentTarget as HTMLElement;
+    const capture = () => {
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* the pointer is already gone */
+      }
+    };
+    const touch = e.pointerType !== 'mouse';
+    if (touch !== touchUI) setTouchUI(touch);
+    if (e.button === 1) e.preventDefault();
+    if (touch) {
+      c.touches.set(e.pointerId, p);
+      if (c.touches.size >= 2) {
+        // Not while a finger drags a squad; a third finger is ignored.
+        if (c.drag || c.touches.size > 2) {
+          c.touches.delete(e.pointerId);
+          return;
+        }
+        c.pinch = pinchOf(c.touches);
+        c.pointer = null;
+        capture();
         return;
       }
-      const cell = c.arena.pickCell(p.x, p.y);
-      if (!cell) return;
-      if (A.k === 'item') useSlot(A.i, cell.x, cell.y);
-      else if (A.s === 'wall' || A.s === 'platform') doBuild(A.s, cell.x, cell.y);
-      else if (A.s === 'golem') {
-        if (!c.battle?.useSkill(0, 'golem', cell.x, cell.y)) flash('只能召唤在我方半场');
-        else clearAim();
-      }
-      return;
     }
-    c.pointer = { x: p.x, y: p.y, moved: false, button: e.button };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (c.pointer) return;
+    c.pointer = { id: e.pointerId, x: p.x, y: p.y, sx: e.clientX, sy: e.clientY, moved: false, button: e.button };
+    capture();
+    // Aiming acts on release, so dragging can still move the camera.
+    if (c.aim !== null) return;
     if (c.phase === 'deploy' && e.button === 0 && c.arena && onDeployMove) {
       const u = c.arena.pickUnit(p.x, p.y, c.side);
       if (u) {
@@ -444,46 +603,43 @@ export function Arena3DView({
     const a = c.arena;
     if (!a) return;
     const p = local(e);
-    if (c.aim !== null) {
-      const A = c.aim;
-      const cell = a.pickCell(p.x, p.y);
-      if (A.k === 'item') {
-        const id = slots[A.i];
-        const def = ITEM_MAP[id];
-        if (!cell || !def || !c.battle) a.setAim(null);
-        else a.setAim({ x: cell.x, y: cell.y }, itemRadius(c.battle, 0, id), def.target !== 'own' || cell.x < ARENA_W / 2, def.color);
-      } else if (A.s === 'wall' || A.s === 'platform') {
-        if (!cell || !c.battle) a.setCells(null);
-        else {
-          const cells = buildCells(c.battle.terrain, 0, A.s, cell.x, cell.y);
-          let ok = cells.length > 0;
-          if (ok && A.s === 'wall') ok = !!applyBuild(cloneTerrain(c.battle.terrain), 0, 'wall', cell.x, cell.y);
-          a.setCells(cells.length ? cells : null, ok, A.s === 'wall' ? 2 : c.battle.has(0, 'obsidian') ? 2 : 1);
-        }
-      } else if (A.s === 'golem') {
-        if (!cell) a.setAim(null);
-        else a.setAim({ x: cell.x, y: cell.y }, 1.2, cell.x < ARENA_W / 2, '#e8e4dc');
-      } else if (A.s === 'tame' && c.battle) {
-        const u = a.pickUnit(p.x, p.y, 1, 60);
-        if (!u) a.setAim(null);
-        else a.setAim({ x: u.x, y: u.y }, Math.max(0.8, (u.radius / BLOCK) * 1.6), canTame(c.battle, 0, u), '#ff9a3d');
+    if (c.touches.has(e.pointerId)) c.touches.set(e.pointerId, p);
+    if (c.pinch) {
+      if (c.touches.size === 2 && c.touches.has(e.pointerId)) {
+        const P = c.pinch;
+        const n = pinchOf(c.touches);
+        if (n.d > 0 && P.d > 0) a.zoomBy(P.d / n.d);
+        // Only a real two-finger drag pans (and stops following); a plain pinch just zooms.
+        if (P.panning) a.pan(n.x - P.x, n.y - P.y);
+        else if (Math.hypot(n.x - P.sx, n.y - P.sy) > 16) P.panning = true;
+        c.pinch = { ...n, sx: P.sx, sy: P.sy, panning: P.panning };
       }
-      if (!c.pointer) return;
+      return;
     }
-    if (c.pointer) {
-      const dx = p.x - c.pointer.x;
-      const dy = p.y - c.pointer.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) c.pointer.moved = true;
-      if (!c.drag) {
-        a.orbit(dx, dy);
-        c.pointer.x = p.x;
-        c.pointer.y = p.y;
-        return;
+    const mouse = e.pointerType === 'mouse';
+    const ptr = c.pointer?.id === e.pointerId ? c.pointer : null;
+    if (ptr && !ptr.moved && Math.hypot(e.clientX - ptr.sx, e.clientY - ptr.sy) > (mouse ? 5 : 10)) {
+      ptr.moved = true;
+      ptr.x = p.x;
+      ptr.y = p.y;
+    }
+    if (ptr && !c.drag) {
+      if (ptr.moved) {
+        if (ptr.button === 0) a.orbit(p.x - ptr.x, p.y - ptr.y);
+        else a.pan(p.x - ptr.x, p.y - ptr.y);
+        ptr.x = p.x;
+        ptr.y = p.y;
       }
+      if (c.aim !== null && mouse) showAim(aimAt(p));
+      return;
+    }
+    if (c.aim !== null) {
+      if (mouse) showAim(aimAt(p));
+      return;
     }
     if (c.phase !== 'deploy') return;
-    const cell = a.pickCell(p.x, p.y);
     if (c.drag) {
+      const cell = a.pickCell(p.x, p.y);
       if (!cell) return;
       const [x, y] = clampToDeploy(c.side, cell.x, cell.y);
       const ok = inZone(c.side, cell.cx) && !isBlocked(terrain, cell.cx, cell.cy);
@@ -502,6 +658,8 @@ export function Arena3DView({
       }
       return;
     }
+    // Terrain info stops at trees and walls, so hovering one describes it.
+    const cell = a.pickCell(p.x, p.y, true);
     if (cell) {
       a.setHover(cell, inZone(c.side, cell.cx));
       const i = cell.cy * GW + cell.cx;
@@ -527,8 +685,23 @@ export function Arena3DView({
     }
   };
 
-  const onPointerUp = (e: PointerEvent) => {
+  /** Pointer released (act) or cancelled by the browser (don't). */
+  const endPointer = (e: PointerEvent, act: boolean) => {
     const c = R.current;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (c.touches.delete(e.pointerId) && c.pinch) {
+      if (c.touches.size < 2) {
+        c.pinch = null;
+        // A finger left on the screen carries on rotating; it never counts as a tap.
+        const rest = [...c.touches.entries()][0];
+        c.pointer = rest ? { id: rest[0], x: rest[1].x, y: rest[1].y, sx: 0, sy: 0, moved: true, button: 0 } : null;
+      }
+      return;
+    }
     if (c.drag) {
       const d = c.drag;
       c.drag = null;
@@ -540,17 +713,23 @@ export function Arena3DView({
         onDeployMove?.(d.uid, d.pos);
       }
     }
+    const ptr = c.pointer?.id === e.pointerId ? c.pointer : null;
+    if (!ptr) return;
     c.pointer = null;
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
+    if (!act || ptr.moved || c.aim === null) return;
+    if (ptr.button === 2) return clearAim();
+    if (ptr.button !== 0) return;
+    const p = local(e);
+    if (e.pointerType === 'mouse') fireAim(aimAt(p));
+    else tapAim(p);
   };
 
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-    R.current.arena?.zoomBy(e.deltaY > 0 ? 1.08 : 0.93);
+    // Mouse wheels step ~100 px per notch; trackpad pinches (ctrlKey) send small deltas.
+    let d = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY;
+    if (e.ctrlKey) d *= 4;
+    R.current.arena?.zoomBy(Math.exp(Math.max(-300, Math.min(300, d)) * 0.0009));
   };
 
   const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
@@ -563,7 +742,9 @@ export function Arena3DView({
         ref={hostRef}
         onPointerDown={onPointerDown as never}
         onPointerMove={onPointerMove as never}
-        onPointerUp={onPointerUp as never}
+        onPointerUp={((e: PointerEvent) => endPointer(e, true)) as never}
+        onPointerCancel={((e: PointerEvent) => endPointer(e, false)) as never}
+        onMouseDown={(e) => e.button === 1 && e.preventDefault()}
         onPointerLeave={() => {
           R.current.arena?.setHover(null);
           setHover(null);
@@ -640,13 +821,22 @@ export function Arena3DView({
               跳过 ▶▶
             </button>
           </div>
-          <div class="cam-hint">拖动旋转视角 · 滚轮缩放 · 双击复位</div>
         </>
+      )}
+      {ready && stage !== 'end' && (
+        <div class={`cam-bar ${fighting ? '' : 'deploy'}`}>
+          {camMoved && (
+            <button class="spd cam-reset" onClick={() => (sfx('click'), R.current.arena?.resetView())}>
+              ⟲ 复位视角{!touchUI && <span class="cam-key">空格</span>}
+            </button>
+          )}
+          <div class="cam-hint">{touchUI ? '单指拖动旋转 · 双指拖动平移 · 双指捏合缩放' : '左键拖动旋转 · 右键拖动 / WASD 平移 · 滚轮缩放'}</div>
+        </div>
       )}
       {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {!note && aim !== null && <div class="hb-hint">{aimHint(aim, slots, golemCost)}</div>}
+          {!note && aim !== null && <div class="hb-hint">{aimHint(aim, slots, golemCost, touchUI, pending)}</div>}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面（Q / E）</div>}
           <div class="hb-row">
             {skillKinds.length > 0 && (
@@ -741,20 +931,22 @@ export function Arena3DView({
   );
 }
 
-function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number) {
+function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, touch: boolean, pending: boolean) {
+  if (touch && pending) return '再点一次圈内确认 · 点别处换位置 · 再点按钮取消';
+  const cancel = touch ? '再点按钮取消' : '右键 / Esc 取消';
   if (aim.k === 'item') {
     const def = ITEM_MAP[slots[aim.i]];
-    return `点击战场投放「${def?.name}」${def?.target === 'own' ? '（只能放在我方半场）' : ''} · 右键 / Esc 取消`;
+    return `点击战场投放「${def?.name}」${def?.target === 'own' ? '（只能放在我方半场）' : ''} · ${cancel}`;
   }
   switch (aim.s) {
     case 'wall':
-      return '点击我方半场砌一道 3 格长的墙（绿色可建，红色不行）· 右键 / Esc 取消';
+      return `点击我方半场砌一道 3 格长的墙（绿色可建，红色不行）· ${cancel}`;
     case 'platform':
-      return '点击我方半场垫高一块 3×3 的土台（布阵时把远程拖上去）· 右键 / Esc 取消';
+      return `点击我方半场垫高一块 3×3 的土台（布阵时把远程拖上去）· ${cancel}`;
     case 'tame':
-      return '点击头顶有橙色爱心的敌人驯服它 · 右键 / Esc 取消';
+      return `点击头顶有橙色爱心的敌人驯服它 · ${cancel}`;
     case 'golem':
-      return `点击我方半场召唤铁傀儡${golemCost ? `（战后支付 ${golemCost} 绿宝石）` : ''} · 右键 / Esc 取消`;
+      return `点击我方半场召唤铁傀儡${golemCost ? `（战后支付 ${golemCost} 绿宝石）` : ''} · ${cancel}`;
   }
 }
 

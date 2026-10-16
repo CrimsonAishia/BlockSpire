@@ -335,14 +335,35 @@
   color: #ddd;
   background: #0b090e;
 }
-.cam-hint {
+.cam-bar {
   position: absolute;
   right: 16px;
   top: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+/* Deploying: above the side panels (top 150px). */
+.cam-bar.deploy {
+  top: 72px;
+}
+.cam-reset {
+  pointer-events: auto;
+  color: #fff;
+}
+.cam-key {
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  box-shadow: 0 0 0 1px #4a4452;
+}
+.cam-hint {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.55);
   text-shadow: 1px 1px 0 #000;
-  pointer-events: none;
 }
 .terrain-tip {
   position: absolute;

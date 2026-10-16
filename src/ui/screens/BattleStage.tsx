@@ -189,7 +189,7 @@ function DeployHud({
           {s.potions.length > 0 && <span class="faint" style={{ fontSize: 13 }}>开战后在下方物品栏使用</span>}
         </div>
         <div class="dh-hint">
-          拖动我方生物到 <b class="blue-t">蓝色区域</b> 布阵 · 拖动空白处旋转视角 · 滚轮缩放
+          拖动我方生物到 <b class="blue-t">蓝色区域</b> 布阵
         </div>
         <Tip
           content={() => (
