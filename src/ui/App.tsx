@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
-import { screen, stageScale, overlay, toasts, settings, go, getRun, runVersion } from './store.ts';
+import { screen, stageScale, stageSize, compact, overlay, toasts, settings, go, getRun, runVersion } from './store.ts';
 import { reloadForUpdate, updateReady } from './update.ts';
 import { TooltipLayer } from './components/common.tsx';
+import { FullscreenButton, canFullscreen } from './components/fullscreen.tsx';
 import { Title } from './screens/Title.tsx';
 import { NewRun } from './screens/NewRun.tsx';
 import { RunView } from './screens/RunView.tsx';
@@ -19,19 +20,61 @@ import { setVolumes, unlockAudio } from '../audio/audio.ts';
 const W = 1600;
 const H = 900;
 
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/**
+ * Fits the stage to the window. Phones, tablets and very small windows get a smaller design canvas
+ * (down to 1280×600, matching the screen's shape) so the UI renders larger, plus the compact styles.
+ */
 function useStageScale() {
-  const [layout, setLayout] = useState({ s: 1, x: 0, y: 0 });
+  const [layout, setLayout] = useState({ s: 1, x: 0, y: 0, portrait: false });
   useEffect(() => {
+    const coarse = window.matchMedia?.('(pointer: coarse)');
     const fit = () => {
-      const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-      setLayout({ s, x: (window.innerWidth - W * s) / 2, y: (window.innerHeight - H * s) / 2 });
+      // A phone's on-screen keyboard shrinks the window: keep the layout while typing.
+      if (compact.value && document.activeElement?.matches('input, textarea')) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const small = vh < 560 || vw < 900 || (!!coarse?.matches && Math.min(vw, vh) < 820);
+      let w = W;
+      let h = H;
+      if (small) {
+        // Aim for ~0.6 CSS px per stage px; in portrait, size it for the landscape it should be turned to.
+        const [lw, lh] = vw >= vh ? [vw, vh] : [vh, vw];
+        w = clamp(Math.round(lw / 0.6), 1280, W);
+        h = clamp(Math.round((w * lh) / lw), 600, H);
+      }
+      const s = Math.min(vw / w, vh / h);
+      setLayout({ s, x: (vw - w * s) / 2, y: (vh - h * s) / 2, portrait: small && vh > vw });
+      stageSize.value = { w, h };
+      compact.value = small;
       stageScale.value = s;
     };
+    // After typing, once the keyboard has closed (or focus moved to another field).
+    const refit = () => setTimeout(fit, 250);
     fit();
     window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
+    window.addEventListener('focusout', refit);
+    coarse?.addEventListener?.('change', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('focusout', refit);
+      coarse?.removeEventListener?.('change', fit);
+    };
   }, []);
   return layout;
+}
+
+/** Phones held upright: the game is landscape only. */
+function RotateHint() {
+  return (
+    <div class="rotate-hint">
+      <div class="rotate-phone" />
+      <div class="rotate-text">请把手机横过来玩</div>
+      <div class="rotate-sub">方块尖塔是横屏游戏</div>
+      {canFullscreen() && <FullscreenButton label="全屏并横屏" />}
+    </div>
+  );
 }
 
 function Boot() {
@@ -117,8 +160,13 @@ export function App() {
     default:
       body = <Title />;
   }
+  const size = stageSize.value;
   return (
-    <div class="stage" style={{ transform: `translate(${layout.x}px, ${layout.y}px) scale(${layout.s})`, left: 0, top: 0 }}>
+    <>
+    <div
+      class={`stage ${compact.value ? 'compact' : ''}`}
+      style={{ transform: `translate(${layout.x}px, ${layout.y}px) scale(${layout.s})`, left: 0, top: 0, width: size.w, height: size.h }}
+    >
       {body}
       {overlay.value === 'settings' && <SettingsModal />}
       {updateReady.value && <UpdateTip />}
@@ -132,6 +180,8 @@ export function App() {
       <TooltipLayer />
       {settings.value.fps && <div id="fps" class="fps" />}
     </div>
+    {layout.portrait && <RotateHint />}
+    </>
   );
 }
 

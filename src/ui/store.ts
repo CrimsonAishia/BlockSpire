@@ -38,6 +38,12 @@ export function hideTips() {
   tooltip.value = null;
 }
 export const stageScale = signal(1);
+/**
+ * Design resolution of the stage: 1600×900, smaller on phones and tablets so everything renders larger
+ * (see App). `compact` is set on those screens: bigger small text, touch-friendly sizes.
+ */
+export const stageSize = signal({ w: 1600, h: 900 });
+export const compact = signal(false);
 
 /** Set while a backup import replaces the stored data: nothing may write over it before the reload. */
 let frozen = false;

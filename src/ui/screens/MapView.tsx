@@ -9,7 +9,7 @@ import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
 import { sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
-import { overlay } from '../store.ts';
+import { overlay, stageSize } from '../store.ts';
 import { Hint } from '../components/hints.tsx';
 import { RichText } from '../components/rich.tsx';
 import type { Family } from '../../core/types.ts';
@@ -27,7 +27,10 @@ export const NODE_INFO: Record<NodeType, { name: string; desc: string; icon: str
 
 const ROW_H = 104;
 const COL_W = 128;
-const MAP_LEFT = 340;
+/** Space the side panels take (left panel, right panel, edge room for the outer nodes). */
+const SIDE_L = 318;
+const SIDE_R = 348;
+const EDGE = 104;
 const ACT_TEX = ['', 'dirt', 'netherrack', 'endstone', 'sift'];
 
 export function MapView({ s }: { s: RunState; v?: number }) {
@@ -35,8 +38,12 @@ export function MapView({ s }: { s: RunState; v?: number }) {
   const nodes = Object.values(s.map.nodes);
   const avail = new Set(availableNodes(s).map((n) => n.id));
   const H = (s.map.rows + 1) * ROW_H + 180;
+  // The columns sit centred between the side panels, closer together on a narrow (compact) stage.
+  const W = stageSize.value.w;
+  const colW = Math.min(COL_W, (W - SIDE_L - SIDE_R - EDGE) / 6);
+  const mid = (SIDE_L + W - SIDE_R) / 2;
   const pos = (n: MapNode) => ({
-    x: MAP_LEFT + n.x * COL_W + 60,
+    x: mid + (n.x - 3) * colW,
     y: H - 110 - n.row * ROW_H - (n.type === 'boss' ? 40 : 0),
   });
   const curRow = s.nodeId ? s.map.nodes[s.nodeId].row : -1;
@@ -58,7 +65,7 @@ export function MapView({ s }: { s: RunState; v?: number }) {
       <div class="map-shade" />
       <div class="map-scroll" ref={scroller}>
         <div class="map-canvas" style={{ height: H }}>
-          <svg class="map-svg" width={1600} height={H}>
+          <svg class="map-svg" width={W} height={H}>
             {nodes.flatMap((n) =>
               n.next.map((id) => {
                 const a = pos(n);

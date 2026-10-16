@@ -1,0 +1,470 @@
+/* ───────── Compact layout: phones and tablets (stage.compact, see App) ─────────
+   The stage is a smaller design canvas there (down to 1280×600), so these rules make room for
+   the larger text (generated in compactText.ts) and give touch-sized targets. */
+
+/* Portrait phones: ask to rotate. */
+.rotate-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: radial-gradient(ellipse at center, #1d1724 0%, #070609 80%);
+  color: var(--ink);
+  font-family: var(--font);
+  text-align: center;
+}
+.rotate-phone {
+  width: 54px;
+  height: 92px;
+  border: 4px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: inset 0 -10px 0 -6px var(--ink);
+  animation: rotate-phone 2.4s ease-in-out infinite;
+}
+@keyframes rotate-phone {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  50%,
+  80% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+.rotate-text {
+  font-family: var(--font-px);
+  font-size: 22px;
+}
+.rotate-sub {
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+.rotate-hint .fs-btn {
+  margin-top: 8px;
+  font-size: 16px;
+}
+
+/* Touch-sized buttons. */
+.stage.compact .mc-btn {
+  min-height: 60px;
+}
+.stage.compact .mc-btn.small {
+  min-height: 50px;
+  padding: 6px 18px;
+}
+.stage.compact .mc-btn.tiny {
+  min-height: 42px;
+  padding: 4px 14px;
+}
+.stage.compact .mc-btn.big {
+  min-height: 72px;
+}
+
+/* Tooltips can grow taller than a short stage: keep them on it and scroll. */
+.stage.compact .mc-tip {
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+}
+
+/* Title: smaller logo, two-column menu. */
+.stage.compact .title-left {
+  left: 56px;
+  top: 34px;
+  width: 700px;
+  gap: 8px;
+}
+.stage.compact .logo-main {
+  font-size: 72px;
+}
+.stage.compact .logo-sub {
+  font-size: 18px;
+  letter-spacing: 9px;
+}
+.stage.compact .splash {
+  top: 52px;
+  right: -110px;
+}
+.stage.compact .menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 700px;
+  gap: 10px;
+  margin-top: 4px;
+}
+.stage.compact .menu > .mc-btn:first-child,
+.stage.compact .menu-row {
+  grid-column: span 2;
+}
+.stage.compact .menu .mc-btn.big {
+  min-height: 66px;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.15;
+  padding: 6px 16px;
+}
+.stage.compact .menu-note {
+  margin-left: 0;
+}
+.stage.compact .menu-row .mc-btn.big {
+  flex-direction: row;
+}
+/* A tip opened by touch can be scrolled (touching elsewhere closes it). */
+.mc-tip.touch {
+  pointer-events: auto;
+}
+
+/* New run: smaller commander cards; the page scrolls and the buttons stay at the bottom. */
+.stage.compact .newrun-screen {
+  overflow-y: auto;
+  place-items: start center;
+}
+.stage.compact .newrun-inner {
+  gap: 10px;
+  padding-top: 12px;
+}
+.stage.compact .nr-title {
+  font-size: 34px;
+}
+.stage.compact .cmd-card {
+  width: 292px;
+  height: auto;
+  padding: 10px 14px 12px;
+}
+.stage.compact .cmd-card > img {
+  width: 92px;
+  height: 92px;
+}
+.stage.compact .newrun-inner > .row:last-child {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  justify-content: center;
+  padding: 14px 0 12px;
+  background: linear-gradient(transparent, rgba(8, 6, 12, 0.92) 45%);
+}
+
+/* Battle: the deploy title is wide here, so the camera hint sits lower on the right. */
+.stage.compact .cam-bar.deploy {
+  top: auto;
+  bottom: 124px;
+}
+.stage.compact .spd {
+  min-width: 58px;
+  height: 46px;
+}
+.stage.compact .cam-bar {
+  top: 122px;
+}
+.stage.compact .hb-slot {
+  width: 70px;
+  height: 70px;
+}
+.stage.compact .hb-slot img {
+  width: 52px;
+  height: 52px;
+}
+.stage.compact .hotbar {
+  bottom: 84px;
+}
+.stage.compact .hotbar.deploy {
+  bottom: 132px;
+}
+
+/* Choice screens (crates, relics, events...): the page scrolls, the buttons stay at the bottom. */
+.stage.compact .choice-screen {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.stage.compact .choice-head {
+  margin-top: 70px;
+}
+.stage.compact .choice-title {
+  font-size: 32px;
+}
+.stage.compact .choice-foot,
+.stage.compact .choice-foot.flow {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: auto;
+  padding: 16px 0 12px;
+  width: 100%;
+  justify-content: center;
+  background: linear-gradient(transparent, rgba(8, 6, 12, 0.92) 40%);
+}
+.stage.compact .crate-offers {
+  margin-top: 14px;
+  padding-bottom: 8px;
+}
+.stage.compact .co-art {
+  width: 96px;
+  height: 96px;
+}
+.stage.compact .co-desc {
+  min-height: 0;
+}
+
+/* Crate opening: smaller crate, full-width strip, the result card beside its text. */
+.stage.compact .crate-screen {
+  overflow-y: auto;
+}
+.stage.compact .crate-head {
+  margin-top: 12px;
+}
+.stage.compact .crate-title {
+  font-size: 32px;
+}
+.stage.compact .crate-ready {
+  gap: 10px;
+  margin-top: 0;
+}
+.stage.compact .crate-art {
+  width: 168px;
+  height: 168px;
+}
+.stage.compact .spinner {
+  align-self: stretch;
+  margin-top: 40px;
+}
+.stage.compact .spin-window {
+  width: 100%;
+}
+.stage.compact .reveal-body {
+  display: grid;
+  grid-template-columns: auto 560px;
+  column-gap: 36px;
+  row-gap: 10px;
+  align-items: center;
+  justify-items: center;
+}
+.stage.compact .reveal-body > * {
+  grid-column: 2;
+}
+.stage.compact .reveal-body > .reveal-card {
+  grid-column: 1;
+  grid-row: 1 / span 8;
+}
+.stage.compact .reveal-skill {
+  width: 560px;
+}
+
+/* Touch screens have no keyboard: hide the key hints. */
+@media (hover: none) {
+  .kbd,
+  .hb-key,
+  .kbd-only {
+    display: none;
+  }
+}
+
+/* Modals never outgrow the stage; long ones scroll. */
+.stage.compact .modal-back > * {
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 20px);
+  overflow: auto;
+}
+.stage.compact .modal {
+  max-height: calc(100% - 20px);
+}
+
+/* Team panel: fills the stage, the card area scrolls. */
+.stage.compact .team-panel {
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  overflow: hidden;
+}
+.stage.compact .team-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+.stage.compact .team-side {
+  width: 360px;
+}
+
+/* Shop: small villager, two columns of trades with room for their text; the left column scrolls. */
+.stage.compact .shop-screen {
+  gap: 16px;
+  padding: 70px 16px 10px;
+}
+.stage.compact .shop-left {
+  width: 270px;
+  flex-shrink: 0;
+  gap: 10px;
+  overflow-y: auto;
+}
+.stage.compact .shop-villager {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+}
+.stage.compact .shop-items {
+  grid-template-columns: 1fr 1fr;
+}
+.stage.compact .trade-sub {
+  max-height: 48px;
+}
+
+/* Rest: smaller fire and option art. */
+.stage.compact .rest-screen {
+  padding-top: 66px;
+  gap: 8px;
+  overflow-y: auto;
+}
+.stage.compact .campfire img {
+  width: 96px;
+  height: 96px;
+}
+.stage.compact .rest-opts {
+  margin: 8px 0;
+}
+.stage.compact .rest-opt {
+  padding: 12px 14px;
+}
+.stage.compact .rest-opt img {
+  width: 64px;
+  height: 64px;
+}
+
+/* Settings toggles and the HUD's icon buttons at finger size. */
+.stage.compact .toggle {
+  min-width: 64px;
+  min-height: 44px;
+}
+.stage.compact .mc-btn.icon-btn {
+  width: 56px;
+  min-height: 0;
+  height: 50px;
+}
+.stage.compact .mc-range {
+  height: 40px;
+}
+
+/* Full-screen panels sized for 1600×900 fill the smaller stage instead (a definite grid row
+   lets their percentage height resolve against the screen, not their content). */
+.stage.compact .codex-screen,
+.stage.compact .lb-screen {
+  grid-template-rows: minmax(0, 1fr);
+}
+.stage.compact .codex-inner,
+.stage.compact .lb-inner {
+  width: calc(100% - 24px);
+  height: calc(100% - 20px);
+}
+.stage.compact .codex-title {
+  font-size: 32px;
+}
+.stage.compact .pick-pool,
+.stage.compact .cmd-detail,
+.stage.compact .cl-games {
+  max-width: calc(100% - 24px);
+}
+.stage.compact .pick-pool {
+  width: calc(100% - 24px);
+}
+.stage.compact .event-panel {
+  max-height: calc(100% - 80px);
+}
+.stage.compact .end-screen {
+  overflow-y: auto;
+  place-items: start center;
+}
+.stage.compact .end-inner {
+  max-height: none;
+  padding: 10px 0 16px;
+}
+.stage.compact .end-title {
+  font-size: 52px;
+}
+.stage.compact .end-shade {
+  position: fixed;
+}
+.stage.compact .lb-side {
+  width: 400px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Arena screens: scroll, smaller headings and mode art; the main buttons stay at the bottom. */
+.stage.compact .classic-screen {
+  overflow-y: auto;
+  overflow-x: hidden;
+  place-items: start center;
+}
+.stage.compact .classic-inner {
+  gap: 10px;
+  padding-top: 10px;
+}
+.stage.compact .cl-title {
+  font-size: 34px;
+}
+.stage.compact .cl-mode {
+  height: 124px;
+}
+.stage.compact .cl-mode-text {
+  padding-top: 14px;
+}
+.stage.compact .classic-inner > .row.center:last-child,
+.stage.compact .end-inner > .row.center:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  justify-content: center;
+  padding: 14px 0 12px;
+  background: linear-gradient(transparent, rgba(8, 6, 12, 0.92) 45%);
+}
+.stage.compact .cl-teams,
+.stage.compact .pick-sides {
+  gap: 36px;
+}
+.stage.compact .cl-team {
+  width: 590px;
+}
+/* Picking: the two sides share the stage width; six cards fit in a row (or wrap on the narrowest stage). */
+.stage.compact .pick-sides {
+  width: calc(100% - 20px);
+}
+.stage.compact .pick-sides .cl-team {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  padding: 10px 6px;
+}
+.stage.compact .pick-row {
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.stage.compact .pick-lock {
+  min-height: 120px;
+}
+.stage.compact .pick-card > .row {
+  max-width: 100px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stage.compact .pick-card .pick-x {
+  padding: 5px 7px;
+}
+
+/* Team full: the new card is shown smaller so its button stays in view. */
+.stage.compact .decide-body {
+  margin-top: 14px;
+}
+.stage.compact .decide-new .mcard {
+  zoom: 0.72;
+}
+/* Deploy side panels: start higher and scroll instead of running under the bottom bar. */
+.stage.compact .dh-panel {
+  top: 118px;
+  max-height: calc(100% - 118px - 142px);
+  overflow-y: auto;
+}

@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { Btn, GitHubLink, Modal, Tip } from '../components/common.tsx';
-import { freezeStorage, overlay, settings, updateSettings } from '../store.ts';
+import { compact, freezeStorage, overlay, settings, updateSettings } from '../store.ts';
+import { FullscreenToggle } from '../components/fullscreen.tsx';
 import { wipeAll } from '../../meta/profile.ts';
 import { sfx } from '../../audio/audio.ts';
 import { resetHints } from '../components/hints.tsx';
@@ -118,6 +119,14 @@ export function SettingsModal() {
           </button>
         </div>
       </div>
+      {compact.value && document.fullscreenEnabled && (
+        <div class="set-row">
+          <span>
+            全屏<span class="faint" style={{ fontSize: 13 }}> · 隐藏浏览器地址栏，手机会锁定横屏</span>
+          </span>
+          <FullscreenToggle />
+        </div>
+      )}
       <div class="set-row">
         <span>
           开源项目<span class="faint" style={{ fontSize: 13 }}> · 欢迎 Star、反馈问题和贡献代码</span>
@@ -156,7 +165,7 @@ export function SettingsModal() {
           完成
         </Btn>
       </div>
-      <div class="faint" style={{ fontSize: 12, marginTop: 10 }}>
+      <div class="faint kbd-only" style={{ fontSize: 12, marginTop: 10 }}>
         快捷键：T 打开队伍 · 空格 开箱/继续 · Esc 关闭面板
       </div>
     </Modal>

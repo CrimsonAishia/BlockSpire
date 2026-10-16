@@ -47,6 +47,11 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* iOS: no "save image" sheet on a long press (long press shows tooltips). */
+  -webkit-touch-callout: none;
+  /* Phones: no pull-to-refresh or bounce when a scrolling panel hits its end, no double-tap zoom. */
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 button {

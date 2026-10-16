@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
+import { effect } from '@preact/signals';
 import { Battle, DT, type BattleConfig, type BattleResult } from '../../battle/sim.ts';
 import type { Arena3D } from '../../battle3d/arena3d.ts';
 import { BLOCK, DEPLOY_COLS, FEATURE_NAME, GW, SURFACE_INFO, applyBuild, buildCells, clampToDeploy, cloneTerrain, isBlocked, isIndestructible, type BuildOrder, type Terrain } from '../../battle/terrain.ts';
@@ -11,7 +12,7 @@ import { SKILL_INFO, type SkillId } from '../../data/commanders.ts';
 import { Emerald, PotionTipContent, Tip, itemIcon } from '../components/common.tsx';
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
-import { earnAchievement, settings, stageScale, updateSettings } from '../store.ts';
+import { earnAchievement, settings, stageScale, stageSize, updateSettings } from '../store.ts';
 import { reloadForUpdate } from '../update.ts';
 import { playMusic, sfx } from '../../audio/audio.ts';
 
@@ -318,7 +319,7 @@ export function Arena3DView({
         onEgg: (id) => setTimeout(() => earnAchievement(id), 600),
       });
       R.current.arena = arena;
-      arena.resize(1600, 900, stageScale.value);
+      arena.resize(stageSize.value.w, stageSize.value.h, stageScale.value);
       arena.setMode(phase === 'deploy' ? 'deploy' : 'battle');
       arena.setDeploySide(R.current.side);
       if (phase === 'deploy') arena.showDeployZones();
@@ -399,7 +400,12 @@ export function Arena3DView({
       console.error(e);
       if (!reloadForUpdate()) flash('战场加载失败，请刷新页面');
     });
-    const unsub = stageScale.subscribe((v) => R.current.arena?.resize(1600, 900, v));
+    // Follows window resizes (and the compact stage's size changing with them).
+    const unsub = effect(() => {
+      const { w, h } = stageSize.value;
+      const sc = stageScale.value;
+      R.current.arena?.resize(w, h, sc);
+    });
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
@@ -567,6 +573,9 @@ export function Arena3DView({
     if (touch !== touchUI) setTouchUI(touch);
     if (e.button === 1) e.preventDefault();
     if (touch) {
+      // A tapped terrain tip closes on the next touch.
+      setHover(null);
+      c.arena?.setHover(null);
       c.touches.set(e.pointerId, p);
       if (c.touches.size >= 2) {
         // Not while a finger drags a squad; a third finger is ignored.
@@ -658,6 +667,14 @@ export function Arena3DView({
       }
       return;
     }
+    terrainTip(p);
+  };
+
+  /** Deploying: what the terrain under a point does (on hover, or on a tap with touch). */
+  const terrainTip = (p: { x: number; y: number }) => {
+    const c = R.current;
+    const a = c.arena;
+    if (!a) return;
     // Terrain info stops at trees and walls, so hovering one describes it.
     const cell = a.pickCell(p.x, p.y, true);
     if (cell) {
@@ -716,7 +733,10 @@ export function Arena3DView({
     const ptr = c.pointer?.id === e.pointerId ? c.pointer : null;
     if (!ptr) return;
     c.pointer = null;
-    if (!act || ptr.moved || c.aim === null) return;
+    if (!act || ptr.moved) return;
+    // Touch has no hover: a tap on the ground while deploying shows what that terrain does.
+    if (c.aim === null && c.phase === 'deploy' && e.pointerType !== 'mouse') return terrainTip(local(e));
+    if (c.aim === null) return;
     if (ptr.button === 2) return clearAim();
     if (ptr.button !== 0) return;
     const p = local(e);
@@ -745,7 +765,9 @@ export function Arena3DView({
         onPointerUp={((e: PointerEvent) => endPointer(e, true)) as never}
         onPointerCancel={((e: PointerEvent) => endPointer(e, false)) as never}
         onMouseDown={(e) => e.button === 1 && e.preventDefault()}
-        onPointerLeave={() => {
+        onPointerLeave={(e: PointerEvent) => {
+          // A lifted finger "leaves" too; a tapped terrain tip stays until the next touch.
+          if (e.pointerType !== 'mouse') return;
           R.current.arena?.setHover(null);
           setHover(null);
         }}
@@ -754,7 +776,7 @@ export function Arena3DView({
       />
       {!ready && <div class="arena-loading blink">正在生成战场……</div>}
       {hover && !fighting && (
-        <div class="terrain-tip" style={{ left: Math.min(hover.x + 18, 1360), top: Math.min(hover.y + 18, 800) }}>
+        <div class="terrain-tip" style={{ left: Math.min(hover.x + 18, stageSize.value.w - 240), top: Math.min(hover.y + 18, stageSize.value.h - 100) }}>
           {hover.text.map((t, i) => (
             <div key={i} class={i === 0 ? 'tt-head' : ''}>
               {t}
@@ -837,7 +859,7 @@ export function Arena3DView({
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
           {!note && aim !== null && <div class="hb-hint">{aimHint(aim, slots, golemCost, touchUI, pending)}</div>}
-          {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面（Q / E）</div>}
+          {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面{touchUI ? '' : '（Q / E）'}</div>}
           <div class="hb-row">
             {skillKinds.length > 0 && (
               <div class="hb-skills">

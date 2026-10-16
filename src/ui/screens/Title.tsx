@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'preact/hooks';
 import { url } from '../assets.ts';
 import { Btn, GitHubLink } from '../components/common.tsx';
-import { go, overlay, profile, setRun } from '../store.ts';
+import { compact, go, overlay, profile, setRun } from '../store.ts';
+import { FullscreenButton } from '../components/fullscreen.tsx';
 import { loadRun } from '../../meta/profile.ts';
 import { playMusic } from '../../audio/audio.ts';
 import { PLAYABLE_MOBS } from '../../data/mobs.ts';
@@ -93,7 +94,10 @@ export function Title() {
           通关 {p.wins} / {p.runs} 局 · 图鉴 {found}/{PLAYABLE_MOBS.length} · 成就 {ach}/{ACHIEVEMENTS.length} · 最高分 {p.bestScore}
         </div>
       </div>
-      <GitHubLink label="GitHub 开源" class="title-gh" />
+      <div class="title-corner">
+        {compact.value && <FullscreenButton />}
+        <GitHubLink label="GitHub 开源" />
+      </div>
       <div class="title-foot faint">v1.0 · 非 Mojang 官方作品 · 美术由 AI 生成 · 字体 Fusion Pixel (OFL)</div>
     </div>
   );

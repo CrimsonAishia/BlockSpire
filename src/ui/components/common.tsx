@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, ComponentChildren, CSSProperties } from 'preact';
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import { sfx } from '../../audio/audio.ts';
-import { hideTips, stageScale, tipStack, tooltip } from '../store.ts';
+import { hideTips, stageScale, stageSize, tipStack, tooltip } from '../store.ts';
 import { url } from '../assets.ts';
 import { FAMILIES } from '../../data/families.ts';
 import type { Card, Family } from '../../core/types.ts';
@@ -79,6 +79,44 @@ let tipEl: HTMLDivElement | null = null;
 const tipAt = { x: 0, y: 0 };
 let tipSeq = 0;
 
+// Touch: there is no hover. A long press shows a tip (and swallows the tap it would have been);
+// a tap shows it too when the thing isn't a button. The next touch anywhere else closes it.
+let touchAt = -1e9;
+/** The tip shown by touch, and the one a touch just closed (so tapping it again toggles it off). */
+let touchTip = 0;
+let closedTip = 0;
+window.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (e.pointerType === 'mouse') return;
+    touchAt = performance.now();
+    closedTip = 0;
+    if (touchTip && !(e.target as Element | null)?.closest?.('.mc-tip')) {
+      closedTip = touchTip;
+      touchTip = 0;
+      hideTips();
+    }
+  },
+  true,
+);
+window.addEventListener('pointerup', (e) => e.pointerType !== 'mouse' && (touchAt = performance.now()), true);
+/** Mouse events the browser fakes after a touch. */
+const fromTouch = () => performance.now() - touchAt < 900;
+/** Nested tips see the same event: only the innermost one handles it. */
+const claim = (e: Event) => {
+  const ev = e as Event & { tipClaimed?: boolean };
+  if (ev.tipClaimed) return false;
+  ev.tipClaimed = true;
+  return true;
+};
+/** Whether a tap lands on something that does its own thing (a button, a clickable card...). */
+function interactive(el: Element | null) {
+  for (; el && !el.classList.contains('stage'); el = el.parentElement) {
+    if (/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || getComputedStyle(el).cursor === 'pointer') return true;
+  }
+  return false;
+}
+
 function placeTip() {
   const el = tipEl;
   if (!el) return;
@@ -86,8 +124,9 @@ function placeTip() {
   const h = el.offsetHeight;
   let x = tipAt.x + 18;
   let y = tipAt.y + 18;
-  if (x + w > 1590) x = Math.max(8, tipAt.x - w - 14);
-  if (y + h > 890) y = Math.max(8, 890 - h);
+  const { w: sw, h: sh } = stageSize.value;
+  if (x + w > sw - 10) x = Math.max(8, tipAt.x - w - 14);
+  if (y + h > sh - 10) y = Math.max(8, sh - 10 - h);
   el.style.left = `${x}px`;
   el.style.top = `${y}px`;
 }
@@ -110,30 +149,74 @@ export function Tip({ content, children, class: cls, style }: { content: () => C
   if (!id.current) id.current = ++tipSeq;
   const latest = useRef(content);
   latest.current = content;
+  const press = useRef<{ timer: number; x: number; y: number; shown: boolean } | null>(null);
   useEffect(
     () => () => {
+      if (press.current) clearTimeout(press.current.timer);
       if (dropTip(id.current)) showTop();
     },
     [],
   );
+  const show = (p: { x: number; y: number }, touch: boolean) => {
+    Object.assign(tipAt, p);
+    dropTip(id.current);
+    tipStack.push({ id: id.current, content: () => latest.current() });
+    if (touch) {
+      // Only this tip: an outer card's tip would otherwise show instead of the keyword pressed.
+      tipStack.splice(0, tipStack.length - 1);
+      touchTip = id.current;
+    }
+    showTop();
+  };
+  const cancelPress = () => {
+    if (press.current && !press.current.shown) clearTimeout(press.current.timer);
+  };
   return (
     <div
       class={cls}
       style={style}
       onMouseEnter={(e) => {
-        Object.assign(tipAt, stagePoint(e as MouseEvent));
-        dropTip(id.current);
-        tipStack.push({ id: id.current, content: () => latest.current() });
-        showTop();
+        if (!fromTouch()) show(stagePoint(e as MouseEvent), false);
       }}
       onMouseMove={(e) => {
+        if (fromTouch()) return;
         Object.assign(tipAt, stagePoint(e as MouseEvent));
         placeTip();
       }}
       onMouseLeave={() => {
-        if (dropTip(id.current)) showTop();
+        if (!fromTouch() && dropTip(id.current)) showTop();
       }}
-      onClick={() => hideTips()}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'mouse' || !claim(e)) return;
+        const p = stagePoint(e as unknown as MouseEvent);
+        press.current = { x: e.clientX, y: e.clientY, shown: false, timer: window.setTimeout(() => {
+          if (!press.current) return;
+          press.current.shown = true;
+          show(p, true);
+        }, 420) };
+      }}
+      onPointerMove={(e) => {
+        const P = press.current;
+        if (P && !P.shown && Math.hypot(e.clientX - P.x, e.clientY - P.y) > 10) cancelPress();
+      }}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onClickCapture={(e) => {
+        // The tap that ends a long press only shows the tip.
+        if (press.current?.shown) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
+      onClick={(e) => {
+        const longPress = !!press.current?.shown;
+        press.current = null;
+        if (longPress || !claim(e)) return;
+        if (!fromTouch()) return hideTips();
+        // A tap: buttons and clickable cards act as usual; anything else shows its tip (a second tap closes it).
+        if (interactive(e.target as Element) || closedTip === id.current) return hideTips();
+        show(stagePoint(e as MouseEvent), true);
+      }}
     >
       {children}
     </div>
@@ -150,7 +233,7 @@ export function TooltipLayer() {
       ref={(el) => {
         tipEl = el;
       }}
-      class="mc-tip"
+      class={`mc-tip ${touchTip ? 'touch' : ''}`}
       style={{ position: 'absolute' }}
     >
       {t.content}

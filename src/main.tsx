@@ -2,15 +2,20 @@ import { render } from 'preact';
 import './styles/main.css';
 import './styles/screens.css';
 import './styles/battle.css';
+import './styles/compact.css';
 import { App } from './ui/App.tsx';
 import { unlockAudio } from './audio/audio.ts';
 import { watchForUpdates } from './ui/update.ts';
+import { installCompactText } from './ui/compactText.ts';
 
+installCompactText();
 render(<App />, document.getElementById('app')!);
 watchForUpdates();
 
 // Prevent accidental browser zoom / context menu inside the game.
 window.addEventListener('contextmenu', (e) => e.preventDefault());
+// iOS Safari ignores user-scalable=no: stop pinch-zooming the page (the battlefield has its own pinch).
+document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 // Browsers require a user gesture before audio can play (and may suspend it later).
 for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => unlockAudio(), { passive: true });

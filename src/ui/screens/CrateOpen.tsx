@@ -118,7 +118,9 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
     const fast = settings.value.spin !== 'full';
     const dur = fast ? 2300 : 5600;
     const jitter = (Math.random() - 0.5) * (ITEM * 0.78);
-    const target = WIN_INDEX * STEP + ITEM / 2 - VIEW / 2 + jitter;
+    // The window is narrower on the compact (phone) stage.
+    const view = el.parentElement?.offsetWidth || VIEW;
+    const target = WIN_INDEX * STEP + ITEM / 2 - view / 2 + jitter;
     const t0 = performance.now();
     let lastIdx = -1;
     let raf = 0;
@@ -135,7 +137,7 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
       const t = Math.min(1, (now - t0) / dur);
       const pos = target * ease(t);
       el.style.transform = `translate3d(${-pos}px,0,0)`;
-      const idx = Math.floor((pos + VIEW / 2) / STEP);
+      const idx = Math.floor((pos + view / 2) / STEP);
       if (idx !== lastIdx) {
         lastIdx = idx;
         tickPitch(idx);
