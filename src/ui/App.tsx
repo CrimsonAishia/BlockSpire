@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { screen, stageScale, stageSize, compact, overlay, toasts, settings, go, getRun, runVersion } from './store.ts';
-import { reloadForUpdate, updateReady } from './update.ts';
+import { dismissUpdate, reloadForUpdate, updateDismissed, updateReady } from './update.ts';
 import { TooltipLayer } from './components/common.tsx';
 import { FullscreenButton, canFullscreen } from './components/fullscreen.tsx';
 import { Title } from './screens/Title.tsx';
@@ -189,13 +189,22 @@ export function App() {
 function UpdateTip() {
   runVersion.value;
   const sc = screen.value;
-  if (sc === 'boot' || sc === 'classic' || (sc === 'run' && getRun()?.queue[0]?.type === 'battle')) return null;
+  if (updateDismissed.value || sc === 'boot' || sc === 'classic' || (sc === 'run' && getRun()?.queue[0]?.type === 'battle')) return null;
   return (
     <div class="update-tip">
-      <span>游戏已更新到新版本</span>
-      <button class="mc-btn small green" onClick={() => reloadForUpdate()}>
-        刷新更新
-      </button>
+      <div class="update-tip-icon">📢</div>
+      <div class="update-tip-info">
+        <div class="update-tip-title">发现新版本</div>
+        <div class="update-tip-desc">游戏已更新，请刷新以获取最新内容</div>
+      </div>
+      <div class="row gap8">
+        <button class="mc-btn small green" onClick={() => reloadForUpdate()}>
+          立即刷新
+        </button>
+        <button class="mc-btn small" onClick={() => dismissUpdate()} title="稍后再说">
+          稍后再说
+        </button>
+      </div>
     </div>
   );
 }

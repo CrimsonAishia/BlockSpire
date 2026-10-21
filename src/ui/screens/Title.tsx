@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'preact/hooks';
 import { url } from '../assets.ts';
-import { Btn, GitHubLink } from '../components/common.tsx';
+import { Btn } from '../components/common.tsx';
 import { compact, go, overlay, profile, setRun } from '../store.ts';
 import { FullscreenButton } from '../components/fullscreen.tsx';
 import { loadRun } from '../../meta/profile.ts';
@@ -96,7 +96,7 @@ export function Title() {
       </div>
       <div class="title-corner">
         {compact.value && <FullscreenButton />}
-        <GitHubLink label="GitHub 开源" />
+
       </div>
       <div class="title-foot faint">v1.0 · 非 Mojang 官方作品 · 美术由 AI 生成 · 字体 Fusion Pixel (OFL)</div>
     </div>

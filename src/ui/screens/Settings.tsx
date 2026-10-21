@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Btn, GitHubLink, Modal, Tip } from '../components/common.tsx';
+import { Btn, GitHubLink, Modal, Tip, UPSTREAM_REPO_URL } from '../components/common.tsx';
 import { compact, freezeStorage, overlay, settings, updateSettings } from '../store.ts';
 import { FullscreenToggle } from '../components/fullscreen.tsx';
 import { wipeAll } from '../../meta/profile.ts';
@@ -129,9 +129,15 @@ export function SettingsModal() {
       )}
       <div class="set-row">
         <span>
-          开源项目<span class="faint" style={{ fontSize: 13 }}> · 欢迎 Star、反馈问题和贡献代码</span>
+          开源仓库<span class="faint" style={{ fontSize: 13 }}> · CrimsonAishia/BlockSpire</span>
         </span>
-        <GitHubLink />
+        <GitHubLink label="本仓库" />
+      </div>
+      <div class="set-row">
+        <span>
+          鸣谢原项目<span class="faint" style={{ fontSize: 13 }}> · 基于 BlockSpire (moonwesif) 二次开发</span>
+        </span>
+        <GitHubLink label="原版仓库" href={UPSTREAM_REPO_URL} />
       </div>
       <div class="divider" />
       <BackupRow onImport={() => setView('import')} onShowCode={(code) => setView({ code })} />

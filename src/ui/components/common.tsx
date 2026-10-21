@@ -38,14 +38,15 @@ export function Btn({ variant = '', size = '', wide, sound = 'click', class: cls
 }
 
 /** The game's source repository. */
-export const REPO_URL = 'https://github.com/moonwesif/BlockSpire';
+export const UPSTREAM_REPO_URL = 'https://github.com/moonwesif/BlockSpire';
+export const REPO_URL = 'https://github.com/CrimsonAishia/BlockSpire';
 
 /** A button-styled link to the GitHub repository (opens a new tab). */
-export function GitHubLink({ label = 'GitHub', size = 'small', class: cls }: { label?: string; size?: string; class?: string }) {
+export function GitHubLink({ label = 'GitHub', href = REPO_URL, size = 'small', class: cls }: { label?: string; href?: string; size?: string; class?: string }) {
   return (
     <a
       class={`mc-btn gh-btn ${size} ${cls ?? ''}`}
-      href={REPO_URL}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       title="在 GitHub 上查看源码"

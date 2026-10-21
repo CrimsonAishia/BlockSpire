@@ -7,10 +7,10 @@
   "homepage": "https://blockspire.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/moonwesif/BlockSpire.git"
+    "url": "git+https://github.com/CrimsonAishia/BlockSpire.git"
   },
   "bugs": {
-    "url": "https://github.com/moonwesif/BlockSpire/issues"
+    "url": "https://github.com/CrimsonAishia/BlockSpire/issues"
   },
   "type": "module",
   "engines": {
@@ -36,6 +36,7 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@plugin-web-update-notification/vite": "^2.1.2",
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.5",
     "@types/three": "^0.186.0",

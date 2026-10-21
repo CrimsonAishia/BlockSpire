@@ -961,7 +961,43 @@ a.mc-btn {
 }
 
 /* New deploy available (ui/update.ts). */
+.update-tip-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.update-tip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.update-tip-title {
+  font-family: var(--font-px);
+  color: var(--gold);
+  font-size: 15px;
+  line-height: 1.2;
+}
+.update-tip-desc {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.3;
+}
 .update-tip {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: rgba(22, 19, 27, 0.96);
+  box-shadow:
+    0 0 0 2px #000,
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(61, 220, 132, 0.5);
+  animation: screen-in 0.35s ease-out;
+}
+.update-tip-unused {
   position: absolute;
   left: 50%;
   top: 78px;
