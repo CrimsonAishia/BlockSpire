@@ -14,6 +14,7 @@ import { RichText } from '../components/rich.tsx';
 import { SynRow } from './BattleStage.tsx';
 import { profile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
+import { selfProfile } from '../../net/bakaboxBridge.ts';
 
 export type Guess = 0 | 1 | 'skip' | null;
 
@@ -50,6 +51,7 @@ interface Props {
 }
 
 export function ClassicMatch({ rules, teams, games, field, guess, odds, pull, supply, deployFirst, onField, onGuess, onFight, onPull, onReplay, onAgain, onSetup, onEdit, onTitle }: Props) {
+  const isLoggedIn = selfProfile.value ? selfProfile.value.isLoggedIn !== false : true;
   const names = rules.names;
   const bo = rules.bo;
   const won = seriesWinner(games, bo);
@@ -97,7 +99,11 @@ export function ClassicMatch({ rules, teams, games, field, guess, odds, pull, su
     const ok = guess === won;
     return (
       <div class={ok ? 'gold-t' : 'red-t'} style={{ fontSize: 22 }}>
-        {ok ? `猜对了！当前连胜 ${profile.value.classic.streak}` : `猜错了……你押的是${names[guess]}`}
+        {ok
+          ? isLoggedIn
+            ? `猜对了！当前连胜 ${profile.value.classic.streak}`
+            : `猜对了！当前连胜 ${profile.value.classic.streak}（未登录体验·不计天梯排名）`
+          : `猜错了……你押的是${names[guess]}`}
       </div>
     );
   };
@@ -113,6 +119,11 @@ export function ClassicMatch({ rules, teams, games, field, guess, odds, pull, su
           <span class="cl-format">{BO_NAME[bo] ?? `${bo} 局`}</span>
           {decider && <span class="cl-decider blink">决胜局！</span>}
           {guessLine()}
+          {!isLoggedIn && (
+            <div class="faint" style={{ fontSize: 13, color: '#f59e0b', marginTop: 4 }}>
+              💡 当前为未登录体验状态 · 对战与连胜不计入全服排位天梯
+            </div>
+          )}
         </div>
         {bo > 1 && (
           <div class="cl-score">

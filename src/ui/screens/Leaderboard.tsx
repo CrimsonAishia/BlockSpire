@@ -79,12 +79,13 @@ function progressText(e: Pick<BoardEntry, 'won' | 'act' | 'floor'>) {
 }
 
 export function Leaderboard() {
-  // 游客模式直接拦截并重定向
+  // 必须在宿主环境（BakaBox）内运行
   if (!isHostConnected.value) {
     go('title');
     return null;
   }
 
+  const isLoggedIn = selfProfile.value ? selfProfile.value.isLoggedIn !== false : true;
   const [tab, setTab] = useState<BoardId>(lbTab.value);
   const [data, setData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +161,11 @@ export function Leaderboard() {
                   今日最好 <b class="gold-t">{daily.best ?? '—'}</b>
                 </span>
               </div>
+              {!isLoggedIn && (
+                <div class="faint" style={{ fontSize: 13, color: '#f59e0b', marginBottom: 10 }}>
+                  💡 当前为未登录体验状态：可正常游玩每日挑战，但对局成绩不会上传至今日榜单。
+                </div>
+              )}
               {daily.status === 'ready' && (
                 <Btn variant="gold" size="big" wide onClick={start}>
                   {daily.tries ? `开始第 ${daily.tries + 1} 次挑战` : '开始今日挑战'}
@@ -211,7 +217,11 @@ export function Leaderboard() {
             {!loading && data && (
               <div class="lb-foot">
                 <span class="faint">共 {data.total} 人上榜</span>
-                {data.me ? (
+                {!isLoggedIn ? (
+                  <span class="faint" style={{ color: '#f59e0b' }}>
+                    当前为未登录体验模式：成绩不计入全服榜单（请在 BakaBox 大厅登录后参与竞逐）
+                  </span>
+                ) : data.me ? (
                   <span>
                     我的排名：<b class="gold-t">第 {data.me.rank} 名</b> · 得分 {data.me.score}
                   </span>
@@ -273,6 +283,7 @@ function Row({ e }: { e: BoardEntry }) {
 
 /** 当前登录玩家的身份卡片（只读展示真实头像与昵称，无需手动填写） */
 export function NicknamePanel() {
+  const isLoggedIn = selfProfile.value ? selfProfile.value.isLoggedIn !== false : true;
   const name = selfProfile.value?.username || profile.value.nickname || '冒险家史蒂夫';
   const avatar = selfProfile.value?.avatar || 'steve';
   const uid = selfProfile.value?.uid ? `#${String(selfProfile.value.uid).slice(-4)}` : '';
@@ -296,13 +307,15 @@ export function NicknamePanel() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div class="row gap8" style={{ alignItems: 'center', gap: 8 }}>
             <span class="lbn-name" style={{ fontSize: 18, color: 'var(--ink)' }}>{name}</span>
-            <span class="my-tag-pill">我</span>
+            <span class="my-tag-pill">{isLoggedIn ? '我' : '未登录体验'}</span>
           </div>
           {uid && <span class="faint" style={{ fontSize: 12 }}>{uid}</span>}
         </div>
       </div>
-      <div class="faint" style={{ fontSize: 13, marginTop: 10 }}>
-        已绑定当前登录账号，排行榜成绩将自动以此身份公开展示。
+      <div class="faint" style={{ fontSize: 13, marginTop: 10, color: isLoggedIn ? undefined : '#f59e0b' }}>
+        {isLoggedIn
+          ? '已绑定当前登录账号，排行榜成绩将自动以此身份公开展示。'
+          : '当前尚未登录账号，对局仅作单机体验，成绩不计入排行榜。登录后即可参与全服排名！'}
       </div>
     </div>
   );

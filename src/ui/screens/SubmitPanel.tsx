@@ -30,6 +30,7 @@ function getAvatarUrl(avatar?: string) {
 
 /** End screen: send the run to the leaderboard if the player wants to. */
 export function SubmitPanel({ s, won }: { s: RunState; won: boolean }) {
+  const isLoggedIn = selfProfile.value ? selfProfile.value.isLoggedIn !== false : true;
   const name = selfProfile.value?.username || profile.value.nickname || '冒险家';
   const userAvatar = selfProfile.value?.avatar || s.commander || 'steve';
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,10 @@ export function SubmitPanel({ s, won }: { s: RunState; won: boolean }) {
   const [res, setRes] = useState<SubmitResult | null>(null);
 
   const send = () => {
+    if (!isLoggedIn) {
+      setMsg('未登录用户无法上传成绩至排行榜，请在 BakaBox 大厅登录后重试');
+      return;
+    }
     setBusy(true);
     setMsg(null);
     submitRun(runSummary(s, won), name, userAvatar)
@@ -74,10 +79,17 @@ export function SubmitPanel({ s, won }: { s: RunState; won: boolean }) {
   return (
     <div class="end-submit">
       <div class="es-head">
-        {s.daily ? '提交每日挑战成绩（取今天最好的一次）' : '上传到排行榜'}
+        {s.daily
+          ? isLoggedIn
+            ? '提交每日挑战成绩（取今天最好的一次）'
+            : '每日挑战结算（未登录体验）'
+          : isLoggedIn
+            ? '上传到排行榜'
+            : '上传到排行榜（未登录体验）'}
         <span class="faint" style={{ fontSize: 14 }}>
-          {' '}
-          · 已绑定当前登录身份，点击即可一键上传
+          {isLoggedIn
+            ? ' · 已绑定当前登录身份，点击即可一键上传'
+            : ' · 当前为未登录状态，成绩不上榜'}
         </span>
       </div>
       <div class="row between" style={{ alignItems: 'center', marginTop: 4 }}>
@@ -93,12 +105,23 @@ export function SubmitPanel({ s, won }: { s: RunState; won: boolean }) {
             }}
           />
           <span style={{ fontSize: 17, color: 'var(--ink)' }}>{name}</span>
-          <span class="my-tag-pill">我</span>
+          <span class="my-tag-pill">{isLoggedIn ? '我' : '未登录体验'}</span>
         </div>
-        <Btn variant="gold" size="big" onClick={send} disabled={busy}>
-          {busy ? '上传中……' : '上传成绩'}
-        </Btn>
+        {isLoggedIn ? (
+          <Btn variant="gold" size="big" onClick={send} disabled={busy}>
+            {busy ? '上传中……' : '上传成绩'}
+          </Btn>
+        ) : (
+          <Btn variant="gold" size="big" disabled title="未登录账号无法上传成绩至排行榜">
+            未登录不上榜
+          </Btn>
+        )}
       </div>
+      {!isLoggedIn && (
+        <div class="faint" style={{ fontSize: 13, marginTop: 6, color: '#f59e0b' }}>
+          💡 未登录用户可自由游玩体验全部模式，但成绩不计入全服榜单。请在 BakaBox 大厅登录后上传成绩参与排名。
+        </div>
+      )}
       {msg && <div class="red-t" style={{ fontSize: 14 }}>{msg}</div>}
     </div>
   );

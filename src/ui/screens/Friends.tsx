@@ -171,6 +171,7 @@ export function FriendsDrawer() {
     if ((f as any).isSelf === true || f.extra?.isSelf === true) return true;
     if (me?.uid && (String(f.id) === String(me.uid) || String(f.extra?.uid) === String(me.uid))) return true;
     if (me?.businessUserId && (String(f.id) === String(me.businessUserId) || String(f.extra?.businessUserId) === String(me.businessUserId))) return true;
+    if (me?.username && (String(f.name) === String(me.username) || String(f.extra?.username) === String(me.username))) return true;
     return false;
   };
 
@@ -185,7 +186,12 @@ export function FriendsDrawer() {
   const me = selfProfile.value;
   const myAvatar = me?.avatar || (myProgress.commander ? url.cmd(myProgress.commander) : url.cmd('steve'));
   const myName = me?.username || profile.value.nickname || '史蒂夫';
-  const myTag = me?.uid ? `#${String(me.uid).slice(-4)}` : '#我';
+  const myTag =
+    me?.username && me.username.includes('#')
+      ? `#${me.username.split('#')[1]}`
+      : me?.uid
+      ? `#${String(me.uid).slice(-4)}`
+      : '#我';
   const myAct = myProgress.act;
   const myActName = myAct ? (myAct >= 4 ? '筛界' : ACT_NAMES[myAct] ?? `第${myAct}幕`) : '';
   const myHasRunProgress = !!(myProgress.status === 'in_run' && myProgress.floor && myProgress.floor > 0);

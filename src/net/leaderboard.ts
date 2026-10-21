@@ -2,6 +2,7 @@
 // missing (static hosting, offline, no storage configured) the game just hides the boards.
 import type { RunSummary } from '../run/run.ts';
 import { profile, updateProfile } from '../ui/store.ts';
+import { selfProfile } from './bakaboxBridge.ts';
 
 export type BoardId = 'daily' | 'week' | 'all';
 
@@ -82,7 +83,10 @@ export function fetchBoard(board: BoardId, date?: string) {
 }
 
 export function submitRun(run: RunSummary, name: string, avatar?: string) {
-  return call<SubmitResult>({ method: 'POST', body: JSON.stringify({ op: 'submit', pid: playerId(), name, avatar, run }) });
+  if (selfProfile.value && selfProfile.value.isLoggedIn === false) {
+    return Promise.reject(new LeaderboardError('未登录用户无法上传成绩至排行榜', false));
+  }
+  return call<SubmitResult>({ method: 'POST', body: JSON.stringify({ op: 'submit', pid: playerId(), name, avatar, run, isLoggedIn: selfProfile.value?.isLoggedIn !== false }) });
 }
 
 export function renameMe(name: string) {

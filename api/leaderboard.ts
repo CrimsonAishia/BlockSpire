@@ -173,6 +173,7 @@ async function readBoard(redis: Redis, board: Board, date: string, pid: string |
 }
 
 async function submit(redis: Redis, body: Record<string, unknown>, ip: string, now: number) {
+  if (body.isLoggedIn === false) return json({ error: '未登录用户无法上传成绩至排行榜' }, 403);
   if (!validPid(body.pid)) return json({ error: '玩家标识无效' }, 400);
   const name = cleanName(body.name);
   if (!name) return json({ error: '昵称需要 1–12 个字，且不能包含链接' }, 400);

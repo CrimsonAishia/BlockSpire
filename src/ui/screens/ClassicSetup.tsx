@@ -6,6 +6,7 @@ import { url } from '../assets.ts';
 import { Btn } from '../components/common.tsx';
 import { go, profile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
+import { selfProfile } from '../../net/bakaboxBridge.ts';
 
 export const CRATE_POOL = CRATES.filter((c) => c.id !== 'ominous');
 const GRADES: { id: Rules['grade']; name: string; desc: string }[] = [
@@ -22,6 +23,7 @@ const CARDS: { k: 'mode' | 'players'; v: Rules['mode'] | Rules['players']; art: 
 ];
 
 export function ClassicSetup({ rules, onChange, onStart }: { rules: Rules; onChange: (r: Rules) => void; onStart: (r: Rules) => void }) {
+  const isLoggedIn = selfProfile.value ? selfProfile.value.isLoggedIn !== false : true;
   const set = (patch: Partial<Rules>) => (sfx('click'), onChange({ ...rules, ...patch }));
   const lab = rules.mode === 'lab';
   const duel = rules.players === 2;
@@ -74,7 +76,10 @@ export function ClassicSetup({ rules, onChange, onStart }: { rules: Rules; onCha
   return (
     <div class="screen classic-screen arena-bg">
       <div class="classic-inner setup-inner">
-        <div class="cl-title title-shadow">竞技场</div>
+        <div class="row gap12" style={{ alignItems: 'center', marginBottom: 6 }}>
+          <div class="cl-title title-shadow" style={{ marginBottom: 0 }}>竞技场</div>
+          {!isLoggedIn && <span class="my-tag-pill" style={{ background: '#f59e0b' }}>未登录体验</span>}
+        </div>
         <div class="cl-modes">
           <div class="cl-mode-group">
             <div class="cl-mode-label">阵容从哪来</div>
@@ -151,13 +156,19 @@ export function ClassicSetup({ rules, onChange, onStart }: { rules: Rules; onCha
           </div>
         </div>
         <div class="faint" style={{ minHeight: 20 }}>
-          {duel
-            ? `双人同屏：${lab ? '两人轮流暗中挑选阵容，互相看不到' : `开箱时每人有 2 次重开机会`}；每局开战前各自布阵，上一局输的一方后布阵。${c.duels ? ` 已进行 ${c.duels} 场双人对战` : ''}`
-            : c.guesses > 0
-              ? `竞猜战绩：猜中 ${c.correct}/${c.guesses} · 当前连胜 ${c.streak} · 最高连胜 ${c.best}${c.upsets ? ` · 爆冷命中 ${c.upsets}` : ''}`
-              : !lab && rules.crate !== 'random'
-                ? CRATE_MAP[rules.crate].desc
-                : ''}
+          {!isLoggedIn ? (
+            <span style={{ color: '#f59e0b' }}>
+              💡 当前为未登录体验状态：可体验全部竞技对战模式，但对决连胜与战绩不计入全服排位天梯（请在 BakaBox 大厅登录账号）。
+            </span>
+          ) : duel ? (
+            `双人同屏：${lab ? '两人轮流暗中挑选阵容，互相看不到' : `开箱时每人有 2 次重开机会`}；每局开战前各自布阵，上一局输的一方后布阵。${c.duels ? ` 已进行 ${c.duels} 场双人对战` : ''}`
+          ) : c.guesses > 0 ? (
+            `竞猜战绩：猜中 ${c.correct}/${c.guesses} · 当前连胜 ${c.streak} · 最高连胜 ${c.best}${c.upsets ? ` · 爆冷命中 ${c.upsets}` : ''}`
+          ) : !lab && rules.crate !== 'random' ? (
+            CRATE_MAP[rules.crate].desc
+          ) : (
+            ''
+          )}
         </div>
         <div class="row gap16 center">
           <Btn size="big" onClick={() => go('title')}>
