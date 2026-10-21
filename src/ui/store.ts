@@ -5,12 +5,13 @@ import { signal } from '@preact/signals';
 import type { ComponentChildren } from 'preact';
 import type { RunState } from '../run/run.ts';
 import {
-  type Profile, type Settings, ACHIEVEMENT_MAP, checkProgress, grant, loadProfile, loadSettings,
+  type Profile, type Settings, ACHIEVEMENT_MAP, checkProgress, grant, loadProfile, loadSettings, loadRun,
   saveProfile as storeProfile, saveRun as storeRun, saveSettings as storeSettings,
 } from '../meta/profile.ts';
 import { setVolumes, sfx } from '../audio/audio.ts';
+import { syncGameProgressToHost, selfProfile, fetchSelfProfileFromHost } from '../net/bakaboxBridge.ts';
 
-export type Screen = 'boot' | 'title' | 'newrun' | 'run' | 'codex' | 'classic' | 'records' | 'leaderboard';
+export type Screen = 'boot' | 'title' | 'newrun' | 'run' | 'codex' | 'classic' | 'records' | 'leaderboard' | 'friends';
 
 export const screen = signal<Screen>('boot');
 export const runVersion = signal(0);
@@ -29,6 +30,10 @@ let toastId = 1;
 
 export type Overlay = null | 'team' | 'settings' | 'abandon' | 'help';
 export const overlay = signal<Overlay>(null);
+export const friendsDrawerOpen = signal(false);
+export function toggleFriendsDrawer(open?: boolean) {
+  friendsDrawerOpen.value = open ?? !friendsDrawerOpen.value;
+}
 
 export const tooltip = signal<{ x: number; y: number; content: ComponentChildren } | null>(null);
 /** Hovered tooltips, innermost last (a keyword tip inside a card tip, ...). */
@@ -62,10 +67,120 @@ export function getRun(): RunState | null {
   return runRef;
 }
 
+export interface MyProgressInfo {
+  status: 'online' | 'in_run' | 'classic' | 'offline';
+  statusLabel: string;
+  act?: number;
+  floor?: number;
+  totalFloor?: number;
+  floorNote?: string;
+  omen?: number;
+  commander?: string;
+  avatar?: string;
+  username?: string;
+  name?: string;
+  hearts?: number;
+  maxHearts?: number;
+  emeralds?: number;
+  won?: boolean;
+  over?: boolean;
+  detailText?: string;
+}
+
+export const myCurrentProgress = signal<MyProgressInfo>({
+  status: 'online',
+  statusLabel: '在线',
+  detailText: '主界面 · 准备就绪',
+});
+
+export function syncProgress(r: RunState | null) {
+  const me = selfProfile.value;
+  const username = me?.username || profile.value.nickname || '史蒂夫';
+  const avatar = me?.avatar || r?.commander || 'steve';
+
+  if (!r) {
+    const payload: MyProgressInfo = {
+      status: 'online',
+      statusLabel: '在线',
+      detailText: '主界面 · 准备就绪',
+      avatar,
+      username,
+      name: username,
+      commander: 'steve',
+    };
+    myCurrentProgress.value = payload;
+    void syncGameProgressToHost(payload);
+    return;
+  }
+  const act = r.act;
+  let floor = 1;
+  let floorNote = '';
+
+  if (r.nodeId && r.map?.nodes?.[r.nodeId]) {
+    const node = r.map.nodes[r.nodeId];
+    floor = node.row + 1;
+    switch (node.type) {
+      case 'battle': floorNote = '普通战斗'; break;
+      case 'elite': floorNote = '精英战'; break;
+      case 'shop': floorNote = '商店营地'; break;
+      case 'rest': floorNote = '营火休息'; break;
+      case 'treasure': floorNote = '宝箱遗迹'; break;
+      case 'event': floorNote = '未知事件'; break;
+      case 'boss':
+        floorNote = act === 1 ? '首领战' : act === 2 ? '决战凋灵' : act === 3 ? '决战末影龙' : '凋灵风暴';
+        break;
+    }
+  } else {
+    const visitedCount = r.visited?.length ?? 0;
+    floor = Math.max(1, Math.min(14, visitedCount + 1));
+    const firstQueue = r.queue?.[0];
+    if (firstQueue?.type === 'battle') {
+      floorNote = firstQueue.kind === 'boss' ? (act === 3 ? '决战末影龙' : '首领战') : firstQueue.kind === 'elite' ? '精英战' : '普通战斗';
+    } else if (firstQueue?.type === 'shop') {
+      floorNote = '商店营地';
+    } else if (firstQueue?.type === 'rest') {
+      floorNote = '营火休息';
+    }
+  }
+
+  const actName = act >= 4 ? '筛界' : `第${['', '一', '二', '三'][act] || act}幕`;
+  const status = r.over ? 'online' : 'in_run';
+  const statusLabel = r.over ? (r.won ? '已通关' : '已阵亡') : (act >= 4 ? '筛界中' : '爬塔中');
+
+  const payload: MyProgressInfo = {
+    status,
+    statusLabel,
+    act,
+    floor,
+    totalFloor: (act - 1) * 14 + floor,
+    floorNote,
+    omen: r.omen,
+    commander: r.commander,
+    avatar,
+    username,
+    name: username,
+    hearts: r.hearts,
+    maxHearts: r.maxHearts,
+    emeralds: r.emeralds,
+    won: r.won,
+    over: r.over,
+    detailText: `${actName} · 第 ${floor} 层${floorNote ? ` (${floorNote})` : ''}${r.omen ? ` 不祥 ${r.omen}` : ''}`,
+  };
+
+  myCurrentProgress.value = payload;
+  void syncGameProgressToHost(payload);
+}
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => syncProgress(loadRun()), 600);
+  void fetchSelfProfileFromHost().then(() => syncProgress(loadRun()));
+}
+
 export function setRun(r: RunState | null) {
   runRef = r;
   runVersion.value++;
   saveRun(r);
+  syncProgress(r);
 }
 
 let saveTimer = 0;
@@ -95,7 +210,10 @@ export function commit() {
   r.earned = [];
   progress(r, earned);
   clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => saveRun(runRef), 120);
+  saveTimer = window.setTimeout(() => {
+    saveRun(runRef);
+    syncProgress(runRef);
+  }, 120);
 }
 
 export function pushToast(text: string, tone: Toast['tone'] = 'neutral') {
@@ -155,5 +273,6 @@ export function updateSettings(patch: Partial<Settings>) {
 export function go(s: Screen) {
   hideTips();
   overlay.value = null;
+  friendsDrawerOpen.value = false;
   screen.value = s;
 }

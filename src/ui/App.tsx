@@ -9,6 +9,7 @@ import { RunView } from './screens/RunView.tsx';
 import { Codex } from './screens/Codex.tsx';
 import { Classic } from './screens/Classic.tsx';
 import { Leaderboard } from './screens/Leaderboard.tsx';
+import { FriendsDrawer } from './screens/Friends.tsx';
 import { SettingsModal } from './screens/Settings.tsx';
 import { preload, url } from './assets.ts';
 import { MOBS } from '../data/mobs.ts';
@@ -170,6 +171,7 @@ export function App() {
       {body}
       {overlay.value === 'settings' && <SettingsModal />}
       {updateReady.value && <UpdateTip />}
+      {sc === 'title' && <FriendsDrawer />}
       <div class="toasts">
         {toasts.value.map((t) => (
           <div key={t.id} class={`toast ${t.tone}`}>

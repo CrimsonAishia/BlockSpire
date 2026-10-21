@@ -4,7 +4,10 @@
 // A match can be a best-of-3 or best-of-5 series, each game on a fresh battlefield, with the
 // prediction worker telling how much of a result was the squads and how much was luck.
 // The arena never touches the codex: nothing here unlocks or requires a discovery.
-import { useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { syncGameProgressToHost, selfProfile } from '../../net/bakaboxBridge.ts';
+import { loadRun } from '../../meta/profile.ts';
+import { syncProgress, myCurrentProgress } from '../store.ts';
 import { Rng, randomSeed } from '../../core/rng.ts';
 import { CRATE_MAP, rollCrate, type CrateGrade } from '../../data/crates.ts';
 import { mobDef, unitCount } from '../../data/mobs.ts';
@@ -43,6 +46,30 @@ function savedRules(): Rules {
 }
 
 export function Classic() {
+  useEffect(() => {
+    const me = selfProfile.value;
+    const username = me?.username || profile.value.nickname || '史蒂夫';
+    const avatar = me?.avatar || 'steve';
+    const payload = {
+      status: 'classic' as const,
+      statusLabel: '竞技场',
+      detailText: '竞技场 · 双人同屏对决',
+      avatar,
+      username,
+      name: username,
+    };
+    myCurrentProgress.value = payload;
+    void syncGameProgressToHost(payload);
+
+    if (false) void syncGameProgressToHost({
+      status: 'classic',
+      statusLabel: '竞技场',
+      detailText: '竞技场 · 双人同屏对决',
+    });
+    return () => {
+      syncProgress(loadRun());
+    };
+  }, []);
   const [phase, setPhase] = useState<Phase>('setup');
   const [rules, setRules] = useState<Rules>(savedRules);
   const [teams, setTeams] = useState<Teams>([[], []]);
