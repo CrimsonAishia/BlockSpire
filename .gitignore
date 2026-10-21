@@ -1,6 +1,29 @@
+# 依赖与产物
 node_modules
 dist
-.env.local
 assets-raw
 .vercel
+
+# 环境变量与敏感凭据（忽略真实配置）
+.env
+.env.*
 .env*
+.env.local
+
+# 保留配置示例/测试模版（确保可正常加入 Git 追踪）
+!.env.example
+!.env.*.example
+!.env*.example
+
+# Python 运行缓存与部署临时压缩包
+__pycache__/
+*.py[cod]
+*$py.class
+*.tar.gz
+
+# 编辑器与系统临时文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

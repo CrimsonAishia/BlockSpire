@@ -1,9 +1,10 @@
 // Subsets the CJK pixel font to only the characters used in the game source, producing a tiny woff2.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import subsetFont from 'subset-font';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SRC = path.join(ROOT, 'assets-src/fonts/fusion-pixel-12px-proportional-zh_hans.otf.woff2');
 const OUT = path.join(ROOT, 'public/fonts/pixel.woff2');
 
