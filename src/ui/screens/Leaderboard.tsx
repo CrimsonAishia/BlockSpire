@@ -5,11 +5,12 @@ import { mobDef } from '../../data/mobs.ts';
 import { createRun } from '../../run/run.ts';
 import { DAILY_TRIES, dailyConfig, dailyDate, msToNextDaily } from '../../run/daily.ts';
 import { loadRun, ROMAN_OMEN } from '../../meta/profile.ts';
-import { fetchBoard, nameError, renameMe, type BoardData, type BoardEntry, type BoardId } from '../../net/leaderboard.ts';
+import { fetchBoard, type BoardData, type BoardEntry, type BoardId } from '../../net/leaderboard.ts';
 import { url } from '../assets.ts';
 import { Btn, Modal } from '../components/common.tsx';
 import { commit, go, profile, setRun, updateProfile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
+import { isHostConnected, selfProfile } from '../../net/bakaboxBridge.ts';
 
 /** Tab the leaderboard opens on (the title screen has a button for the daily and one for the boards). */
 export const lbTab = signal<BoardId>('daily');
@@ -19,6 +20,26 @@ const TABS: [BoardId, string][] = [
   ['week', '本周'],
   ['all', '总榜'],
 ];
+
+const COMMANDER_SET = new Set(['steve', 'alex', 'villager', 'witch']);
+
+function getAvatarUrl(avatar?: string) {
+  if (!avatar) return url.cmd('steve');
+  if (avatar.startsWith('//')) return 'https:' + avatar;
+  if (
+    avatar.startsWith('http://') ||
+    avatar.startsWith('https://') ||
+    avatar.startsWith('data:') ||
+    avatar.startsWith('blob:') ||
+    avatar.startsWith('/') ||
+    avatar.startsWith('./') ||
+    avatar.includes('assets/')
+  ) {
+    return avatar;
+  }
+  if (COMMANDER_SET.has(avatar)) return url.cmd(avatar);
+  return url.mob(avatar);
+}
 
 /** Where today's daily challenge stands for this player. */
 export function dailyState() {
@@ -58,6 +79,12 @@ function progressText(e: Pick<BoardEntry, 'won' | 'act' | 'floor'>) {
 }
 
 export function Leaderboard() {
+  // 游客模式直接拦截并重定向
+  if (!isHostConnected.value) {
+    go('title');
+    return null;
+  }
+
   const [tab, setTab] = useState<BoardId>(lbTab.value);
   const [data, setData] = useState<BoardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -214,10 +241,23 @@ export function Leaderboard() {
 
 function Row({ e }: { e: BoardEntry }) {
   const c = COMMANDER_MAP[e.commander];
+  const userAvatar = e.avatar || e.commander || 'steve';
   return (
     <div class={`lb-row ${e.me ? 'me' : ''} ${e.rank <= 3 ? `top${e.rank}` : ''}`}>
       <span class="lb-rank">{e.rank}</span>
-      <span class="lb-name">{e.name}</span>
+      <span class="lb-player">
+        <img
+          src={getAvatarUrl(userAvatar)}
+          class="lb-avatar"
+          alt=""
+          onError={(ev) => {
+            const el = ev.currentTarget as HTMLImageElement;
+            el.onerror = null;
+            el.src = url.cmd('steve');
+          }}
+        />
+        <span class="lb-name">{e.name}</span>
+      </span>
       <span class="lb-cmd">{c && <img src={url.cmd(c.id)} title={`${c.name} · ${c.title}`} />}</span>
       <span class={e.omen ? 'red-t' : 'faint'}>{e.omen ? `☠ ${ROMAN_OMEN[e.omen]}` : '普通'}</span>
       <span class={e.won ? 'gold-t' : 'subtle'}>{progressText(e)}</span>
@@ -231,54 +271,38 @@ function Row({ e }: { e: BoardEntry }) {
   );
 }
 
-/** The public name shown on the boards. */
+/** 当前登录玩家的身份卡片（只读展示真实头像与昵称，无需手动填写） */
 export function NicknamePanel() {
-  const name = profile.value.nickname ?? '';
-  const [edit, setEdit] = useState(!name);
-  const [val, setVal] = useState(name);
-  const [msg, setMsg] = useState<string | null>(null);
-  const save = () => {
-    const err = nameError(val);
-    if (err) return setMsg(err);
-    const n = val.trim();
-    updateProfile((p) => {
-      p.nickname = n;
-    });
-    setEdit(false);
-    setMsg(null);
-    // Renames existing entries too; harmless when the player has never submitted.
-    renameMe(n).catch(() => {});
-  };
+  const name = selfProfile.value?.username || profile.value.nickname || '冒险家史蒂夫';
+  const avatar = selfProfile.value?.avatar || 'steve';
+  const uid = selfProfile.value?.uid ? `#${String(selfProfile.value.uid).slice(-4)}` : '';
+
   return (
     <div class="panel lb-nick">
-      <div class="panel-title" style={{ marginBottom: 6 }}>
-        我的昵称
+      <div class="panel-title" style={{ marginBottom: 8 }}>
+        我的身份
       </div>
-      {edit ? (
-        <div class="row gap8">
-          <input
-            class="mc-input"
-            maxLength={24}
-            placeholder="1–12 个字"
-            value={val}
-            onInput={(e) => setVal((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
-          />
-          <Btn size="small" variant="green" onClick={save}>
-            保存
-          </Btn>
+      <div class="row gap12" style={{ alignItems: 'center', gap: 12 }}>
+        <img
+          src={getAvatarUrl(avatar)}
+          class="lb-user-card-avatar"
+          alt=""
+          onError={(ev) => {
+            const el = ev.currentTarget as HTMLImageElement;
+            el.onerror = null;
+            el.src = url.cmd('steve');
+          }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div class="row gap8" style={{ alignItems: 'center', gap: 8 }}>
+            <span class="lbn-name" style={{ fontSize: 18, color: 'var(--ink)' }}>{name}</span>
+            <span class="my-tag-pill">我</span>
+          </div>
+          {uid && <span class="faint" style={{ fontSize: 12 }}>{uid}</span>}
         </div>
-      ) : (
-        <div class="row between">
-          <span class="lbn-name">{name}</span>
-          <Btn size="small" onClick={() => (setVal(name), setEdit(true))}>
-            修改
-          </Btn>
-        </div>
-      )}
-      {msg && <div class="red-t" style={{ fontSize: 14, marginTop: 4 }}>{msg}</div>}
-      <div class="faint" style={{ fontSize: 13, marginTop: 6 }}>
-        上传成绩是自愿的：只会公开昵称、统领、难度、进度和最终阵容。
+      </div>
+      <div class="faint" style={{ fontSize: 13, marginTop: 10 }}>
+        已绑定当前登录账号，排行榜成绩将自动以此身份公开展示。
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { PLAYABLE_MOBS } from '../../data/mobs.ts';
 import { COMMANDER_MAP } from '../../data/items.ts';
 import { ACHIEVEMENTS, ROMAN_OMEN } from '../../meta/profile.ts';
 import { dailyState, lbTab } from './Leaderboard.tsx';
+import { isHostConnected } from '../../net/bakaboxBridge.ts';
 
 const SPLASHES = [
   '开箱即战斗！',
@@ -65,12 +66,14 @@ export function Title() {
           <Btn variant={save ? '' : 'green'} size="big" wide onClick={() => go('newrun')}>
             {save ? '新的爬塔' : '开始爬塔'}
           </Btn>
-          <Btn size="big" wide onClick={() => ((lbTab.value = 'daily'), go('leaderboard'))}>
+          {isHostConnected.value && (
+            <Btn size="big" wide onClick={() => ((lbTab.value = 'daily'), go('leaderboard'))}>
             每日挑战
             <span class="menu-note">
               {daily.status === 'done' ? '今日次数已用完' : `今日：${COMMANDER_MAP[daily.cfg.commander].name} · 不祥之兆 ${ROMAN_OMEN[daily.cfg.omen]}`}
             </span>
           </Btn>
+          )}
           <Btn size="big" wide onClick={() => go('classic')}>
             竞技场
             <span class="menu-note">自选 · 随机 · 双人同屏</span>
@@ -82,9 +85,11 @@ export function Title() {
             <Btn size="big" wide onClick={() => go('codex')}>
               图鉴
             </Btn>
-            <Btn size="big" wide onClick={() => ((lbTab.value = 'week'), go('leaderboard'))}>
+            {isHostConnected.value && (
+              <Btn size="big" wide onClick={() => ((lbTab.value = 'week'), go('leaderboard'))}>
               排行榜
             </Btn>
+            )}
             <Btn size="big" wide onClick={() => (overlay.value = 'settings')}>
               设置
             </Btn>

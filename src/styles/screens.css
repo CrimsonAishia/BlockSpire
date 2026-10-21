@@ -3200,6 +3200,23 @@
 .lb-row.top3 .lb-rank {
   color: #d58a4a;
 }
+.lb-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.lb-avatar {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  background: #09070c;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #443854;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  margin-right: 2px;
+}
 .lb-name {
   overflow: hidden;
   white-space: nowrap;
@@ -5091,3 +5108,24 @@
   flex-shrink: 0;
 }
 
+
+/* ───────── Identity & Avatar Badges for Leaderboard / Submit ───────── */
+.submit-user-avatar {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  background: #0d0a12;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #483a5e;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.lb-user-card-avatar {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  background: #0d0a12;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #483a5e;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  margin-right: 4px;
+}

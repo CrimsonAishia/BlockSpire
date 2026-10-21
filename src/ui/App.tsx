@@ -17,6 +17,7 @@ import { RELICS, POTIONS } from '../data/items.ts';
 import { CRATES } from '../data/crates.ts';
 import { COMMANDERS } from '../data/items.ts';
 import { setVolumes, unlockAudio } from '../audio/audio.ts';
+import { isHostConnected } from '../net/bakaboxBridge.ts';
 
 const W = 1600;
 const H = 900;
@@ -156,7 +157,7 @@ export function App() {
       body = <Classic />;
       break;
     case 'leaderboard':
-      body = <Leaderboard />;
+      body = isHostConnected.value ? <Leaderboard /> : <Title />;
       break;
     default:
       body = <Title />;

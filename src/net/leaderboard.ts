@@ -8,6 +8,7 @@ export type BoardId = 'daily' | 'week' | 'all';
 export interface BoardEntry {
   rank: number;
   name: string;
+  avatar?: string;
   score: number;
   commander: string;
   omen: number;
@@ -31,6 +32,7 @@ export interface BoardData {
 export interface SubmitResult {
   score: number;
   name: string;
+  avatar?: string;
   ranks: Partial<Record<BoardId, { rank: number; total: number; best: number; updated: boolean }>>;
 }
 
@@ -79,8 +81,8 @@ export function fetchBoard(board: BoardId, date?: string) {
   return call<BoardData>({ method: 'GET', query: `?board=${board}${date ? `&date=${date}` : ''}` });
 }
 
-export function submitRun(run: RunSummary, name: string) {
-  return call<SubmitResult>({ method: 'POST', body: JSON.stringify({ op: 'submit', pid: playerId(), name, run }) });
+export function submitRun(run: RunSummary, name: string, avatar?: string) {
+  return call<SubmitResult>({ method: 'POST', body: JSON.stringify({ op: 'submit', pid: playerId(), name, avatar, run }) });
 }
 
 export function renameMe(name: string) {

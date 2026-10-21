@@ -130,6 +130,7 @@ const json = (body: unknown, status = 200) =>
 export interface BoardEntry {
   rank: number;
   name: string;
+  avatar?: string;
   score: number;
   commander: string;
   omen: number;
@@ -161,7 +162,7 @@ async function readBoard(redis: Redis, board: Board, date: string, pid: string |
     entries = ids.map((id, i) => {
       const d = details[i] ? (JSON.parse(details[i]!) as Omit<BoardEntry, 'rank' | 'name'>) : null;
       return {
-        rank: i + 1, name: names[i] ?? '无名统领', score: Number(flat[i * 2 + 1]),
+        rank: i + 1, name: names[i] ?? '无名统领', avatar: d?.avatar || '', score: Number(flat[i * 2 + 1]),
         commander: d?.commander ?? 'steve', omen: d?.omen ?? 0, won: d?.won ?? false, act: d?.act ?? 1, floor: d?.floor ?? 0, team: d?.team ?? [], at: d?.at ?? 0,
         ...(id === pid ? { me: true } : {}),
       };
@@ -200,7 +201,8 @@ async function submit(redis: Redis, body: Record<string, unknown>, ip: string, n
     ...keys.map((k) => ['ZADD', k, 'GT', 'CH', score, pid]),
     ['HSET', NAMES, pid, name],
   ]);
-  const entry = JSON.stringify({ commander: run.commander, omen: run.omen, won: run.won, act: run.act, floor: run.floor, team: run.team.slice(0, 5), at: now });
+  const rawAvatar = typeof body.avatar === 'string' ? body.avatar.slice(0, 500) : '';
+  const entry = JSON.stringify({ commander: run.commander, avatar: rawAvatar, omen: run.omen, won: run.won, act: run.act, floor: run.floor, team: run.team.slice(0, 5), at: now });
   const cmds: (string | number)[][] = [];
   keys.forEach((k, i) => {
     if (Number(added[i]) > 0) cmds.push(['HSET', `bs:e:${k}`, pid, entry]);

@@ -10,6 +10,7 @@ import { Btn, MobCard } from '../components/common.tsx';
 import { commit, go, profile, progress, setRun, updateProfile, pushToast } from '../store.ts';
 import { SubmitPanel } from './SubmitPanel.tsx';
 import { sfx } from '../../audio/audio.ts';
+import { isHostConnected } from '../../net/bakaboxBridge.ts';
 import { OMEN_TIER_NAME, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
 
 export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
@@ -131,7 +132,7 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
                 {unlocks.map((u) => <div key={u} class="gold-t">✦ {u}</div>)}
               </div>
             )}
-            <SubmitPanel s={s} won={won} />
+            {isHostConnected.value && <SubmitPanel s={s} won={won} />}
           </div>
         </div>
         <div class="row gap16 center">

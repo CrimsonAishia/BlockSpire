@@ -17,6 +17,7 @@
     "node": "22.x"
   },
   "scripts": {
+    "server": "python server/api.py",
     "deploy": "python deploy.py",
     "dev": "vite",
     "build": "node scripts/subset-font.mjs && tsc --noEmit && vite build",

@@ -872,8 +872,14 @@ a.mc-btn {
 .gap4 {
   gap: 4px;
 }
+.gap6 {
+  gap: 6px;
+}
 .gap8 {
   gap: 8px;
+}
+.gap10 {
+  gap: 10px;
 }
 .gap12 {
   gap: 12px;
