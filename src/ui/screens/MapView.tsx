@@ -56,6 +56,109 @@ export function MapView({ s }: { s: RunState; v?: number }) {
     el.scrollTop = Math.max(0, Math.min(target, H));
   }, [s.nodeId]);
 
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startY = 0;
+    let startScrollTop = 0;
+    let hasMoved = false;
+    let lastY = 0;
+    let lastTime = 0;
+    let velocityY = 0;
+    let animId = 0;
+
+    const stopInertia = () => {
+      if (animId) {
+        cancelAnimationFrame(animId);
+        animId = 0;
+      }
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      stopInertia();
+      isDown = true;
+      hasMoved = false;
+      startY = e.clientY;
+      startScrollTop = el.scrollTop;
+      lastY = e.clientY;
+      lastTime = performance.now();
+      velocityY = 0;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDown) return;
+      const dy = e.clientY - startY;
+      if (!hasMoved && Math.abs(dy) > 4) {
+        hasMoved = true;
+        el.classList.add('dragging');
+      }
+      if (hasMoved) {
+        el.scrollTop = startScrollTop - dy;
+        const now = performance.now();
+        const dt = now - lastTime;
+        if (dt > 0) {
+          velocityY = (e.clientY - lastY) / dt;
+        }
+        lastY = e.clientY;
+        lastTime = now;
+      }
+    };
+
+    const onPointerUp = () => {
+      if (!isDown) return;
+      isDown = false;
+      el.classList.remove('dragging');
+
+      if (hasMoved) {
+        const captureClick = (e: MouseEvent) => {
+          e.stopPropagation();
+          e.preventDefault();
+        };
+        window.addEventListener('click', captureClick, { capture: true, once: true });
+        setTimeout(() => {
+          window.removeEventListener('click', captureClick, { capture: true });
+        }, 50);
+
+        const now = performance.now();
+        if (now - lastTime < 80 && Math.abs(velocityY) > 0.15) {
+          let v = velocityY;
+          const inertiaStep = () => {
+            v *= 0.92;
+            if (Math.abs(v) > 0.04) {
+              el.scrollTop -= v * 16;
+              animId = requestAnimationFrame(inertiaStep);
+            } else {
+              animId = 0;
+            }
+          };
+          animId = requestAnimationFrame(inertiaStep);
+        }
+      }
+    };
+
+    const onDragStart = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('dragstart', onDragStart);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      stopInertia();
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('dragstart', onDragStart);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, []);
+
   const boss = ENC_MAP[s.map.bossId];
   const bossMob = mobDef(boss.cards[0][0]);
   const syn = sideSynergies(s.team, s.relics);

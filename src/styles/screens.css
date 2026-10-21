@@ -353,6 +353,19 @@
   overflow-y: auto;
   overflow-x: hidden;
   image-rendering: auto;
+  cursor: grab;
+}
+.map-scroll.dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+.map-scroll.dragging * {
+  pointer-events: none;
+}
+.map-scroll img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  user-select: none;
 }
 .map-canvas {
   position: relative;
