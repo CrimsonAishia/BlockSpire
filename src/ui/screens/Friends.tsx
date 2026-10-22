@@ -3,7 +3,7 @@ import { signal } from '@preact/signals';
 import { url } from '../assets.ts';
 import { friendsDrawerOpen, toggleFriendsDrawer, myCurrentProgress, profile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
-import { isHostConnected, fetchFriendsFromHost, selfProfile, fetchSelfProfileFromHost } from '../../net/bakaboxBridge.ts';
+import { isHostConnected, fetchFriendsFromHost, selfProfile, fetchSelfProfileFromHost, syncGameProgressToHost } from '../../net/bakaboxBridge.ts';
 
 export type FriendStatus = 'online' | 'in_run' | 'classic' | 'offline';
 
@@ -25,8 +25,6 @@ export interface SimpleFriend {
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 const ACT_NAMES = ['', '第一幕', '第二幕', '第三幕', '第四幕'];
-
-
 
 // 动态好友列表信号
 export const friendsList = signal<SimpleFriend[]>([]);
@@ -139,7 +137,7 @@ export function FriendsDrawer() {
   const [filter, setFilter] = useState<'all' | 'online'>('all');
   const [search, setSearch] = useState('');
 
-  // 展开抽屉或组件挂载时，从 BakaBox 客户端拉取玩过此游戏的好友列表（抽屉开启期间每5秒轮询刷新，确保好友开关游戏状态实时响应）
+  // 展开抽屉时，每 5 秒自动轮询拉取玩过此游戏的好友列表
   useEffect(() => {
     if (open) {
       void fetchSelfProfileFromHost();
@@ -163,15 +161,27 @@ export function FriendsDrawer() {
         friendsList.value = list;
       }
     });
+
+    // 静默心跳保活：游戏打开期间每 45 秒向宿主上报一次当前状态，保持活跃打卡时间戳新鲜
+    const heartbeat = setInterval(() => {
+      if (myCurrentProgress.value) {
+        void syncGameProgressToHost(myCurrentProgress.value);
+      }
+    }, 45000);
+    return () => clearInterval(heartbeat);
   }, []);
 
-  // 过滤判定：排除当前玩家自身
+  // 过滤判定：排除当前玩家自身（精确比对 ID，杜绝误杀默认同名玩家）
   const isSelfFriend = (f: SimpleFriend) => {
     const me = selfProfile.value;
     if ((f as any).isSelf === true || f.extra?.isSelf === true) return true;
     if (me?.uid && (String(f.id) === String(me.uid) || String(f.extra?.uid) === String(me.uid))) return true;
     if (me?.businessUserId && (String(f.id) === String(me.businessUserId) || String(f.extra?.businessUserId) === String(me.businessUserId))) return true;
-    if (me?.username && (String(f.name) === String(me.username) || String(f.extra?.username) === String(me.username))) return true;
+    // 只有当自己已登录且有非通用默认昵称时，才比对 username；绝不能把通用昵称“冒险家/史蒂夫”同名玩家误当成自己吃掉
+    if (me?.isLoggedIn && me?.username && me.username !== '冒险家' && me.username !== '史蒂夫') {
+      const fName = String(f.name || f.extra?.username || '');
+      if (fName === String(me.username)) return true;
+    }
     return false;
   };
 
