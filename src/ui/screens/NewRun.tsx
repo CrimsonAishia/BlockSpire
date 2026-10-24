@@ -100,33 +100,35 @@ export function NewRun() {
                   ))}
                 </div>
               </div>
-              {omen === 0 ? (
-                <div class="subtle" style={{ marginTop: 8 }}>
-                  基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，开箱与积分回报也更高。
-                </div>
-              ) : (
-                <>
-                  <div class="omen-cur">
-                    <b>本级新增：{policy.name}</b>
-                    {policy.newRules.map((r) => (
-                      <span key={r}>☠ {r}</span>
-                    ))}
+              <div key={omen} class="omen-scroll">
+                {omen === 0 ? (
+                  <div class="subtle" style={{ marginTop: 4 }}>
+                    基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，开箱与积分回报也更高。
                   </div>
-                  {omen > 1 && (
-                    <div class="omen-prev">
-                      <span class="faint">累计生效全部前置规则：</span>
-                      {policy.rules.map((r, idx) => (
-                        <span key={idx} class="omen-chip" title={r}>
-                          ✔ {r}
-                        </span>
+                ) : (
+                  <>
+                    <div class="omen-cur">
+                      <b>本级新增：{policy.name}</b>
+                      {policy.newRules.map((r) => (
+                        <span key={r}>☠ {r}</span>
                       ))}
                     </div>
-                  )}
-                  <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
-                    {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。得分 +{Math.round((policy.scoreMul - 1) * 100)}%、幸运 +{Math.round(policy.luckBonus * 100)}%。通关后解锁下一级并点亮该统领勋标。
-                  </div>
-                </>
-              )}
+                    {omen > 1 && (
+                      <div class="omen-prev">
+                        <span class="faint">累计生效全部前置规则：</span>
+                        {policy.rules.map((r, idx) => (
+                          <span key={idx} class="omen-chip" title={r}>
+                            ✔ {r}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
+                      {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。得分 +{Math.round((policy.scoreMul - 1) * 100)}%、幸运 +{Math.round(policy.luckBonus * 100)}%。通关后解锁下一级并点亮该统领勋标。
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           );
         })()}

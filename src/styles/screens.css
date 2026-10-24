@@ -146,6 +146,9 @@
 .newrun-screen {
   display: grid;
   place-items: center;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px 0 24px;
 }
 .newrun-inner {
   position: relative;
@@ -154,6 +157,7 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  margin: auto;
 }
 .nr-title {
   font-size: 44px;
@@ -243,6 +247,30 @@
 .omen-panel {
   width: 1000px;
 }
+.omen-scroll {
+  height: 84px;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.omen-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.omen-scroll::-webkit-scrollbar-track {
+  background: rgba(18, 15, 22, 0.6);
+  border-radius: 3px;
+}
+.omen-scroll::-webkit-scrollbar-thumb {
+  background: #5a2626;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px #803030;
+}
+.omen-scroll::-webkit-scrollbar-thumb:hover {
+  background: #7a3030;
+}
 .omen-pip {
   width: 44px;
   height: 36px;
@@ -273,7 +301,7 @@
   gap: 4px 20px;
 }
 .omen-cur {
-  margin-top: 6px;
+  margin-top: 2px;
   display: flex;
   flex-wrap: wrap;
   gap: 2px 18px;
@@ -285,7 +313,7 @@
   font-weight: normal;
 }
 .omen-prev {
-  margin-top: 4px;
+  margin-top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
