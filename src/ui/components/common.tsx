@@ -123,13 +123,52 @@ function placeTip() {
   if (!el) return;
   const w = el.offsetWidth;
   const h = el.offsetHeight;
-  let x = tipAt.x + 18;
-  let y = tipAt.y + 18;
   const { w: sw, h: sh } = stageSize.value;
-  if (x + w > sw - 10) x = Math.max(8, tipAt.x - w - 14);
-  if (y + h > sh - 10) y = Math.max(8, sh - 10 - h);
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
+
+  // 1. Horizontal: start at the right side of the cursor with safe clearance
+  const rightX = tipAt.x + 24;
+  const leftX = tipAt.x - w - 16;
+  let x: number;
+  if (rightX + w <= sw - 10) {
+    x = rightX;
+  } else if (leftX >= 8) {
+    x = leftX;
+  } else {
+    // If neither strictly fits, place where there's more room
+    x = tipAt.x > sw / 2 ? Math.max(8, leftX) : Math.min(sw - w - 10, rightX);
+  }
+
+  // 2. Vertical: prefer below the cursor, flip above if overflowing bottom
+  const belowY = tipAt.y + 14;
+  const aboveY = tipAt.y - h - 14;
+  let y: number;
+  if (belowY + h <= sh - 10) {
+    y = belowY;
+  } else if (aboveY >= 8) {
+    y = aboveY;
+  } else {
+    y = Math.max(8, sh - h - 10);
+  }
+
+  // 3. Collision guard: ensure the mouse cursor never falls inside the tooltip box
+  const cursorPadding = 2;
+  if (
+    tipAt.x >= x - cursorPadding &&
+    tipAt.x <= x + w + cursorPadding &&
+    tipAt.y >= y - cursorPadding &&
+    tipAt.y <= y + h + cursorPadding
+  ) {
+    if (tipAt.x + 28 + w <= sw - 8) {
+      x = tipAt.x + 28;
+    } else if (tipAt.x - w - 16 >= 8) {
+      x = tipAt.x - w - 16;
+    } else if (aboveY >= 8) {
+      y = aboveY;
+    }
+  }
+
+  el.style.left = `${Math.round(x)}px`;
+  el.style.top = `${Math.round(y)}px`;
 }
 
 /** Shows the innermost hovered tip (leaving a keyword inside a card brings the card's back). */
@@ -233,6 +272,7 @@ export function TooltipLayer() {
     <div
       ref={(el) => {
         tipEl = el;
+        if (el) placeTip();
       }}
       class={`mc-tip ${touchTip ? 'touch' : ''}`}
       style={{ position: 'absolute' }}

@@ -148,7 +148,7 @@
   place-items: center;
   overflow-y: auto;
   box-sizing: border-box;
-  padding: 16px 0 24px;
+  padding: 10px 0 16px;
 }
 .newrun-inner {
   position: relative;
@@ -156,7 +156,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin: auto;
 }
 .nr-title {
@@ -245,7 +245,142 @@
   text-align: center;
 }
 .omen-panel {
-  width: 1000px;
+  width: 1254px;
+  height: 114px;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.omen-header {
+  height: 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.omen-badge-danger {
+  background: #ff4d6d;
+  color: #120508;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.omen-body {
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+.omen-rules-row {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.omen-badge-std {
+  background: #232a35;
+  color: #8faed9;
+  border: 1px solid #3c4c66;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.omen-badge-new {
+  background: #5a1e24;
+  color: #ffb0b0;
+  border: 1px solid #8e2b34;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.omen-new-list {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omen-rule-item {
+  color: #ffe0e0;
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.omen-accum-tag {
+  font-size: 12px;
+  color: #a89aa0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 120, 120, 0.35);
+  padding: 2px 8px;
+  border-radius: 2px;
+  cursor: help;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.omen-accum-tag:hover {
+  color: #ffd0d0;
+  border-color: rgba(255, 140, 140, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+.omen-history-tt {
+  max-width: 420px;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.omen-stats-bar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.omen-stat-chip {
+  background: #1e1925;
+  border: 1px solid #3d3349;
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: #d8cfe2;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.omen-stat-chip b {
+  color: #ff7575;
+  font-weight: 600;
+  margin-left: 3px;
+}
+.omen-stat-chip.gold b {
+  color: #ffd166;
+}
+.omen-stat-sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .omen-scroll {
   height: 84px;

@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { COMMANDERS, COMMANDER_MAP, OMENS, OMEN_SCALING, RELICS, difficultyPolicy } from '../../data/items.ts';
+import { COMMANDERS, COMMANDER_MAP, OMENS, RELICS, difficultyPolicy } from '../../data/items.ts';
 import { SKILL_INFO } from '../../data/commanders.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, HeartIcon, RelicTipContent, Tip } from '../components/common.tsx';
@@ -79,11 +79,32 @@ export function NewRun() {
         <CommanderDetail id={cmd} />
         {(() => {
           const policy = difficultyPolicy(omen);
+          const roman = ROMAN_OMEN[omen];
+          const prevRules = policy.rules.slice(0, policy.rules.length - policy.newRules.length);
           return (
             <div class="panel omen-panel">
-              <div class="row between">
-                <div class="panel-title" style={{ marginBottom: 4 }}>
-                  难度：{omen === 0 ? '普通' : `不祥之兆 ${['', 'I', 'II', 'III', 'IV', 'V'][omen]}`}
+              <div class="row between omen-header">
+                <div class="row gap8 center">
+                  <div class="panel-title" style={{ marginBottom: 0 }}>
+                    {omen === 0 ? '难度：普通 · 探索' : `难度：不祥之兆 ${roman} · ${policy.name}`}
+                  </div>
+                  {omen === 5 && <span class="omen-badge-danger">终局挑战</span>}
+                  {prevRules.length > 0 && (
+                    <Tip
+                      content={() => (
+                        <div class="omen-history-tt">
+                          <div class="tt-title">前置已生效规则（{prevRules.length} 条）：</div>
+                          {prevRules.map((r, idx) => (
+                            <div key={idx} class="tt-line tt-red">✔ {r}</div>
+                          ))}
+                        </div>
+                      )}
+                    >
+                      <span class="omen-accum-tag">
+                        ✔ 包含前置全部挑战规则（悬停查看）
+                      </span>
+                    </Tip>
+                  )}
                 </div>
                 <div class="row gap8">
                   {Array.from({ length: 6 }, (_, i) => (
@@ -94,46 +115,40 @@ export function NewRun() {
                       onClick={() => (sfx('click'), setOmen(i))}
                       title={i > p.maxOmen ? '在上一难度通关后解锁' : ''}
                     >
-                      {i === 0 ? '普' : ['I', 'II', 'III', 'IV', 'V'][i - 1]}
+                      {i === 0 ? '普' : ROMAN_OMEN[i]}
                     </button>
                   ))}
                 </div>
               </div>
-              <div key={omen} class="omen-scroll">
+              <div key={omen} class="omen-body">
                 {omen === 0 ? (
-                  <div class="subtle" style={{ marginTop: 4 }}>
-                    基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，通关积分倍率与勋标回报也更高。
-                  </div>
+                  <>
+                    <div class="omen-rules-row">
+                      <span class="omen-badge-std">标准模式</span>
+                      <span class="omen-rule-item">{policy.summary}</span>
+                    </div>
+                    <div class="omen-stats-bar">
+                      <span class="omen-stat-chip">💖 敌方生命 <b>基准</b></span>
+                      <span class="omen-stat-chip">⚔️ 敌方攻击 <b>基准</b></span>
+                      <span class="omen-stat-chip gold">🏆 通关积分 <b>1.0x</b></span>
+                      <span class="omen-stat-sub">通关后解锁「不祥之兆」进阶挑战等级与统领勋标</span>
+                    </div>
+                  </>
                 ) : (
                   <>
-                    {omen === 5 && (
-                      <div class="omen-endgame-banner" style={{ background: 'rgba(255, 77, 109, 0.15)', border: '1px solid #ff4d6d', borderRadius: 4, padding: '6px 8px', marginBottom: 8 }}>
-                        <div style={{ color: '#ff6b8b', fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>
-                          ☠ 终局挑战 · 预计强度：极高（面向：已掌握构筑与资源规划的玩家）
-                        </div>
-                        <div style={{ fontSize: 12, color: '#f0e6d2', lineHeight: 1.4 }}>
-                          每幕固定两场必经精英闸门，敌军高频配备三星核心与五卡成型编队，精英双战术，所有首领强化且最终首领连续作战。推荐完成羁绊、附魔核心并保存关键道具后挑战。
-                        </div>
-                      </div>
-                    )}
-                    <div class="omen-cur">
-                      <b>本级新增：</b>
-                      {policy.newRules.map((r) => (
-                        <span key={r}>☠ {r}</span>
-                      ))}
-                    </div>
-                    {omen > 1 && (
-                      <div class="omen-prev">
-                        <span class="faint">累计生效全部前置规则：</span>
-                        {policy.rules.map((r, idx) => (
-                          <span key={idx} class="omen-chip" title={r}>
-                            ✔ {r}
-                          </span>
+                    <div class="omen-rules-row">
+                      <span class="omen-badge-new">本级新增</span>
+                      <div class="omen-new-list">
+                        {policy.newRules.map((r) => (
+                          <span key={r} class="omen-rule-item">☠ {r}</span>
                         ))}
                       </div>
-                    )}
-                    <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
-                      {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。通关积分 +{Math.round((policy.scoreMul - 1) * 100)}%。通关后解锁下一级并点亮该统领勋标。
+                    </div>
+                    <div class="omen-stats-bar">
+                      <span class="omen-stat-chip">💖 敌方生命 <b>+{Math.round((policy.hpMul - 1) * 100)}%</b></span>
+                      <span class="omen-stat-chip">⚔️ 敌方攻击 <b>+{Math.round((policy.atkMul - 1) * 100)}%</b></span>
+                      <span class="omen-stat-chip gold">🏆 通关积分 <b>+{Math.round((policy.scoreMul - 1) * 100)}%</b></span>
+                      <span class="omen-stat-sub">通关后解锁下一级并点亮该统领勋标</span>
                     </div>
                   </>
                 )}
