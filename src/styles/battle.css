@@ -785,3 +785,117 @@
   color: #e8e8e8;
   text-shadow: 6px 6px 0 #222;
 }
+
+/* Battle Modifier intro announcement & persistent badge */
+.bm-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.25s ease-out;
+  cursor: pointer;
+}
+.bm-intro.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.bm-intro-box {
+  background: rgba(14, 12, 18, 0.95);
+  border: 2px solid #ffcc00;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 204, 0, 0.15);
+  padding: 24px 36px;
+  border-radius: 4px;
+  text-align: center;
+  max-width: 480px;
+  width: 90%;
+  animation: bm-pop 0.25s ease-out;
+}
+@keyframes bm-pop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bm-intro-box {
+    animation: none !important;
+  }
+}
+.bm-intro-k {
+  font-size: 14px;
+  color: #ffcc00;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.bm-intro-name {
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  margin-bottom: 12px;
+}
+.bm-intro-desc {
+  font-size: 16px;
+  color: #f0f0f0;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.bm-intro-reward {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+.bm-intro-dismiss {
+  font-size: 12px;
+}
+.bm-persistent-badge {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 100;
+  pointer-events: auto;
+}
+.bm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(12, 10, 16, 0.88);
+  border: 1px solid rgba(255, 204, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #e6e1d6;
+  transition: all 0.15s ease;
+}
+.bm-pill:hover,
+.bm-pill:focus-visible {
+  border-color: #ffd700;
+  background: rgba(22, 18, 28, 0.95);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  outline: none;
+}
+.bm-pill-icon {
+  color: #ffcc00;
+  font-weight: bold;
+}
+.bm-pill-title {
+  font-weight: bold;
+}
+.bm-pill-desc {
+  color: #ccc;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

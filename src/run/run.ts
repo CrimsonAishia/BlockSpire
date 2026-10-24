@@ -4,7 +4,10 @@ import type { ActMap, Card, MapNode, Rarity, Row } from '../core/types.ts';
 import { RARITIES } from '../core/types.ts';
 import { CRATE_MAP, cratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
 import { ENC_MAP, ENCOUNTERS, enemyScales, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
-import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, OMEN_ENEMY_MULS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
+import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
+import { difficultyPolicy } from '../data/difficulty.ts';
+import { computeSynergies } from '../data/families.ts';
+import type { Family } from '../core/types.ts';
 import { MOB_MAP, RARITY_INFO, mobDef, unitCount } from '../data/mobs.ts';
 import { MOB_COST } from '../classic/costs.ts';
 import { buildSide } from '../battle/setup.ts';
@@ -14,7 +17,7 @@ import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 
-export const RUN_VERSION = 3;
+export const RUN_VERSION = 4;
 
 export interface CrateOffer {
   crate: string;
@@ -246,7 +249,7 @@ export function priceMul(s: RunState) {
   let m = 1;
   if (s.commander === 'villager') m *= 0.8;
   if (hasRelic(s, 'gold_ingot')) m *= 0.85;
-  if (s.omen >= 3) m *= 1.15;
+  if (difficultyPolicy(s.omen).shopPriceMul > 1) m *= difficultyPolicy(s.omen).shopPriceMul;
   if (hasRelic(s, 'conduit')) m *= 1.2;
   return m;
 }
@@ -257,7 +260,7 @@ export function openContext(s: RunState): OpenContext {
   if (hasRelic(s, 'rabbit_foot')) luck += 0.06;
   if (hasRelic(s, 'ominous_bottle')) luck += 0.15;
   // Ominous loot: every omen level makes the crates a little luckier.
-  luck += 0.02 * s.omen;
+  luck += difficultyPolicy(s.omen).luckBonus;
   return {
     act: s.act,
     luck,
@@ -278,7 +281,8 @@ export function createRun(commander: string, omen: number, seed = randomSeed()):
   const rng = new Rng(seed);
   const bossPool = ['a1b_raid', 'a1b_monument'];
   const bosses = [rng.pick(bossPool), 'a2b_wither', 'a3b_dragon'];
-  const hearts = cmd.hearts - (omen >= 3 ? 1 : 0);
+  const pol = difficultyPolicy(omen);
+  const hearts = cmd.hearts - pol.heartsPenalty;
   const s: RunState = {
     v: RUN_VERSION,
     seed,
@@ -299,7 +303,7 @@ export function createRun(commander: string, omen: number, seed = randomSeed()):
     benchSize: 4,
     relics: [],
     potions: [],
-    potionSlots: (commander === 'witch' ? 5 : 4) - (omen >= 3 ? 1 : 0),
+    potionSlots: (commander === 'witch' ? 5 : 4) - pol.potionSlotsPenalty,
     pity: 0,
     elytraAct: 0,
     queue: [],
@@ -454,7 +458,11 @@ function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): Enco
       // The final tier starts part-way up its range so row 9 never becomes easier than row 8.
       const progress = tier === 2 ? 0.4 + rawProgress * 0.6 : rawProgress;
       const threats = pool.map(encounterThreat);
-      const target = Math.min(...threats) + (Math.max(...threats) - Math.min(...threats)) * progress;
+      let target = Math.min(...threats) + (Math.max(...threats) - Math.min(...threats)) * progress;
+      const pol = difficultyPolicy(s.omen);
+      if (pol.encounterBias > 0) {
+        target += (Math.max(...threats) - target) * (pol.encounterBias * 0.35);
+      }
       const distances = choices.map((e) => Math.abs(encounterThreat(e) - target));
       const nearest = Math.min(...distances);
       let window = distances.map((d) => d <= nearest + 1.5);
@@ -475,9 +483,9 @@ function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): Enco
 
 export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'event', row: number) {
   const sc = enemyScales(s.act, row, kind);
-  const omen = OMEN_ENEMY_MULS[Math.max(0, Math.min(OMEN_ENEMY_MULS.length - 1, s.omen))];
-  let hp = sc.hp * omen.hp;
-  let atk = sc.atk * omen.atk;
+  const pol = difficultyPolicy(s.omen);
+  let hp = sc.hp * pol.hpMul;
+  let atk = sc.atk * pol.atkMul;
   if (hasRelic(s, 'ominous_bottle')) {
     hp *= 1.12;
     atk *= 1.12;
@@ -503,7 +511,195 @@ function rollBattleModifier(s: RunState, kind: 'battle' | 'elite' | 'boss', row:
   });
 }
 
-function makeBattle(s: RunState, node: MapNode): Pending {
+/**
+ * Dynamic enemy formation generator based on unified threat budget and theme candidates.
+ * Keeps the encounter's theme core, and adds support cards within budget tolerance (-6%..+8%).
+ */
+export function dynamicFormation(
+  rng: Rng,
+  act: number,
+  row: number,
+  kind: 'battle' | 'elite' | 'boss',
+  omen: number,
+  baseCards: EncCard[],
+): EncCard[] {
+  const cards = baseCards.map((c) => c.slice() as EncCard);
+  const pol = difficultyPolicy(omen);
+
+  // Boss formation
+  if (kind === 'boss') {
+    if (pol.bossPhase) {
+      for (let i = 0; i < cards.length; i++) {
+        const m = mobDef(cards[i][0]);
+        if (!m.boss && !m.structure) {
+          cards[i][1] = Math.min(2, cards[i][1] + 1) as 1 | 2 | 3;
+        }
+      }
+    }
+    return cards;
+  }
+
+  // Opening protection: Act 1 rows 0-1 do not add support cards
+  if (act === 1 && row < 2) {
+    return cards;
+  }
+
+  const tier = tierForRow(row);
+  const shouldAddSupport = kind === 'elite' || (pol.supportChance > 0 && rng.chance(pol.supportChance));
+
+  // Maximum allowed cards based on tier & difficulty
+  let maxCards = baseCards.length;
+  if (shouldAddSupport) {
+    if (tier === 0) {
+      maxCards = Math.min(3, baseCards.length + 1);
+    } else if (tier === 1) {
+      maxCards = Math.min(4, baseCards.length + 1);
+    } else {
+      // tier === 2
+      const allowFifth = pol.omen >= 5 && rng.chance(pol.fifthCardChance);
+      maxCards = Math.min(allowFifth ? 5 : 4, baseCards.length + 1);
+    }
+  }
+
+  // Row correction for front/back positions (Difficulty >= 1)
+  const fixRows = (cs: EncCard[]) => {
+    if (pol.omen >= 1) {
+      for (const c of cs) {
+        const role = mobDef(c[0]).role;
+        if (['tank', 'melee'].includes(role) && c[2] === 'back') {
+          c[2] = 'front';
+        } else if (['ranged', 'caster', 'support', 'bomber'].includes(role) && c[2] === 'front') {
+          c[2] = 'back';
+        }
+      }
+    }
+  };
+
+  if (!shouldAddSupport || cards.length >= maxCards) {
+    fixRows(cards);
+    return cards;
+  }
+
+  const baseThreat = encounterThreat({ cards: baseCards });
+  const [start, end] = tier === 0 ? [0, 3] : tier === 1 ? [4, 8] : [9, 11];
+  const rawProgress = Math.max(0, Math.min(1, (row - start) / Math.max(1, end - start)));
+  const progress = tier === 2 ? 0.4 + rawProgress * 0.6 : rawProgress;
+  const progressMul = 0.95 + progress * 0.1;
+  const kindBudgetMul = kind === 'elite' ? 1.12 : 1.0;
+  const targetBudget = baseThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
+  const maxBudget = targetBudget * (kind === 'elite' ? 1.1 : 1.08);
+
+  const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act).flatMap((e) => e.cards.map((c) => c[0])))]
+    .filter((id) => {
+      const m = mobDef(id);
+      return !m.boss && !m.structure && !m.hidden;
+    })
+    .sort();
+
+  if (!actMobs.length) {
+    fixRows(cards);
+    return cards;
+  }
+
+  while (cards.length < maxCards) {
+    const curThreat = encounterThreat({ cards });
+    const remainingBudget = maxBudget - curThreat;
+    if (remainingBudget <= 0.8) break;
+
+    const trySynergy = rng.chance(pol.synergyChance);
+    const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
+    const hasFront = cards.some((c) => ['tank', 'melee'].includes(mobDef(c[0]).role));
+    const hasBack = cards.some((c) => ['ranged', 'caster', 'support', 'bomber'].includes(mobDef(c[0]).role));
+
+    interface ScoredCandidate {
+      mob: string;
+      star: number;
+      row: Row;
+      count?: number;
+      score: number;
+      threat: number;
+    }
+
+    const scored: ScoredCandidate[] = [];
+
+    for (const mob of actMobs) {
+      const m = mobDef(mob);
+      const star = tier === 2 && row >= 10 && cards.length >= 3 && rng.chance(0.3) ? 2 : 1;
+      const normalCount = unitCount(m, star);
+      const fullCost = MOB_COST[mob]?.[star - 1] ?? 4;
+
+      let chosenCount: number | undefined = undefined;
+      let actualCost = fullCost;
+
+      const forceWeakened = pol.weakenedSupportOnly;
+      if (forceWeakened || curThreat + fullCost > maxBudget) {
+        const scale = forceWeakened ? 0.6 : 0.65;
+        const scaledCount = Math.max(1, Math.round(normalCount * scale));
+        actualCost = fullCost * (scaledCount / normalCount);
+        if (curThreat + actualCost <= maxBudget) {
+          chosenCount = scaledCount;
+        } else {
+          continue;
+        }
+      }
+
+      let score = 0;
+
+      // 1. Synergy (+5)
+      if (trySynergy) {
+        const synAfter = computeSynergies([...cards.map((c) => mobDef(c[0]).families), m.families]).active;
+        for (const [f, t] of Object.entries(synAfter)) {
+          if (t > (synBefore[f as Family] ?? -1)) score += 5;
+        }
+      }
+
+      // 2. Role filling (+3)
+      if (!hasFront && ['tank', 'melee'].includes(m.role)) score += 3;
+      if (!hasBack && ['ranged', 'caster', 'support'].includes(m.role)) score += 3;
+
+      // 3. Theme affinity (+2)
+      if (m.families.some((f) => cards.some((c) => mobDef(c[0]).families.includes(f)))) {
+        score += 2;
+      }
+
+      // 4. Role redundancy (-3)
+      const sameRoleCount = cards.filter((c) => mobDef(c[0]).role === m.role).length;
+      if (sameRoleCount >= 2) score -= 3;
+
+      // 5. Duplicate card penalty (-4)
+      if (cards.some((c) => c[0] === mob)) score -= 4;
+
+      scored.push({
+        mob,
+        star,
+        row: m.defaultRow,
+        count: chosenCount,
+        score,
+        threat: actualCost,
+      });
+    }
+
+    if (!scored.length) break;
+
+    scored.sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
+
+    const valid = scored.filter((s) => s.score >= 0);
+    const pickPool = valid.length ? valid.slice(0, Math.min(3, valid.length)) : [];
+    if (!pickPool.length) break;
+
+    const chosen = rng.pick(pickPool);
+    if (chosen.count !== undefined) {
+      cards.push([chosen.mob, chosen.star, chosen.row, chosen.count]);
+    } else {
+      cards.push([chosen.mob, chosen.star, chosen.row]);
+    }
+  }
+
+  fixRows(cards);
+  return cards;
+}
+
+export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Extract<Pending, { type: 'battle' }> {
   const kind = node.type as 'battle' | 'elite' | 'boss';
   // A chain-made ambush takes the place of the next ordinary fight.
   const am = s.ambush;
@@ -517,14 +713,15 @@ function makeBattle(s: RunState, node: MapNode): Pending {
     return p;
   }
   const enc = kind === 'boss' ? ENC_MAP[s.bosses[s.act - 1]] : pickEncounter(s, kind, node.row);
-  const cards = enc.cards.map((c) => c.slice() as EncCard);
-  // 不祥之兆 II: elites get an affix. III: one enchanted card in normal fights. IV: also in elite and boss fights.
-  const affix = kind === 'elite' && s.omen >= 2 ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
+  const baseCards = enc.cards.map((c) => c.slice() as EncCard);
+  const cards = withRng(s, (r) => dynamicFormation(r.fork(node.row * 10007 + s.act * 31), s.act, node.row, kind, s.omen, baseCards));
+  const pol = difficultyPolicy(s.omen);
+  const affix = kind === 'elite' && pol.eliteAffix && !(s.act === 1 && node.row === 0) ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
   const tier = tierForRow(node.row);
-  if (kind === 'battle' && s.omen >= 3) enchantEnemies(s, cards, 1, 2);
+  if (kind === 'battle' && pol.normalEnchant && !(s.act === 1 && node.row < 2)) enchantEnemies(s, cards, 1, 2);
   else if (kind === 'battle' && tier === 2) enchantEnemies(s, cards, 1, 1);
   else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
-  else if ((kind === 'elite' || kind === 'boss') && s.omen >= 4) enchantEnemies(s, cards, 1, 2);
+  else if ((kind === 'elite' || kind === 'boss') && pol.eliteBossEnchant) enchantEnemies(s, cards, 1, 2);
   const m = enemyMuls(s, kind, node.row);
   const modifier = rollBattleModifier(s, kind, node.row);
   const biome = kind === 'boss' ? BOSS_BIOME[enc.id] ?? 'plains' : withRng(s, (r) => pickBiome(r, s.act, node.row));
@@ -553,7 +750,7 @@ function brewFor(s: RunState): string[] | undefined {
   return withRng(s, (r) => Array.from({ length: n }, () => rollItem(r, { potionOnly: true })));
 }
 
-export function makeEventBattle(s: RunState, encId: string, onWin: string, biome?: string): Pending {
+export function makeEventBattle(s: RunState, encId: string, onWin: string, biome?: string): Extract<Pending, { type: 'battle' }> {
   const enc = ENC_MAP[encId];
   const row = s.nodeId ? s.map.nodes[s.nodeId].row : 0;
   const m = enemyMuls(s, 'event', row);
@@ -603,7 +800,7 @@ export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }
     p.cards.map(([mob, star, row, count, enchant, enchantLv]) => ({ mob, star, row: row ?? mobDef(mob).defaultRow, count, enchant, enchantLv })),
     {
       relics: [], potions: [], act: s.act, hpMul: p.hpMul, atkMul: p.atkMul, affix: p.affix,
-      flags: [...(modifierFlags ?? []), ...(p.kind === 'boss' && s.omen >= 5 ? ['omen_enrage'] : [])],
+      flags: [...(modifierFlags ?? []), ...(p.kind === 'boss' && difficultyPolicy(s.omen).bossPhase ? ['omen_enrage'] : [])],
     },
   );
   if (p.bossHp !== undefined) for (const c of enemy.cards) if (mobDef(c.mob).boss) c.startHp = p.bossHp;
@@ -1275,7 +1472,7 @@ export function randomBooks(s: RunState, n: number) {
 // ───────────────────────── rest ─────────────────────────
 
 export function restHeal(s: RunState) {
-  return s.omen >= 4 ? 1 : 2;
+  return difficultyPolicy(s.omen).restHeal;
 }
 
 export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant') {
@@ -1412,7 +1609,7 @@ export function runSummary(s: RunState, won = s.won): RunSummary {
 
 /** Same formula as the leaderboard API's scoreOf. */
 export function scoreOf(r: Pick<RunSummary, 'floor' | 'elites' | 'bosses' | 'gold' | 'red' | 'won' | 'omen'>) {
-  return Math.round((r.floor * 10 + r.elites * 30 + r.bosses * 120 + r.gold * 60 + r.red * 20 + (r.won ? 500 : 0)) * (1 + 0.2 * r.omen));
+  return Math.round((r.floor * 10 + r.elites * 30 + r.bosses * 120 + r.gold * 60 + r.red * 20 + (r.won ? 500 : 0)) * difficultyPolicy(r.omen).scoreMul);
 }
 
 export function runScore(s: RunState) {

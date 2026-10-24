@@ -1,5 +1,5 @@
 import type { RunState } from '../../run/run.ts';
-import { COMMANDER_MAP, OMENS, OMEN_SCALING, POTION_MAP } from '../../data/items.ts';
+import { COMMANDER_MAP, OMEN_SCALING, POTION_MAP, difficultyPolicy } from '../../data/items.ts';
 import { url } from '../assets.ts';
 import { Emerald, Hearts, PotionTipContent, RelicSlot, Tip, itemIcon } from '../components/common.tsx';
 import { overlay } from '../store.ts';
@@ -30,13 +30,19 @@ export function RunHud({ s }: { s: RunState }) {
         <div>
           <div class="tt-title" style={{ color: cmd.color }}>{cmd.name} · {cmd.title}</div>
           {cmd.desc.map((d) => <div class="tt-line" key={d}>{d}</div>)}
-          {s.omen > 0 && (
-            <>
-              <div class="tt-sec tt-red">不祥之兆 {['', 'I', 'II', 'III', 'IV', 'V'][s.omen]}</div>
-              {OMENS.slice(0, s.omen).flatMap((o) => o.rules.map((r) => <div class="tt-line tt-red" key={r}>☠ {r}</div>))}
-              <div class="tt-line tt-gray">{OMEN_SCALING}</div>
-            </>
-          )}
+          {(() => {
+            const pol = difficultyPolicy(s.omen);
+            return (
+              <>
+                <div class="tt-sec tt-red">难度 {pol.omen === 0 ? '0 · 探索' : `${['', 'I', 'II', 'III', 'IV', 'V'][pol.omen]} · ${pol.name}`}（{pol.summary}）</div>
+                {pol.rules.map((r) => <div class="tt-line tt-red" key={r}>☠ {r}</div>)}
+                <div class="tt-line tt-gray">
+                  敌方倍率：生命 ×{pol.hpMul.toFixed(2)} · 攻击 ×{pol.atkMul.toFixed(2)} · 编队预算 ×{pol.formationBudgetMul.toFixed(2)}
+                </div>
+                <div class="tt-line tt-gray">{OMEN_SCALING}</div>
+              </>
+            );
+          })()}
         </div>
       )}>
         <img class="cmd-face" src={url.cmd(s.commander)} />

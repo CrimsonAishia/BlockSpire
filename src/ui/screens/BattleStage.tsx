@@ -1,8 +1,8 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
 import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy } from '../../run/run.ts';
 import { mobDef, unitCount, RARITY_INFO } from '../../data/mobs.ts';
-import { estimatePower, sideSynergies } from '../../battle/setup.ts';
+import { estimateCombatPower, evaluateMatchup, sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
 import type { Family } from '../../core/types.ts';
 import { url } from '../assets.ts';
@@ -16,9 +16,86 @@ import { Hint } from '../components/hints.tsx';
 import { ComboList } from './TeamPanel.tsx';
 import { AFFIX_MAP, ENCHANT_MAP, enchantName } from '../../data/items.ts';
 import { BATTLE_MODIFIER_MAP } from '../../data/battleModifiers.ts';
+import { COMMANDER_MAP } from '../../data/commanders.ts';
+import { difficultyPolicy } from '../../data/difficulty.ts';
 
 type BattleP = Extract<Pending, { type: 'battle' }>;
 const KIND_NAME = { battle: '战斗', elite: '精英战斗', boss: '首领战', event: '事件战斗' };
+
+function BattleModifierOverlay({ modifierId, attempt }: { modifierId?: string; attempt: number }) {
+  const mod = modifierId ? BATTLE_MODIFIER_MAP[modifierId] : undefined;
+  if (!mod) return null;
+
+  const [dismissed, setDismissed] = useState(false);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const displayTime = attempt > 1 ? 800 : 1800;
+    const fadeTimer = setTimeout(() => {
+      setFading(true);
+    }, displayTime);
+    const removeTimer = setTimeout(() => {
+      setDismissed(true);
+    }, displayTime + 250);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (['Space', 'Enter', 'Escape'].includes(e.code)) {
+        setDismissed(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [attempt]);
+
+  return (
+    <>
+      {!dismissed && (
+        <div
+          class={`bm-intro ${fading ? 'fade-out' : ''}`}
+          onClick={() => setDismissed(true)}
+          role="button"
+          tabIndex={0}
+        >
+          <div class="bm-intro-box">
+            <div class="bm-intro-k">⚔ 战场规则</div>
+            <div class="bm-intro-name" style={{ color: mod.color }}>
+              {mod.name}
+            </div>
+            <div class="bm-intro-desc">{mod.desc}</div>
+            <div class="bm-intro-reward gold-t">胜利绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
+            <div class="bm-intro-dismiss faint">点击或按键关闭</div>
+          </div>
+        </div>
+      )}
+      <div class="bm-persistent-badge">
+        <Tip
+          content={() => (
+            <div>
+              <div class="tt-title" style={{ color: mod.color }}>
+                ⚔ 战场规则「{mod.name}」
+              </div>
+              <div class="tt-line">{mod.desc}</div>
+              <div class="tt-line tt-yellow">本场胜利额外奖励绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
+              <div class="tt-sec tt-gray">此规则对双方对称生效。</div>
+            </div>
+          )}
+        >
+          <div class="bm-pill" tabIndex={0}>
+            <span class="bm-pill-icon">⚔</span>
+            <span class="bm-pill-title" style={{ color: mod.color }}>
+              {mod.name}
+            </span>
+            <span class="bm-pill-desc">· {mod.desc.replace(/（[^）]+）/g, '')}</span>
+          </div>
+        </Tip>
+      </div>
+    </>
+  );
+}
 
 export function BattleStage({ s, p }: { s: RunState; p: BattleP; v?: number }) {
   const [phase, setPhase] = useState<'deploy' | 'fight'>('deploy');
@@ -46,6 +123,7 @@ export function BattleStage({ s, p }: { s: RunState; p: BattleP; v?: number }) {
       canPay={s.emeralds >= golemCost(s)}
       builds={p.build ?? []}
       onBuild={s.commander === 'steve' ? (list) => act((r) => setBuilds(r, list)) : undefined}
+      extraOverlay={<BattleModifierOverlay modifierId={p.modifier} attempt={p.attempt} />}
     >
       <DeployHud s={s} p={p} config={config} terrainName={terrain.name} effects={terrain.effects} onFight={() => (sfx('fight'), setPhase('fight'))} />
     </Arena3DView>
@@ -66,12 +144,32 @@ function DeployHud({
   const foeSyn = sideSynergies(p.cards.map(([mob]) => ({ mob })), []);
   const stake = p.kind === 'battle' || p.kind === 'event' ? 1 : 2;
   const bossCard = p.cards.find(([m]) => mobDef(m).boss);
-  const mine = estimatePower(config.sides[0]);
-  const theirs = estimatePower(config.sides[1]) * (p.bossHp ?? 1);
+  const mineEst = estimateCombatPower(config.sides[0]);
+  const theirsEst = estimateCombatPower(config.sides[1], { bossHp: p.bossHp });
+  const mine = mineEst.power;
+  const theirs = theirsEst.power;
+  const hasHighVariance = mineEst.variance === 'high' || theirsEst.variance === 'high';
+  const varianceReason = [mineEst.varianceReason, theirsEst.varianceReason].filter(Boolean).join('、');
+  const evaluation = evaluateMatchup(mine, theirs, hasHighVariance ? 'high' : 'normal', varianceReason);
   const formationThreat = encounterThreat({ cards: p.cards });
   const modifier = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier] : undefined;
-  const ratio = mine / Math.max(0.01, theirs);
-  const verdict = ratio > 1.3 ? ['优势', '#7dff9f'] : ratio > 0.92 ? ['均势', '#ffe14a'] : ratio > 0.7 ? ['劣势', '#ffa64d'] : ['危险', '#ff5a5a'];
+
+  const tacticalItems: string[] = [];
+  if (s.commander) {
+    const cmd = COMMANDER_MAP[s.commander];
+    const charges = config.sides[0].skill?.charges;
+    if (cmd && charges !== undefined && charges > 0) {
+      tacticalItems.push(`技能「${cmd.skill.name}」×${charges}`);
+    }
+  }
+  const totalPotions = s.potions.length + (p.brew?.length ?? 0);
+  if (totalPotions > 0) {
+    tacticalItems.push(`药水 ×${totalPotions}`);
+  }
+  if (p.build?.length) {
+    tacticalItems.push(`工事 ×${p.build.length}`);
+  }
+  const tacticalSummary = tacticalItems.length > 0 ? tacticalItems.join('、') : '无可用资源';
   return (
     <div class="deploy-hud">
       <div class="dh-top">
@@ -92,7 +190,9 @@ function DeployHud({
             ☠ 精英词缀「{AFFIX_MAP[p.affix].name}」：{AFFIX_MAP[p.affix].desc}
           </div>
         )}
-        {p.kind === 'boss' && s.omen >= 5 && <div class="omen-note">☠ 不祥之兆 V：首领生命低于一半时狂暴，并召唤一队护卫。</div>}
+        {p.kind === 'boss' && difficultyPolicy(s.omen).bossPhase && (
+          <div class="omen-note">☠ 不祥之兆 V：首领生命低于一半时狂暴（攻速 +30%、受到伤害 -15%，召唤升级护卫）。</div>
+        )}
         <div class="dh-terrain">
           <span class="dh-tname">战场 · {terrainName}</span>
           {effects.map((e) => (
@@ -205,9 +305,18 @@ function DeployHud({
         <Tip
           content={() => (
             <div>
-              <div class="tt-title">战力评估</div>
-              <div class="tt-line">根据双方生命、攻击、数量与加成粗略估算，不含技能联动与地形因素。</div>
-              <div class="tt-sec tt-gray">仅供参考：克制关系与站位往往能以弱胜强。</div>
+              <div class="tt-title">预估战况分析</div>
+              <div class="tt-line">
+                我方阵容预估：<b class="blue-t">{Math.round(mine)}</b> · 敌方威胁预估：<b class="red-t">{Math.round(theirs)}</b>
+              </div>
+              <div class="tt-line">
+                预估战况：<b style={{ color: evaluation.color }}>{evaluation.verdict}</b>（战力比值 {(mine / Math.max(0.1, theirs)).toFixed(2)}）
+              </div>
+              <div class="tt-line tt-yellow">战术资源：{tacticalSummary}</div>
+              {evaluation.variance === 'high' && (
+                <div class="tt-sec tt-red">估算波动：较高（{evaluation.varianceReason || '召唤/复活阵容'}）</div>
+              )}
+              <div class="tt-sec tt-gray">基于有效生命、持续输出与机制加成估算；克制关系、布阵与战术资源往往能逆转局势。</div>
             </div>
           )}
         >
@@ -216,9 +325,14 @@ function DeployHud({
               <div class="pb-me" style={{ width: `${(mine / (mine + theirs)) * 100}%` }} />
             </div>
             <div class="power-text">
-              战力 <span class="blue-t">{mine.toFixed(1)}</span> : <span class="red-t">{theirs.toFixed(1)}</span> ·{' '}
-              <b style={{ color: verdict[1] }}>{verdict[0]}</b>
+              我方 <span class="blue-t">{Math.round(mine)}</span> vs 敌方 <span class="red-t">{Math.round(theirs)}</span> ·{' '}
+              <b style={{ color: evaluation.color }}>预估：{evaluation.verdict}</b>
             </div>
+            {evaluation.variance === 'high' && (
+              <div class="power-variance" style={{ color: '#ffa64d', fontSize: '11px', textAlign: 'center', marginTop: '2px' }}>
+                估算波动：较高（{evaluation.varianceReason}）
+              </div>
+            )}
           </div>
         </Tip>
         <div class="stake">

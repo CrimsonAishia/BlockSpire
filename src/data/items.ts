@@ -263,6 +263,8 @@ export const RELIC_TIER_INFO: Record<RelicTier, { name: string; color: string; p
 };
 
 export { COMMANDERS, COMMANDER_MAP, SKILL_INFO, type CommanderDef, type SkillId } from './commanders.ts';
+export { DIFFICULTY_POLICIES, difficultyPolicy, type DifficultyPolicy } from './difficulty.ts';
+import { DIFFICULTY_POLICIES } from './difficulty.ts';
 
 export interface OmenDef {
   level: number;
@@ -284,24 +286,15 @@ export interface OmenDef {
 export const OMEN_SCALING = '难度越高，敌人会稳步强化；每级仍提供开箱幸运 +2%，得分 +20%。';
 
 /** Explicit cumulative multipliers keep high difficulty readable and prevent hidden double scaling. */
-export const OMEN_ENEMY_MULS = [
-  { hp: 1, atk: 1 },
-  { hp: 1.05, atk: 1.03 },
-  { hp: 1.1, atk: 1.06 },
-  { hp: 1.16, atk: 1.1 },
-  { hp: 1.23, atk: 1.14 },
-  { hp: 1.31, atk: 1.19 },
-] as const;
+export const OMEN_ENEMY_MULS = DIFFICULTY_POLICIES.map((p) => ({ hp: p.hpMul, atk: p.atkMul }));
 
-const O = (level: number, name: string, title: string, rules: string[]): OmenDef => ({ level, name, title, rules, desc: rules.join(' ') });
-
-export const OMENS: OmenDef[] = [
-  O(1, '不祥之兆 I', '精英出没', ['地图上的精英战更多，第 3 层起就会出现。']),
-  O(2, '不祥之兆 II', '精英词缀', ['精英战的敌人带一个随机词缀：再生、荆棘、迅捷、坚韧或嗜血。']),
-  O(3, '不祥之兆 III', '物资紧缺', ['开局少 1 颗心，物品栏 -1，商店价格 +15%。', '普通战斗中有一张敌方卡牌带随机附魔（II 级）。']),
-  O(4, '不祥之兆 IV', '精锐护卫', ['休息只回复 1 颗心。', '精英战和首领战中也有一张敌方卡牌带随机附魔（II 级）。']),
-  O(5, '不祥之兆 V', '末日', ['首领生命低于一半时狂暴：攻速 +30%、受到伤害 -15%，并召唤一队护卫。']),
-];
+export const OMENS: OmenDef[] = DIFFICULTY_POLICIES.slice(1).map((p) => ({
+  level: p.omen,
+  name: `不祥之兆 ${['', 'I', 'II', 'III', 'IV', 'V'][p.omen]}`,
+  title: p.name,
+  rules: p.newRules,
+  desc: p.summary,
+}));
 
 /** Elite affixes (不祥之兆 II+): one per elite fight, on every enemy card. */
 export interface AffixDef {

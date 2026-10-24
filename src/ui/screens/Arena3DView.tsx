@@ -43,6 +43,7 @@ interface Props {
   /** Steve: deployment builds and how to change them. */
   builds?: BuildOrder[];
   onBuild?: (builds: BuildOrder[]) => void;
+  extraOverlay?: ComponentChildren;
   children?: ComponentChildren;
 }
 
@@ -105,7 +106,7 @@ function maxHp(b: Battle): [number, number] {
 
 export function Arena3DView({
   terrain, config, configKey, phase, title, subtitle, boss, leftLabel = '我方', rightLabel = '敌方', endText, deploySide = 0, onDeployMove, onFinish, items = [], temp = [],
-  golemCost = 0, canPay = true, builds = [], onBuild, children,
+  golemCost = 0, canPay = true, builds = [], onBuild, extraOverlay, children,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -949,6 +950,7 @@ export function Arena3DView({
         </div>
       )}
       {paused && stage === 'fight' && <div class="b-paused">已暂停</div>}
+      {extraOverlay}
     </div>
   );
 }

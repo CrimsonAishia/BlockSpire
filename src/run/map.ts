@@ -1,6 +1,7 @@
 // Slay-the-Spire style branching map per act.
 import type { Rng } from '../core/rng.ts';
 import type { ActMap, MapNode, NodeType } from '../core/types.ts';
+import { difficultyPolicy } from '../data/difficulty.ts';
 
 export const MAP_ROWS = 13; // rows 0..12, boss at row 13
 export const MAP_COLS = 7;
@@ -68,7 +69,8 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
       };
       add('battle', 45);
       add('event', 22);
-      if (n.row >= (omen >= 1 ? 3 : 4) && !pTypes.includes('elite')) add('elite', omen >= 1 ? 24 : 15);
+      const policy = difficultyPolicy(omen);
+      if (n.row >= (policy.omen >= 1 ? 3 : 4) && !pTypes.includes('elite')) add('elite', policy.eliteWeight);
       if (n.row >= 4 && n.row !== MAP_ROWS - 2 && !pTypes.includes('rest')) add('rest', 11);
       if (n.row >= 2 && !pTypes.includes('shop')) add('shop', 9);
       n.type = rng.weighted(opts, w);

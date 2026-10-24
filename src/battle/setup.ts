@@ -299,22 +299,159 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
   };
 }
 
-/** Rough fighting strength of a side (≈ number of blue ★1 squads), for the prep screen gauge. */
-export function estimatePower(side: SidePlan): number {
+export interface PowerEstimate {
+  power: number;
+  variance: 'normal' | 'high';
+  varianceReason?: string;
+}
+
+export interface MatchupEvaluation {
+  ratio: number;
+  verdict: '优势' | '均势' | '劣势' | '危险';
+  color: string;
+  variance: 'normal' | 'high';
+  varianceReason?: string;
+}
+
+export function estimateCombatPower(side: SidePlan, options?: { bossHp?: number }): PowerEstimate {
   let p = 0;
+  let hasSummoners = false;
+  let hasBombers = false;
+  let hasRevive = false;
+
   for (const c of side.cards) {
     const m = mobDef(c.mob);
-    if (m.structure) continue;
     const sm = starStatMul(m, c.star);
-    const hp = m.hp * sm * c.hpMul * (1 + m.armor);
-    const dps = ((m.atk * sm * c.atkMul) / m.cd) * c.atkSpd;
-    let v = c.count * Math.sqrt(hp * Math.max(1, dps));
-    if (m.range >= 60) v *= 1.35;
-    if (m.ai === 'evoker' || m.ai === 'illusioner') v *= 1.4;
-    if (c.fx.lifesteal) v *= 1 + c.fx.lifesteal;
-    if (c.fx.crit) v *= 1 + c.fx.crit * 0.75;
-    p += v;
+    let hp = m.hp * sm * c.hpMul;
+    if (m.boss && options?.bossHp !== undefined) {
+      hp *= Math.max(0.05, Math.min(1, options.bossHp));
+    }
+
+    const armor = m.armor;
+    const dmgTaken = Math.max(0.2, c.fx.dmgTaken ?? 1);
+    let effectiveHp = (hp * (1 + armor)) / dmgTaken;
+
+    if (c.fx.dodge > 0) effectiveHp /= Math.max(0.4, 1 - Math.min(0.6, c.fx.dodge));
+    if (c.fx.lifesteal > 0) effectiveHp *= 1 + Math.min(0.5, c.fx.lifesteal * 0.75);
+    if (c.fx.regen > 0) effectiveHp *= 1 + Math.min(0.4, c.fx.regen * 15);
+
+    if (m.id === 'slime' || m.id === 'magma_cube' || m.id === 'baby_sifter') {
+      effectiveHp *= 1.35;
+      hasRevive = true;
+    }
+    if (side.flags['totem_of_undying'] || c.fx.revive) {
+      effectiveHp *= 1.4;
+      hasRevive = true;
+    }
+
+    const baseDps = ((m.atk * sm * c.atkMul) / Math.max(0.2, m.cd)) * c.atkSpd;
+    let rawDps = baseDps;
+    if (c.fx.crit > 0) rawDps *= 1 + c.fx.crit * 0.75;
+    if (m.range >= 120) rawDps *= 1.25;
+    else if (m.range >= 60) rawDps *= 1.15;
+    if (c.fx.sweep > 0) rawDps *= 1 + c.fx.sweep * 0.4;
+    if (c.fx.pierce > 0) rawDps *= 1 + Math.min(3, c.fx.pierce) * 0.25;
+
+    const controlBonus = 1 + (c.fx.stunChance ?? 0) * 0.3 + (c.fx.knock > 0 ? 0.08 : 0);
+    let continuousOutput = rawDps * controlBonus;
+
+    if (m.role === 'summoner' || m.ai === 'evoker' || m.ai === 'illusioner' || m.ai === 'nester' || m.ai === 'singer') {
+      continuousOutput *= 1.35;
+      effectiveHp *= 1.15;
+      hasSummoners = true;
+    }
+    if (m.role === 'bomber' || m.ai === 'creeper') {
+      hasBombers = true;
+    }
+
+    let roleCoeff = 1.0;
+    switch (m.role) {
+      case 'tank':
+        roleCoeff = 1.08;
+        break;
+      case 'assassin':
+        roleCoeff = 1.1;
+        break;
+      case 'bomber':
+        roleCoeff = 1.08;
+        break;
+      case 'support':
+        roleCoeff = 1.12;
+        break;
+      case 'boss':
+        roleCoeff = 1.1;
+        break;
+      default:
+        roleCoeff = 1.0;
+        break;
+    }
+
+    let mechCoeff = 1.0;
+    if (m.flying) mechCoeff *= 1.15;
+    if (c.fx.thorns > 0) mechCoeff *= 1 + c.fx.thorns * 0.4;
+    if (c.fx.burnHit > 0 || c.fx.poisonHit > 0) mechCoeff *= 1.1;
+
+    let cardPower = 0;
+    if (m.structure) {
+      cardPower = c.count * Math.sqrt(effectiveHp * Math.max(15, continuousOutput || 25)) * 0.85;
+    } else {
+      cardPower = c.count * Math.sqrt(effectiveHp * Math.max(1, continuousOutput)) * roleCoeff * mechCoeff;
+    }
+    p += cardPower;
   }
+
+  if (side.builds && side.builds.length > 0) {
+    p += side.builds.length * 50;
+  }
+
   const flags = Object.keys(side.flags).length;
-  return (p / 168) * (1 + Math.min(0.3, flags * 0.025));
+  const power = (p / 168) * 25 * (1 + Math.min(0.2, flags * 0.02));
+
+  let variance: 'normal' | 'high' = 'normal';
+  let varianceReason: string | undefined;
+  if (hasSummoners && hasRevive) {
+    variance = 'high';
+    varianceReason = '召唤/复活阵容';
+  } else if (hasSummoners) {
+    variance = 'high';
+    varianceReason = '召唤阵容';
+  } else if (hasRevive) {
+    variance = 'high';
+    varianceReason = '分裂/复活阵容';
+  } else if (hasBombers) {
+    variance = 'high';
+    varianceReason = '高爆发自爆';
+  }
+
+  return { power, variance, varianceReason };
+}
+
+/** Rough fighting strength of a side (≈ number of blue ★1 squads), for the prep screen gauge. */
+export function estimatePower(side: SidePlan, options?: { bossHp?: number }): number {
+  return estimateCombatPower(side, options).power;
+}
+
+export function evaluateMatchup(
+  mine: number,
+  theirs: number,
+  variance: 'normal' | 'high' = 'normal',
+  varianceReason?: string,
+): MatchupEvaluation {
+  const ratio = mine / Math.max(0.01, theirs);
+  let verdict: '优势' | '均势' | '劣势' | '危险' = '均势';
+  let color = '#ffe14a';
+  if (ratio >= 1.18) {
+    verdict = '优势';
+    color = '#7dff9f';
+  } else if (ratio >= 0.9) {
+    verdict = '均势';
+    color = '#ffe14a';
+  } else if (ratio >= 0.72) {
+    verdict = '劣势';
+    color = '#ffa64d';
+  } else {
+    verdict = '危险';
+    color = '#ff5a5a';
+  }
+  return { ratio, verdict, color, variance, varianceReason };
 }

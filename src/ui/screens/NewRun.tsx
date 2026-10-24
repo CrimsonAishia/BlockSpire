@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { COMMANDERS, COMMANDER_MAP, OMENS, OMEN_ENEMY_MULS, OMEN_SCALING, RELICS } from '../../data/items.ts';
+import { COMMANDERS, COMMANDER_MAP, OMENS, OMEN_SCALING, RELICS, difficultyPolicy } from '../../data/items.ts';
 import { SKILL_INFO } from '../../data/commanders.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, HeartIcon, RelicTipContent, Tip } from '../components/common.tsx';
@@ -17,7 +17,6 @@ export function NewRun() {
   };
   const [cmd, setCmd] = useState('steve');
   const [omen, setOmen] = useState(Math.max(0, Math.min(p.maxOmen, p.lastOmen ?? 0, OMENS.length)));
-  const enemyMul = OMEN_ENEMY_MULS[omen] ?? OMEN_ENEMY_MULS[0];
   const start = () => {
     sfx('levelup');
     updateProfile((next) => {
@@ -34,7 +33,7 @@ export function NewRun() {
         <div class="cmd-cards">
           {COMMANDERS.map((c) => {
             const ok = unlocked(c.id);
-            const hearts = c.hearts - (omen >= 3 ? 1 : 0);
+            const hearts = c.hearts - difficultyPolicy(omen).heartsPenalty;
             const best = p.bestOmen?.[c.id];
             const tier = omenTier(best);
             return (
@@ -78,69 +77,59 @@ export function NewRun() {
           })}
         </div>
         <CommanderDetail id={cmd} />
-        <div class="panel omen-panel">
-          <div class="row between">
-            <div class="panel-title" style={{ marginBottom: 4 }}>
-              难度：{omen === 0 ? '普通' : OMENS[omen - 1].name}
-            </div>
-            <div class="row gap8">
-              {Array.from({ length: 6 }, (_, i) => (
-                <button
-                  key={i}
-                  class={`omen-pip ${omen === i ? 'on' : ''} ${i > p.maxOmen ? 'locked' : ''}`}
-                  disabled={i > p.maxOmen}
-                  onClick={() => (sfx('click'), setOmen(i))}
-                  title={i > p.maxOmen ? '在上一难度通关后解锁' : ''}
-                >
-                  {i === 0 ? '普' : ['I', 'II', 'III', 'IV', 'V'][i - 1]}
-                </button>
-              ))}
-            </div>
-          </div>
-          {omen === 0 ? (
-            <div class="subtle" style={{ marginTop: 8 }}>
-              标准难度，适合第一次游玩。通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的规则，敌人更强、物资更紧，开箱也更幸运。
-            </div>
-          ) : (
-            <>
-              <div class="omen-cur">
-                <b>{OMENS[omen - 1].title}</b>
-                {OMENS[omen - 1].rules.map((r) => (
-                  <span key={r}>☠ {r}</span>
-                ))}
-              </div>
-              {omen > 1 && (
-                <div class="omen-prev">
-                  <span class="faint">以及之前每一级的规则：</span>
-                  {OMENS.slice(0, omen - 1).map((o) => (
-                    <Tip
-                      key={o.level}
-                      content={() => (
-                        <div>
-                          <div class="tt-title">
-                            {o.name} · {o.title}
-                          </div>
-                          {o.rules.map((r) => (
-                            <div class="tt-line tt-red" key={r}>
-                              ☠ {r}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+        {(() => {
+          const policy = difficultyPolicy(omen);
+          return (
+            <div class="panel omen-panel">
+              <div class="row between">
+                <div class="panel-title" style={{ marginBottom: 4 }}>
+                  难度：{policy.omen === 0 ? '普通 · 探索' : `不祥之兆 ${['', 'I', 'II', 'III', 'IV', 'V'][policy.omen]} · ${policy.name}`}
+                  <span class="subtle" style={{ fontSize: 13, marginLeft: 8 }}>{policy.summary}</span>
+                </div>
+                <div class="row gap8">
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <button
+                      key={i}
+                      class={`omen-pip ${omen === i ? 'on' : ''} ${i > p.maxOmen ? 'locked' : ''}`}
+                      disabled={i > p.maxOmen}
+                      onClick={() => (sfx('click'), setOmen(i))}
+                      title={i > p.maxOmen ? '在上一难度通关后解锁' : ''}
                     >
-                      <span class="omen-chip">
-                        {ROMAN_OMEN[o.level]} {o.title}
-                      </span>
-                    </Tip>
+                      {i === 0 ? '普' : ['I', 'II', 'III', 'IV', 'V'][i - 1]}
+                    </button>
                   ))}
                 </div>
-              )}
-              <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
-                {OMEN_SCALING} 当前敌人生命 +{Math.round((enemyMul.hp - 1) * 100)}%、攻击 +{Math.round((enemyMul.atk - 1) * 100)}%。通关后解锁下一级，并为这位统领记录最高难度（铜 I–II · 银 III–IV · 金 V 统领边框）。
               </div>
-            </>
-          )}
-        </div>
+              {omen === 0 ? (
+                <div class="subtle" style={{ marginTop: 8 }}>
+                  基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，开箱与积分回报也更高。
+                </div>
+              ) : (
+                <>
+                  <div class="omen-cur">
+                    <b>本级新增：{policy.name}</b>
+                    {policy.newRules.map((r) => (
+                      <span key={r}>☠ {r}</span>
+                    ))}
+                  </div>
+                  {omen > 1 && (
+                    <div class="omen-prev">
+                      <span class="faint">累计生效全部前置规则：</span>
+                      {policy.rules.map((r, idx) => (
+                        <span key={idx} class="omen-chip" title={r}>
+                          ✔ {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
+                    {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。得分 +{Math.round((policy.scoreMul - 1) * 100)}%、幸运 +{Math.round(policy.luckBonus * 100)}%。通关后解锁下一级并点亮该统领勋标。
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
         <div class="row gap16 center">
           <Btn size="big" onClick={() => go('title')}>
             返回
