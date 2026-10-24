@@ -463,8 +463,31 @@
   zoom: 0.72;
 }
 /* Deploy side panels: start higher and scroll instead of running under the bottom bar. */
+.stage.compact .dh-bottom {
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 8px 10px;
+}
+.stage.compact .dh-bottom .potion-bar {
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.stage.compact .dh-hint {
+  min-width: 160px;
+}
 .stage.compact .dh-panel {
   top: 118px;
-  max-height: calc(100% - 118px - 142px);
+  max-height: calc(100% - 118px - 176px);
   overflow-y: auto;
+}
+
+/* Battle result: short phone screens need to scroll to the loot and continue button. */
+.stage.compact .result-screen {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.stage.compact .result-body {
+  flex: 0 0 auto;
+  padding-bottom: 32px;
 }
