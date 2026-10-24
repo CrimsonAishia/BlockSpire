@@ -3,9 +3,10 @@ import { Rng, randomSeed } from '../core/rng.ts';
 import type { ActMap, Card, MapNode, Rarity, Row } from '../core/types.ts';
 import { RARITIES } from '../core/types.ts';
 import { CRATE_MAP, cratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
-import { ENC_MAP, ENCOUNTERS, enemyScale, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
-import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
-import { MOB_MAP, RARITY_INFO, mobDef } from '../data/mobs.ts';
+import { ENC_MAP, ENCOUNTERS, enemyScales, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
+import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, OMEN_ENEMY_MULS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
+import { MOB_MAP, RARITY_INFO, mobDef, unitCount } from '../data/mobs.ts';
+import { MOB_COST } from '../classic/costs.ts';
 import { buildSide } from '../battle/setup.ts';
 import type { BattleConfig, BattleResult } from '../battle/sim.ts';
 import { EVENTS, EVENT_MAP } from './events.ts';
@@ -420,29 +421,57 @@ export function enterNode(s: RunState, id: string) {
   }
 }
 
+/** Arena-simulated encounter cost; used to make each tier climb from lighter to heavier formations. */
+export function encounterThreat(enc: Pick<EncounterDef, 'cards'>): number {
+  return enc.cards.reduce((sum, [mob, star, , count]) => {
+    const measured = MOB_COST[mob]?.[Math.max(0, Math.min(2, star - 1))];
+    const fallback = [2, 4, 7, 11, 16][RARITIES.indexOf(mobDef(mob).rarity)] ?? 4;
+    const normalCount = unitCount(mobDef(mob), star);
+    return sum + (measured ?? fallback) * ((count ?? normalCount) / normalCount);
+  }, 0);
+}
+
 function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): EncounterDef {
   return withRng(s, (r) => {
     let pool = ENCOUNTERS.filter((e) => e.act === s.act && e.kind === kind);
+    let tier: 0 | 1 | 2 = 0;
     if (kind === 'battle') {
-      const tier = tierForRow(row);
+      tier = tierForRow(row);
       pool = pool.filter((e) => e.tier === tier);
     }
     const fresh = pool.filter((e) => !s.usedEnc.includes(e.id));
-    const pick = r.pick(fresh.length ? fresh : pool);
+    const choices = fresh.length ? fresh : pool;
+    let pick: EncounterDef;
+    if (kind === 'battle' && choices.length > 1) {
+      const [start, end] = tier === 0 ? [0, 3] : tier === 1 ? [4, 8] : [9, 11];
+      const rawProgress = Math.max(0, Math.min(1, (row - start) / Math.max(1, end - start)));
+      // The final tier starts part-way up its range so row 9 never becomes easier than row 8.
+      const progress = tier === 2 ? 0.4 + rawProgress * 0.6 : rawProgress;
+      const threats = pool.map(encounterThreat);
+      const target = Math.min(...threats) + (Math.max(...threats) - Math.min(...threats)) * progress;
+      const distances = choices.map((e) => Math.abs(encounterThreat(e) - target));
+      const nearest = Math.min(...distances);
+      let window = distances.map((d) => d <= nearest + 1.5);
+      const minWindow = Math.min(3, choices.length);
+      if (window.filter(Boolean).length < minWindow) {
+        const closest = new Set(distances.map((d, i) => ({ d, i })).sort((a, b) => a.d - b.d).slice(0, minWindow).map((x) => x.i));
+        window = distances.map((_, i) => closest.has(i));
+      }
+      const windowSize = window.filter(Boolean).length;
+      // 80% follows the floor's budget window; 20% is a bounded surprise from the full pool.
+      const weights = choices.map((_, i) => 0.2 / choices.length + (window[i] ? 0.8 / windowSize : 0));
+      pick = r.weighted(choices, weights);
+    } else pick = r.pick(choices);
     s.usedEnc.push(pick.id);
     return pick;
   });
 }
 
-/** Per omen level, on top of each level's rules (see OMEN_SCALING). */
-const OMEN_HP = 0.03;
-const OMEN_ATK = 0.02;
-
 export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'event', row: number) {
-  const sc = enemyScale(s.act, row, kind);
-  // Each omen level's own rules change how the run plays; on top, enemies get a little tougher.
-  let hp = sc * (1 + OMEN_HP * s.omen);
-  let atk = sc * (1 + OMEN_ATK * s.omen);
+  const sc = enemyScales(s.act, row, kind);
+  const omen = OMEN_ENEMY_MULS[Math.max(0, Math.min(OMEN_ENEMY_MULS.length - 1, s.omen))];
+  let hp = sc.hp * omen.hp;
+  let atk = sc.atk * omen.atk;
   if (hasRelic(s, 'ominous_bottle')) {
     hp *= 1.12;
     atk *= 1.12;
@@ -467,7 +496,10 @@ function makeBattle(s: RunState, node: MapNode): Pending {
   const cards = enc.cards.map((c) => c.slice() as EncCard);
   // 不祥之兆 II: elites get an affix. III: one enchanted card in normal fights. IV: also in elite and boss fights.
   const affix = kind === 'elite' && s.omen >= 2 ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
+  const tier = tierForRow(node.row);
   if (kind === 'battle' && s.omen >= 3) enchantEnemies(s, cards, 1, 2);
+  else if (kind === 'battle' && tier === 2) enchantEnemies(s, cards, 1, 1);
+  else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
   else if ((kind === 'elite' || kind === 'boss') && s.omen >= 4) enchantEnemies(s, cards, 1, 2);
   const m = enemyMuls(s, kind, node.row);
   const biome = kind === 'boss' ? BOSS_BIOME[enc.id] ?? 'plains' : withRng(s, (r) => pickBiome(r, s.act, node.row));

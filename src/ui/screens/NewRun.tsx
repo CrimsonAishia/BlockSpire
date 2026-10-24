@@ -1,10 +1,10 @@
 import { useState } from 'preact/hooks';
-import { COMMANDERS, COMMANDER_MAP, OMENS, OMEN_SCALING, RELICS } from '../../data/items.ts';
+import { COMMANDERS, COMMANDER_MAP, OMENS, OMEN_ENEMY_MULS, OMEN_SCALING, RELICS } from '../../data/items.ts';
 import { SKILL_INFO } from '../../data/commanders.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, HeartIcon, RelicTipContent, Tip } from '../components/common.tsx';
 import { RichText } from '../components/rich.tsx';
-import { go, profile, setRun, commit } from '../store.ts';
+import { go, profile, setRun, commit, updateProfile } from '../store.ts';
 import { createRun } from '../../run/run.ts';
 import { sfx } from '../../audio/audio.ts';
 import { OMEN_TIER_NAME, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
@@ -16,9 +16,13 @@ export function NewRun() {
     return !c.unlock || p.flags[c.unlock.key];
   };
   const [cmd, setCmd] = useState('steve');
-  const [omen, setOmen] = useState(Math.min(p.maxOmen, 0));
+  const [omen, setOmen] = useState(Math.max(0, Math.min(p.maxOmen, p.lastOmen ?? 0, OMENS.length)));
+  const enemyMul = OMEN_ENEMY_MULS[omen] ?? OMEN_ENEMY_MULS[0];
   const start = () => {
     sfx('levelup');
+    updateProfile((next) => {
+      next.lastOmen = omen;
+    });
     setRun(createRun(cmd, omen));
     commit();
     go('run');
@@ -132,7 +136,7 @@ export function NewRun() {
                 </div>
               )}
               <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
-                {OMEN_SCALING} 通关后解锁下一级，并为这位统领记录最高难度（铜 I–II · 银 III–IV · 金 V 统领边框）。
+                {OMEN_SCALING} 当前敌人生命 +{Math.round((enemyMul.hp - 1) * 100)}%、攻击 +{Math.round((enemyMul.atk - 1) * 100)}%。通关后解锁下一级，并为这位统领记录最高难度（铜 I–II · 银 III–IV · 金 V 统领边框）。
               </div>
             </>
           )}

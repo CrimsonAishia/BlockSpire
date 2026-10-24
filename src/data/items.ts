@@ -281,7 +281,17 @@ export interface OmenDef {
  * rather than only inflating numbers. Tuned with the bot to lose a similar share of clears per
  * level (see README).
  */
-export const OMEN_SCALING = '每升一级，敌人生命再 +3%、攻击再 +2%；开箱幸运 +2%，得分 +20%。';
+export const OMEN_SCALING = '难度越高，敌人会稳步强化；每级仍提供开箱幸运 +2%，得分 +20%。';
+
+/** Explicit cumulative multipliers keep high difficulty readable and prevent hidden double scaling. */
+export const OMEN_ENEMY_MULS = [
+  { hp: 1, atk: 1 },
+  { hp: 1.05, atk: 1.03 },
+  { hp: 1.1, atk: 1.06 },
+  { hp: 1.16, atk: 1.1 },
+  { hp: 1.23, atk: 1.14 },
+  { hp: 1.31, atk: 1.19 },
+] as const;
 
 const O = (level: number, name: string, title: string, rules: string[]): OmenDef => ({ level, name, title, rules, desc: rules.join(' ') });
 

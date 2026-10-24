@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
-import { battleConfig, battleTerrain, golemCost, resolveBattle, setBuilds, setDeploy } from '../../run/run.ts';
+import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy } from '../../run/run.ts';
 import { mobDef, unitCount, RARITY_INFO } from '../../data/mobs.ts';
 import { estimatePower, sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
@@ -67,6 +67,7 @@ function DeployHud({
   const bossCard = p.cards.find(([m]) => mobDef(m).boss);
   const mine = estimatePower(config.sides[0]);
   const theirs = estimatePower(config.sides[1]) * (p.bossHp ?? 1);
+  const formationThreat = encounterThreat({ cards: p.cards });
   const ratio = mine / Math.max(0.01, theirs);
   const verdict = ratio > 1.3 ? ['优势', '#7dff9f'] : ratio > 0.92 ? ['均势', '#ffe14a'] : ratio > 0.7 ? ['劣势', '#ffa64d'] : ['危险', '#ff5a5a'];
   return (
@@ -75,6 +76,9 @@ function DeployHud({
         <div class={`prep-kind k-${p.kind}`}>{KIND_NAME[p.kind]}</div>
         <div class="dh-title title-shadow">{p.name}</div>
         {p.desc && <div class="subtle">{p.desc}</div>}
+        <div class="omen-note">
+          敌方强度：{p.kind !== 'boss' && <>编队 {Math.round(formationThreat)} · </>}生命 ×{p.hpMul.toFixed(2)} · 攻击 ×{p.atkMul.toFixed(2)}
+        </div>
         {p.bossHp !== undefined && <div class="gold-t">首领带伤再战：剩余 {Math.round(p.bossHp * 100)}% 生命</div>}
         {p.affix && (
           <div class="omen-note" style={{ color: AFFIX_MAP[p.affix].color }}>

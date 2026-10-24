@@ -23,6 +23,8 @@ export interface Profile {
   wins: number;
   bestScore: number;
   maxOmen: number;
+  /** Last difficulty chosen on the new-run screen. */
+  lastOmen?: number;
   /** Highest omen level cleared with each commander (absent = never cleared). */
   bestOmen: Record<string, number>;
   totalEmeralds: number;
@@ -95,7 +97,7 @@ function safeDel(k: string) {
 
 export function defaultProfile(): Profile {
   return {
-    v: 1, discovered: [], relicsSeen: [], runs: 0, wins: 0, bestScore: 0, maxOmen: 0, bestOmen: {}, totalEmeralds: 0, flags: {}, achievements: {},
+    v: 1, discovered: [], relicsSeen: [], runs: 0, wins: 0, bestScore: 0, maxOmen: 0, lastOmen: 0, bestOmen: {}, totalEmeralds: 0, flags: {}, achievements: {},
     classic: { played: 0, guesses: 0, correct: 0, streak: 0, best: 0 }, history: [], unlockV: 2, daily: {},
   };
 }
