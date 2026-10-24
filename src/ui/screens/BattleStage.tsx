@@ -18,25 +18,28 @@ import { AFFIX_MAP, ENCHANT_MAP, enchantName } from '../../data/items.ts';
 import { BATTLE_MODIFIER_MAP } from '../../data/battleModifiers.ts';
 import { COMMANDER_MAP } from '../../data/commanders.ts';
 import { difficultyPolicy } from '../../data/difficulty.ts';
+import { ENEMY_TACTIC_MAP, type EnemyTacticId } from '../../data/enemyTactics.ts';
 
 type BattleP = Extract<Pending, { type: 'battle' }>;
 const KIND_NAME = { battle: '战斗', elite: '精英战斗', boss: '首领战', event: '事件战斗' };
 
-function BattleModifierOverlay({ modifierId, attempt }: { modifierId?: string; attempt: number }) {
+function BattleTacticsOverlay({ tactics, modifierId, attempt }: { tactics?: string[]; modifierId?: string; attempt: number }) {
+  const tacticDefs = (tactics ?? []).map((id) => ENEMY_TACTIC_MAP[id as EnemyTacticId]).filter(Boolean);
   const mod = modifierId ? BATTLE_MODIFIER_MAP[modifierId] : undefined;
-  if (!mod) return null;
+  if (!tacticDefs.length && !mod) return null;
 
   const [dismissed, setDismissed] = useState(false);
   const [fading, setFading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    const displayTime = attempt > 1 ? 800 : 1800;
+    const displayTime = attempt > 1 ? 1200 : 2500;
     const fadeTimer = setTimeout(() => {
       setFading(true);
     }, displayTime);
     const removeTimer = setTimeout(() => {
       setDismissed(true);
-    }, displayTime + 250);
+    }, displayTime + 300);
 
     const onKey = (e: KeyboardEvent) => {
       if (['Space', 'Enter', 'Escape'].includes(e.code)) {
@@ -53,45 +56,77 @@ function BattleModifierOverlay({ modifierId, attempt }: { modifierId?: string; a
 
   return (
     <>
-      {!dismissed && (
+      {(!dismissed || expanded) && (
         <div
-          class={`bm-intro ${fading ? 'fade-out' : ''}`}
-          onClick={() => setDismissed(true)}
+          class={`bm-intro ${fading && !expanded ? 'fade-out' : ''}`}
+          onClick={() => {
+            setDismissed(true);
+            setExpanded(false);
+          }}
           role="button"
           tabIndex={0}
         >
-          <div class="bm-intro-box">
-            <div class="bm-intro-k">⚔ 战场规则</div>
-            <div class="bm-intro-name" style={{ color: mod.color }}>
-              {mod.name}
+          <div class="bm-intro-box" onClick={(e) => e.stopPropagation()}>
+            {tacticDefs.map((t) => (
+              <div key={t.id} style={{ marginBottom: 12 }}>
+                <div class="bm-intro-k" style={{ color: t.color }}>⚔ 敌军战术</div>
+                <div class="bm-intro-name" style={{ color: t.color }}>{t.name}</div>
+                <div class="bm-intro-desc">{t.desc}</div>
+                <div style={{ marginTop: 6, fontSize: 13, color: '#ffd166' }}>💡 建议应对：{t.tips}</div>
+              </div>
+            ))}
+            {mod && (
+              <div style={{ marginTop: tacticDefs.length ? 12 : 0, borderTop: tacticDefs.length ? '1px solid rgba(255,255,255,0.1)' : 'none', paddingTop: tacticDefs.length ? 8 : 0 }}>
+                <div class="bm-intro-k">⚔ 战场规则</div>
+                <div class="bm-intro-name" style={{ color: mod.color }}>{mod.name}</div>
+                <div class="bm-intro-desc">{mod.desc}</div>
+                <div class="bm-intro-reward gold-t">胜利绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
+              </div>
+            )}
+            <div class="bm-intro-dismiss faint" style={{ cursor: 'pointer', marginTop: 10 }} onClick={() => { setDismissed(true); setExpanded(false); }}>
+              点击关闭或按键继续
             </div>
-            <div class="bm-intro-desc">{mod.desc}</div>
-            <div class="bm-intro-reward gold-t">胜利绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
-            <div class="bm-intro-dismiss faint">点击或按键关闭</div>
           </div>
         </div>
       )}
-      <div class="bm-persistent-badge">
-        <Tip
-          content={() => (
-            <div>
-              <div class="tt-title" style={{ color: mod.color }}>
-                ⚔ 战场规则「{mod.name}」
+      <div class="bm-persistent-badge" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {tacticDefs.map((t) => (
+          <Tip
+            key={t.id}
+            content={() => (
+              <div>
+                <div class="tt-title" style={{ color: t.color }}>⚔ 敌军战术「{t.name}」</div>
+                <div class="tt-line">{t.desc}</div>
+                <div class="tt-line tt-yellow">应对建议：{t.tips}</div>
+                <div class="tt-sec tt-gray">点击卡片可重新展开大标题详情。</div>
               </div>
-              <div class="tt-line">{mod.desc}</div>
-              <div class="tt-line tt-yellow">本场胜利额外奖励绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
-              <div class="tt-sec tt-gray">此规则对双方对称生效。</div>
+            )}
+          >
+            <div class="bm-pill" tabIndex={0} onClick={() => setExpanded(true)} style={{ cursor: 'pointer' }}>
+              <span class="bm-pill-icon">⚔</span>
+              <span class="bm-pill-title" style={{ color: t.color }}>战术：{t.name}</span>
+              <span class="bm-pill-desc">· {t.summary}</span>
             </div>
-          )}
-        >
-          <div class="bm-pill" tabIndex={0}>
-            <span class="bm-pill-icon">⚔</span>
-            <span class="bm-pill-title" style={{ color: mod.color }}>
-              {mod.name}
-            </span>
-            <span class="bm-pill-desc">· {mod.desc.replace(/（[^）]+）/g, '')}</span>
-          </div>
-        </Tip>
+          </Tip>
+        ))}
+        {mod && (
+          <Tip
+            content={() => (
+              <div>
+                <div class="tt-title" style={{ color: mod.color }}>⚔ 战场规则「{mod.name}」</div>
+                <div class="tt-line">{mod.desc}</div>
+                <div class="tt-line tt-yellow">本场胜利额外奖励绿宝石 +{Math.round((mod.rewardMul - 1) * 100)}%</div>
+                <div class="tt-sec tt-gray">此规则对双方对称生效。</div>
+              </div>
+            )}
+          >
+            <div class="bm-pill" tabIndex={0} onClick={() => setExpanded(true)} style={{ cursor: 'pointer' }}>
+              <span class="bm-pill-icon">⚔</span>
+              <span class="bm-pill-title" style={{ color: mod.color }}>{mod.name}</span>
+              <span class="bm-pill-desc">· {mod.desc.replace(/（[^）]+）/g, '')}</span>
+            </div>
+          </Tip>
+        )}
       </div>
     </>
   );
@@ -123,7 +158,7 @@ export function BattleStage({ s, p }: { s: RunState; p: BattleP; v?: number }) {
       canPay={s.emeralds >= golemCost(s)}
       builds={p.build ?? []}
       onBuild={s.commander === 'steve' ? (list) => act((r) => setBuilds(r, list)) : undefined}
-      extraOverlay={<BattleModifierOverlay modifierId={p.modifier} attempt={p.attempt} />}
+      extraOverlay={<BattleTacticsOverlay tactics={p.tactics} modifierId={p.modifier} attempt={p.attempt} />}
     >
       <DeployHud s={s} p={p} config={config} terrainName={terrain.name} effects={terrain.effects} onFight={() => (sfx('fight'), setPhase('fight'))} />
     </Arena3DView>
@@ -305,14 +340,23 @@ function DeployHud({
         <Tip
           content={() => (
             <div>
-              <div class="tt-title">预估战况分析</div>
+              <div class="tt-title">预估战况结构拆解</div>
               <div class="tt-line">
-                我方阵容预估：<b class="blue-t">{Math.round(mine)}</b> · 敌方威胁预估：<b class="red-t">{Math.round(theirs)}</b>
+                ① 基础兵力：我方 <b class="blue-t">{Math.round(mine)}</b> vs 敌方 <b class="red-t">{Math.round(theirs)}</b>
               </div>
               <div class="tt-line">
-                预估战况：<b style={{ color: evaluation.color }}>{evaluation.verdict}</b>（战力比值 {(mine / Math.max(0.1, theirs)).toFixed(2)}）
+                ② 羁绊联动：我方 {Object.keys(mySyn.active).length} 项激活 vs 敌方 {Object.keys(foeSyn.active).length} 项激活
               </div>
-              <div class="tt-line tt-yellow">战术资源：{tacticalSummary}</div>
+              <div class="tt-line">
+                ③ 敌军战术：{p.tactics?.length ? p.tactics.map((id) => ENEMY_TACTIC_MAP[id as EnemyTacticId]?.name).filter(Boolean).join('、') : '无额外战术'}
+              </div>
+              <div class="tt-line">
+                ④ 场地规则：{modifier ? `${modifier.name}（${modifier.desc}）` : '标准平原场地'}
+              </div>
+              <div class="tt-line tt-yellow">⑤ 储备资源（未计入）：{tacticalSummary}</div>
+              <div class="tt-line" style={{ marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 4 }}>
+                综合研判：<b style={{ color: evaluation.color }}>{evaluation.verdict}</b>
+              </div>
               {evaluation.variance === 'high' && (
                 <div class="tt-sec tt-red">估算波动：较高（{evaluation.varianceReason || '召唤/复活阵容'}）</div>
               )}

@@ -31,6 +31,29 @@ export function BattleResultView({ s, p }: { s: RunState; p: P; v?: number }) {
   const foes = p.summary.cards.filter((c) => c.team === 1 && !mobDef(c.mob).structure);
   const maxDmg = Math.max(1, ...mine.map((c) => c.dmg));
   const mvp = mine.reduce((a, c) => (c.dmg > a.dmg ? c : a), mine[0]);
+
+  const failureReview: string[] = [];
+  if (!p.win) {
+    const foeTotalDmg = foes.reduce((s, c) => s + c.dmg, 0);
+    const foeMvp = foes.reduce((a, c) => (c.dmg > a.dmg ? c : a), foes[0]);
+    if (foeMvp && foeTotalDmg > 0 && foeMvp.dmg / foeTotalDmg >= 0.35) {
+      const isBack = ['ranged', 'caster', 'support'].includes(mobDef(foeMvp.mob).role);
+      if (isBack) {
+        failureReview.push(`敌方后排「${mobDef(foeMvp.mob).name}」造成 ${Math.round((foeMvp.dmg / foeTotalDmg) * 100)}% 总伤害，未被及时切入或转火。`);
+      } else {
+        failureReview.push(`敌方核心「${mobDef(foeMvp.mob).name}」造成 ${Math.round((foeMvp.dmg / foeTotalDmg) * 100)}% 核心伤害，前排防线承伤过载。`);
+      }
+    }
+    if (s.potions.length > 0) {
+      failureReview.push(`背包中存有 ${s.potions.length} 件可用物品/药水，本场战斗未予消耗使用。`);
+    }
+    const myFront = mine.filter((c) => ['tank', 'melee'].includes(mobDef(c.mob).role));
+    if (myFront.length > 0 && myFront.every((c) => c.alive === 0)) {
+      failureReview.push('我方前排单位全灭崩溃，后排失去肉盾屏障掩护。');
+    } else if (myFront.length === 0) {
+      failureReview.push('出战阵容缺乏前排承伤单位，极易被敌方近战与齐射快速突破。');
+    }
+  }
   useEffect(() => {
     if (p.win) setTimeout(() => sfx('coin'), 300);
     else if (p.heartsLost) setTimeout(() => sfx('heart_lose'), 300);
@@ -84,6 +107,18 @@ export function BattleResultView({ s, p }: { s: RunState; p: P; v?: number }) {
               </span>
             ))}
           </div>
+          {!p.win && failureReview.length > 0 && (
+            <div class="result-review" style={{ marginTop: 12, padding: '8px 10px', background: 'rgba(255, 77, 109, 0.08)', borderRadius: 4, border: '1px solid rgba(255, 77, 109, 0.25)' }}>
+              <div style={{ color: '#ff6b8b', fontWeight: 'bold', fontSize: 13, marginBottom: 4 }}>
+                🔍 战后复盘分析：
+              </div>
+              {failureReview.slice(0, 3).map((r, idx) => (
+                <div key={idx} style={{ fontSize: 12, color: '#f0e6d2', lineHeight: 1.5 }}>
+                  • {r}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div class="panel result-rewards">
           <div class="panel-title">{p.win ? '战利品' : '损失'}</div>

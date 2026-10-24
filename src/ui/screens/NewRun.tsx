@@ -102,10 +102,20 @@ export function NewRun() {
               <div key={omen} class="omen-scroll">
                 {omen === 0 ? (
                   <div class="subtle" style={{ marginTop: 4 }}>
-                    基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，开箱与积分回报也更高。
+                    基准难度：{policy.summary} 通关后解锁「不祥之兆」挑战等级：每一级保留之前的全部规则，再加上新的机制规则，敌人编队更丰富、附魔更精锐、物资更紧凑，通关积分倍率与勋标回报也更高。
                   </div>
                 ) : (
                   <>
+                    {omen === 5 && (
+                      <div class="omen-endgame-banner" style={{ background: 'rgba(255, 77, 109, 0.15)', border: '1px solid #ff4d6d', borderRadius: 4, padding: '6px 8px', marginBottom: 8 }}>
+                        <div style={{ color: '#ff6b8b', fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>
+                          ☠ 终局挑战 · 预计强度：极高（面向：已掌握构筑与资源规划的玩家）
+                        </div>
+                        <div style={{ fontSize: 12, color: '#f0e6d2', lineHeight: 1.4 }}>
+                          中后期敌军以五卡成型编队为主，精英拥有双战术，所有首领进入强化阶段，最终首领连续作战。推荐完成羁绊、附魔核心并保存关键道具后挑战。
+                        </div>
+                      </div>
+                    )}
                     <div class="omen-cur">
                       <b>本级新增：</b>
                       {policy.newRules.map((r) => (
@@ -123,7 +133,7 @@ export function NewRun() {
                       </div>
                     )}
                     <div class="faint" style={{ fontSize: 13, marginTop: 4 }}>
-                      {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。得分 +{Math.round((policy.scoreMul - 1) * 100)}%、幸运 +{Math.round(policy.luckBonus * 100)}%。通关后解锁下一级并点亮该统领勋标。
+                      {OMEN_SCALING} 敌方生命 +{Math.round((policy.hpMul - 1) * 100)}%、攻击 +{Math.round((policy.atkMul - 1) * 100)}%、编队预算 +{Math.round((policy.formationBudgetMul - 1) * 100)}%。通关积分 +{Math.round((policy.scoreMul - 1) * 100)}%。通关后解锁下一级并点亮该统领勋标。
                     </div>
                   </>
                 )}

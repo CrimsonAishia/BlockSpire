@@ -283,7 +283,7 @@ export interface OmenDef {
  * rather than only inflating numbers. Tuned with the bot to lose a similar share of clears per
  * level (see README).
  */
-export const OMEN_SCALING = '难度越高，敌人会稳步强化；每级仍提供开箱幸运 +2%，得分 +20%。';
+export const OMEN_SCALING = '难度越高，敌人会显著强化；每级提供更高的通关积分倍率与勋标，不提供局内幸运补偿。';
 
 /** Explicit cumulative multipliers keep high difficulty readable and prevent hidden double scaling. */
 export const OMEN_ENEMY_MULS = DIFFICULTY_POLICIES.map((p) => ({ hp: p.hpMul, atk: p.atkMul }));

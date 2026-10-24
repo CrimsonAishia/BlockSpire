@@ -1389,6 +1389,14 @@ export const BEHAVIORS: Record<string, Behavior> = {
           b.summon(u, 'guardian', u.x + b.rng.range(-70, 20), u.y + (i ? 70 : -70), 0.8, { fx: 'summon' });
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '守卫集结!', color: '#5ee6d6' });
       }
+      if (!u.ab.p2 && u.hpFrac < 0.5 && b.has(u.team, 'omen_enrage')) {
+        u.ab.p2 = 1;
+        b.emit({ k: 'phase', s: 'guardian2' });
+        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 10, s: '深海护盾与溺尸护卫！', color: '#5ee6d6' });
+        b.emit({ k: 'roar', x: u.x, y: u.y, r: 300, color: '#5ee6d6' });
+        u.shield += u.maxHp * 0.15;
+        b.summon(u, 'drowned', u.x + (u.team === 0 ? 30 : -30), ARENA_D / 2, 0.7, { fx: 'summon' });
+      }
     },
     attack(u, t, b) {
       startBeam(u, t, 1.5);
@@ -1471,6 +1479,16 @@ export const BEHAVIORS: Record<string, Behavior> = {
       u.z = 110;
     },
     move(u, b, dt) {
+      if (!u.ab.p2 && u.hpFrac < 0.5 && b.has(u.team, 'omen_enrage')) {
+        u.ab.p2 = 1;
+        b.emit({ k: 'phase', s: 'dragon2' });
+        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '终末之怒！', color: '#d36bff' });
+        b.emit({ k: 'roar', x: u.x, y: u.y, r: 400, color: '#d36bff' });
+        u.atkSpd *= 1.25;
+        for (let i = 0; i < 2; i++) {
+          b.summon(u, 'enderman', u.x + b.rng.range(-40, 40), ARENA_D / 2 + (i ? 80 : -80), 0.75, { fx: 'summon' });
+        }
+      }
       u.atkTimer = Math.max(0, u.atkTimer - dt * b.atkSpeedOf(u));
       const foe = (1 - u.team) as 0 | 1;
       const foes = b.live[foe].filter((e) => !e.structure);

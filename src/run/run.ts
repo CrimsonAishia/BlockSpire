@@ -16,6 +16,7 @@ import { EVENTS, EVENT_MAP } from './events.ts';
 import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
+import { rollEnemyTactics, type EnemyTacticId } from '../data/enemyTactics.ts';
 
 export const RUN_VERSION = 4;
 
@@ -71,6 +72,10 @@ export type Pending =
       affix?: string;
       /** Symmetric battlefield rule, shown before deployment. */
       modifier?: string;
+      /** V3 Enemy tactics (盾墙推进、猎杀后排、火力齐射、增援波次). */
+      tactics?: string[];
+      /** Continuous endgame flag for Omen V final boss phase 2. */
+      endgamePhase2?: boolean;
     }
   | {
       type: 'result';
@@ -259,8 +264,10 @@ export function openContext(s: RunState): OpenContext {
   if (s.commander === 'alex') luck += 0.1;
   if (hasRelic(s, 'rabbit_foot')) luck += 0.06;
   if (hasRelic(s, 'ominous_bottle')) luck += 0.15;
-  // Ominous loot: every omen level makes the crates a little luckier.
-  luck += difficultyPolicy(s.omen).luckBonus;
+  // V3: 难度不再额外增加开箱幸运，避免高难中玩家无门槛快速成型滚雪球
+  if (difficultyPolicy(s.omen).luckBonus > 0) {
+    luck += difficultyPolicy(s.omen).luckBonus;
+  }
   return {
     act: s.act,
     luck,
@@ -545,21 +552,63 @@ export function dynamicFormation(
   }
 
   const tier = tierForRow(row);
-  const shouldAddSupport = kind === 'elite' || (pol.supportChance > 0 && rng.chance(pol.supportChance));
+  const shouldAddSupport = kind === 'elite' || pol.omen > 0 || (pol.supportChance > 0 && rng.chance(pol.supportChance));
 
-  // Maximum allowed cards based on tier & difficulty
-  let maxCards = baseCards.length;
-  if (shouldAddSupport) {
-    if (tier === 0) {
-      maxCards = Math.min(3, baseCards.length + 1);
-    } else if (tier === 1) {
-      maxCards = Math.min(4, baseCards.length + 1);
+  // Target cards based on Tier and Difficulty (Section 6.1)
+  let targetCards = baseCards.length;
+  if (kind === 'elite') {
+    if (pol.omen === 0) {
+      targetCards = Math.max(3, Math.min(4, baseCards.length));
+    } else if (pol.omen <= 2) {
+      targetCards = 4;
+    } else if (pol.omen === 3) {
+      targetCards = act === 1 ? 4 : (rng.chance(0.5) ? 5 : 4);
     } else {
-      // tier === 2
-      const allowFifth = pol.omen >= 5 && rng.chance(pol.fifthCardChance);
-      maxCards = Math.min(allowFifth ? 5 : 4, baseCards.length + 1);
+      targetCards = act === 1 ? 4 : 5;
+    }
+  } else if (tier === 0) {
+    if (pol.omen === 0) {
+      targetCards = Math.min(3, baseCards.length);
+    } else if (pol.omen <= 2) {
+      targetCards = 3;
+    } else if (pol.omen === 3) {
+      targetCards = rng.chance(0.4) ? 4 : 3;
+    } else {
+      targetCards = 4;
+    }
+  } else if (tier === 1) {
+    if (pol.omen === 0) {
+      targetCards = 3;
+    } else if (pol.omen === 1) {
+      targetCards = 3;
+    } else if (pol.omen === 2) {
+      targetCards = rng.chance(0.4) ? 4 : 3;
+    } else if (pol.omen === 3) {
+      targetCards = 4;
+    } else if (pol.omen === 4) {
+      targetCards = rng.chance(0.15) ? 5 : 4;
+    } else {
+      // omen 5: 40% 5 cards (target 30%-50%)
+      targetCards = rng.chance(0.40) ? 5 : 4;
+    }
+  } else {
+    // tier === 2
+    if (pol.omen === 0) {
+      targetCards = 3;
+    } else if (pol.omen === 1) {
+      targetCards = rng.chance(0.5) ? 4 : 3;
+    } else if (pol.omen === 2) {
+      targetCards = 4;
+    } else if (pol.omen === 3) {
+      targetCards = rng.chance(0.20) ? 5 : 4;
+    } else if (pol.omen === 4) {
+      targetCards = rng.chance(0.50) ? 5 : 4;
+    } else {
+      // omen 5: default 5 cards (target 85%-100%)
+      targetCards = rng.chance(0.92) ? 5 : 4;
     }
   }
+  targetCards = Math.max(cards.length, targetCards);
 
   // Row correction for front/back positions (Difficulty >= 1)
   const fixRows = (cs: EncCard[]) => {
@@ -575,7 +624,7 @@ export function dynamicFormation(
     }
   };
 
-  if (!shouldAddSupport || cards.length >= maxCards) {
+  if (!shouldAddSupport || cards.length >= targetCards) {
     fixRows(cards);
     return cards;
   }
@@ -585,9 +634,11 @@ export function dynamicFormation(
   const rawProgress = Math.max(0, Math.min(1, (row - start) / Math.max(1, end - start)));
   const progress = tier === 2 ? 0.4 + rawProgress * 0.6 : rawProgress;
   const progressMul = 0.95 + progress * 0.1;
-  const kindBudgetMul = kind === 'elite' ? 1.12 : 1.0;
-  const targetBudget = baseThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
-  const maxBudget = targetBudget * (kind === 'elite' ? 1.1 : 1.08);
+  const kindBudgetMul = kind === 'elite' ? 1.15 : 1.0;
+  const avgBaseCardThreat = baseThreat / Math.max(1, baseCards.length);
+  const normalizedThreat = Math.max(baseThreat, avgBaseCardThreat * targetCards * 0.85);
+  const targetBudget = normalizedThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
+  const maxBudget = targetBudget * (kind === 'elite' ? 1.15 : 1.1);
 
   const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act).flatMap((e) => e.cards.map((c) => c[0])))]
     .filter((id) => {
@@ -601,10 +652,10 @@ export function dynamicFormation(
     return cards;
   }
 
-  while (cards.length < maxCards) {
+  while (cards.length < targetCards) {
     const curThreat = encounterThreat({ cards });
     const remainingBudget = maxBudget - curThreat;
-    if (remainingBudget <= 0.8) break;
+    if (remainingBudget <= 0.4 && cards.length >= Math.min(baseCards.length + 1, targetCards)) break;
 
     const trySynergy = rng.chance(pol.synergyChance);
     const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
@@ -624,7 +675,7 @@ export function dynamicFormation(
 
     for (const mob of actMobs) {
       const m = mobDef(mob);
-      const star = tier === 2 && row >= 10 && cards.length >= 3 && rng.chance(0.3) ? 2 : 1;
+      const star = tier === 2 && (row >= 8 || pol.omen >= 4) && cards.length >= 3 && rng.chance(pol.omen >= 4 ? 0.35 : 0.2) ? 2 : 1;
       const normalCount = unitCount(m, star);
       const fullCost = MOB_COST[mob]?.[star - 1] ?? 4;
 
@@ -636,8 +687,12 @@ export function dynamicFormation(
         const scale = forceWeakened ? 0.6 : 0.65;
         const scaledCount = Math.max(1, Math.round(normalCount * scale));
         actualCost = fullCost * (scaledCount / normalCount);
-        if (curThreat + actualCost <= maxBudget) {
+        if (curThreat + actualCost <= maxBudget * 1.05) {
           chosenCount = scaledCount;
+        } else if (cards.length < targetCards && remainingBudget > 0.5) {
+          const minCount = Math.max(1, Math.round(normalCount * 0.5));
+          actualCost = fullCost * (minCount / normalCount);
+          chosenCount = minCount;
         } else {
           continue;
         }
@@ -645,29 +700,32 @@ export function dynamicFormation(
 
       let score = 0;
 
-      // 1. Synergy (+5)
+      // 1. Synergy (+10 if activates a new family tier, +5 if upgrades)
       if (trySynergy) {
         const synAfter = computeSynergies([...cards.map((c) => mobDef(c[0]).families), m.families]).active;
         for (const [f, t] of Object.entries(synAfter)) {
-          if (t > (synBefore[f as Family] ?? -1)) score += 5;
+          const prev = synBefore[f as Family] ?? -1;
+          if (t > prev) {
+            score += prev < 0 ? 10 : 5;
+          }
         }
       }
 
-      // 2. Role filling (+3)
-      if (!hasFront && ['tank', 'melee'].includes(m.role)) score += 3;
-      if (!hasBack && ['ranged', 'caster', 'support'].includes(m.role)) score += 3;
+      // 2. Role filling
+      if (!hasFront && ['tank', 'melee'].includes(m.role)) score += 6;
+      if (!hasBack && ['ranged', 'caster', 'support'].includes(m.role)) score += 6;
 
-      // 3. Theme affinity (+2)
+      // 3. Theme affinity (+3 if shares any family with existing cards)
       if (m.families.some((f) => cards.some((c) => mobDef(c[0]).families.includes(f)))) {
-        score += 2;
+        score += 3;
       }
 
-      // 4. Role redundancy (-3)
+      // 4. Role redundancy
       const sameRoleCount = cards.filter((c) => mobDef(c[0]).role === m.role).length;
       if (sameRoleCount >= 2) score -= 3;
 
-      // 5. Duplicate card penalty (-4)
-      if (cards.some((c) => c[0] === mob)) score -= 4;
+      // 5. Duplicate card penalty
+      if (cards.some((c) => c[0] === mob)) score -= 6;
 
       scored.push({
         mob,
@@ -684,7 +742,7 @@ export function dynamicFormation(
     scored.sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
 
     const valid = scored.filter((s) => s.score >= 0);
-    const pickPool = valid.length ? valid.slice(0, Math.min(3, valid.length)) : [];
+    const pickPool = valid.length ? valid.slice(0, Math.min(2, valid.length)) : scored.slice(0, 1);
     if (!pickPool.length) break;
 
     const chosen = rng.pick(pickPool);
@@ -718,6 +776,7 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   const pol = difficultyPolicy(s.omen);
   const affix = kind === 'elite' && pol.eliteAffix && !(s.act === 1 && node.row === 0) ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
   const tier = tierForRow(node.row);
+  const tactics = withRng(s, (r) => rollEnemyTactics(r.fork(node.row * 9901 + s.act * 53), s.omen, kind, tier));
   if (kind === 'battle' && pol.normalEnchant && !(s.act === 1 && node.row < 2)) enchantEnemies(s, cards, 1, 2);
   else if (kind === 'battle' && tier === 2) enchantEnemies(s, cards, 1, 1);
   else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
@@ -726,7 +785,7 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   const modifier = rollBattleModifier(s, kind, node.row);
   const biome = kind === 'boss' ? BOSS_BIOME[enc.id] ?? 'plains' : withRng(s, (r) => pickBiome(r, s.act, node.row));
   return {
-    type: 'battle', kind, enc: enc.id, name: enc.name, desc: enc.desc, cards, hpMul: m.hp, atkMul: m.atk, affix, modifier,
+    type: 'battle', kind, enc: enc.id, name: enc.name, desc: enc.desc, cards, hpMul: m.hp, atkMul: m.atk, affix, modifier, tactics,
     seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: 1, biome, tseed: withRng(s, (r) => r.int(1, 2 ** 31)), brew: brewFor(s),
   };
 }
@@ -792,6 +851,7 @@ export function battleTerrain(p: Extract<Pending, { type: 'battle' }>): Terrain 
 
 export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }>, headless = false): BattleConfig {
   const modifierFlags = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier]?.flags : undefined;
+  const tacticFlags = (p.tactics ?? []).map((t) => `tactic_${t}`);
   const player = buildSide(
     s.team.map((c) => ({ mob: c.mob, star: c.star, row: c.row, enchant: c.enchant, enchantLv: c.enchantLv, bonus: c.bonus, uid: c.uid, anchor: p.deploy?.[c.uid] })),
     { relics: s.relics, potions: [], commander: s.commander, act: s.act, builds: p.build, flags: modifierFlags },
@@ -800,7 +860,11 @@ export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }
     p.cards.map(([mob, star, row, count, enchant, enchantLv]) => ({ mob, star, row: row ?? mobDef(mob).defaultRow, count, enchant, enchantLv })),
     {
       relics: [], potions: [], act: s.act, hpMul: p.hpMul, atkMul: p.atkMul, affix: p.affix,
-      flags: [...(modifierFlags ?? []), ...(p.kind === 'boss' && difficultyPolicy(s.omen).bossPhase ? ['omen_enrage'] : [])],
+      flags: [
+        ...(modifierFlags ?? []),
+        ...tacticFlags,
+        ...(p.kind === 'boss' && difficultyPolicy(s.omen).bossPhase ? ['omen_enrage'] : []),
+      ],
     },
   );
   if (p.bossHp !== undefined) for (const c of enemy.cards) if (mobDef(c.mob).boss) c.startHp = p.bossHp;
@@ -910,16 +974,47 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       if (hasRelic(s, 'trial_key')) follow.push({ type: 'crates', title: '试炼钥匙：额外开箱', offers: crateOffers(s, 2, 'elite'), skip: 15 });
       follow.push({ type: 'relic_choice', title: '选择一件宝物', choices: relicChoices(s, 3, ['common', 'rare', 'legendary']), skippable: true });
     } else if (p.kind === 'boss') {
-      s.stats.bossesWon++;
-      follow.push({ type: 'crates', title: '首领战利品：传奇补给箱', offers: crateOffers(s, nOffers, 'boss'), skip: 20 });
-      const slotGained = s.act < 3;
-      if (slotGained) s.slots = Math.min(5, s.slots + 1);
-      const healed = Math.min(2, s.maxHearts - s.hearts);
-      s.hearts += healed;
-      follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
-      // After the dragon the rift to the Sift opens: an optional fourth act.
-      if (s.act < 4) follow.push({ type: 'act_intro', act: s.act + 1 });
-      else follow.push({ type: 'victory' });
+      // 不祥之兆 V 终局连续阶段 (Section 10.2)
+      if (s.omen >= 5 && s.act === 3 && !p.endgamePhase2) {
+        follow.push({
+          type: 'message',
+          title: '终末之音：余响再起',
+          text: '末影龙溃散之处，虚空裂隙中涌现出终末余响！准备迎战连续终局作战！',
+          tone: 'bad',
+        });
+        const echoEnc = ENC_MAP['a3b_dragon_echo'] ?? ENC_MAP['a3b_dragon'];
+        follow.push({
+          type: 'battle',
+          kind: 'boss',
+          enc: echoEnc.id,
+          name: '末影龙 · 终末余响',
+          desc: '击败末影龙后激发的终末余响，虚空之火漫延全场。',
+          cards: [
+            ['ender_dragon_boss', 1, 'back'],
+            ['shulker', 2, 'back'],
+            ['enderman', 2, 'front'],
+          ],
+          hpMul: p.hpMul * 0.45,
+          atkMul: p.atkMul * 1.15,
+          seed: withRng(s, (r) => r.int(1, 2 ** 31)),
+          attempt: 1,
+          biome: p.biome,
+          tseed: withRng(s, (r) => r.int(1, 2 ** 31)),
+          brew: brewFor(s),
+          endgamePhase2: true,
+        });
+      } else {
+        s.stats.bossesWon++;
+        follow.push({ type: 'crates', title: '首领战利品：传奇补给箱', offers: crateOffers(s, nOffers, 'boss'), skip: 20 });
+        const slotGained = s.act < 3;
+        if (slotGained) s.slots = Math.min(5, s.slots + 1);
+        const healed = Math.min(2, s.maxHearts - s.hearts);
+        s.hearts += healed;
+        follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
+        // After the dragon the rift to the Sift opens: an optional fourth act.
+        if (s.act < 4) follow.push({ type: 'act_intro', act: s.act + 1 });
+        else follow.push({ type: 'victory' });
+      }
     } else if (p.kind === 'event' && p.onWin) {
       follow.push(...eventWinRewards(s, p.onWin));
     }
@@ -942,8 +1037,15 @@ export function resolveBattle(s: RunState, res: BattleResult) {
     else if (p.kind === 'boss') {
       const start = p.bossHp ?? 1;
       const end = res.bossHp ?? start;
-      const bossHp = Math.max(0.35, start - 0.5 * Math.max(0, start - end));
-      follow.push({ ...p, seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: p.attempt + 1, bossHp });
+      const bossHp = Math.max(0.15, Math.min(start, end + 0.05));
+      // 重试首领战时，已被击破的结构型水晶不再全数复活
+      const cards = p.cards.map((c) => {
+        if (c[0] === 'end_crystal') {
+          return [c[0], c[1], c[2], 1] as EncCard;
+        }
+        return c;
+      });
+      follow.push({ ...p, cards, seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: p.attempt + 1, bossHp });
     }
   }
   s.queue.unshift(...follow);

@@ -105,6 +105,7 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a3e_city', '末地城守卫', 3, 'elite', undefined, [['shulker', 3], ['enderman', 2], ['phantom', 2], ['blaze', 2]], '每一层塔楼都布满了潜影贝。'),
   E('a3e_illusion', '幻术师的迷宫', 3, 'elite', undefined, [['illusioner', 2], ['evoker', 2], ['vindicator', 2], ['ravager', 1]], '哪一个才是真的？'),
   E('a3b_dragon', '末影龙', 3, 'boss', undefined, [['ender_dragon_boss', 1, 'back'], ['end_crystal', 1, 'back', 4], ['enderman', 2, 'mid']], '去吧，屠龙者。'),
+  E('a3b_dragon_echo', '末影龙 · 终末余响', 3, 'boss', undefined, [['ender_dragon_boss', 1, 'back'], ['shulker', 2, 'back'], ['enderman', 2, 'front']], '虚空深处传来的终末余响。'),
 
   // ───── 第四幕 · 筛界（打败末影龙后可选）─────
   E('a4_sifters', '小筛者窝', 4, 'battle', 0, [['baby_sifter', 2], ['blub', 1], ['bearded_sifter', 1]]),

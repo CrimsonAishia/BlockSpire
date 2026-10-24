@@ -318,8 +318,8 @@ export class Battle {
     u.hasteMul = Math.max(u.hasteT > 0 ? u.hasteMul : 1, 1.3);
     u.hasteT = 1e9;
     u.fx = { ...u.fx, dmgTaken: u.fx.dmgTaken * 0.85 };
-    const guard = this.plans.find((p, i) => this.cards[i].team === u.team && !mobDef(p.mob).boss && !mobDef(p.mob).structure);
-    if (guard) for (const dy of [-34, 34]) this.summon(u, guard.mob, u.x + (u.team === 0 ? 30 : -30), u.y + dy, 0.8, { fx: 'summon' });
+    const guardMob = u.mob.id === 'elder_guardian_boss' ? 'drowned' : this.plans.find((p, i) => this.cards[i].team === u.team && !mobDef(p.mob).boss && !mobDef(p.mob).structure)?.mob;
+    if (guardMob) for (const dy of [-34, 34]) this.summon(u, guardMob, u.x + (u.team === 0 ? 30 : -30), u.y + dy, 0.75, { fx: 'summon' });
     this.emit({ k: 'roar', x: u.x, y: u.y, r: 160, color: '#ff4a4a' });
     this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 10, s: '狂暴！', color: '#ff5a5a' });
     this.emit({ k: 'sfx', id: 'roar' });
@@ -1272,8 +1272,7 @@ export class Battle {
     if (this.beh(p.src).onProjLand?.(p.src, p, p.tx, p.ty, this)) return;
     if (p.special === 'heal') {
       this.aoeAllies(p.tx, p.ty, 60, p.team, (a) => {
-        if (!a.mob.families.includes('undead')) this.heal(a, p.dmg, p.src);
-        else this.damage(p.src, a, p.dmg * 0.5, 'magic', { noCrit: true });
+        this.heal(a, p.dmg, p.src);
       });
       this.emit({ k: 'boom', x: p.tx, y: p.ty, r: 60, color: '#ff6fa8', big: false });
       return;
@@ -1311,8 +1310,7 @@ export class Battle {
     if (r >= 60) this.emit({ k: 'shake', a: r >= 90 ? 7 : 4 });
     if (p.special === 'harm') {
       this.aoe(x, y, r, p.team, (e) => {
-        if (e.mob.families.includes('undead')) this.heal(e, p.dmg * 0.6, null);
-        else this.damage(src, e, p.dmg, 'magic', { proj: true });
+        this.damage(src, e, p.dmg, 'magic', { proj: true });
       });
       return;
     }
@@ -1548,6 +1546,52 @@ export class Battle {
           this.teleported(u);
         }
       });
+
+    // ── 敌军战术 (Enemy Tactics) ──
+    if (this.has(team, 'tactic_hunt_backline')) {
+      once('tactic_hunt', 4, () => {
+        const owner = live[0];
+        if (!owner) return;
+        const flankX = team === 0 ? ARENA_W - 120 : 120;
+        const flankY1 = ARENA_D * 0.35 + this.rng.range(-20, 20);
+        const flankY2 = ARENA_D * 0.65 + this.rng.range(-20, 20);
+        const mob = s.plan.act === 1 ? 'cave_spider' : s.plan.act === 2 ? 'wither_skeleton' : s.plan.act === 3 ? 'endermite' : 'sculk_slasher';
+        this.emit({ k: 'text', x: flankX, y: ARENA_D / 2, z: 90, s: '敌军猎杀后排！', color: '#ff6b6b' });
+        this.emit({ k: 'sfx', id: 'roar', v: 0.5 });
+        this.summon(owner, mob, flankX, flankY1, 0.7, { fx: 'summon' });
+        this.summon(owner, mob, flankX, flankY2, 0.7, { fx: 'summon' });
+      });
+    }
+
+    if (this.has(team, 'tactic_salvo')) {
+      every('tactic_salvo', 8, 8, () => {
+        const rangedShooters = live.filter((u) => u.isRanged && !u.structure);
+        if (!rangedShooters.length) return;
+        const cx = rangedShooters.reduce((acc, u) => acc + u.x, 0) / rangedShooters.length;
+        this.emit({ k: 'text', x: cx, y: ARENA_D / 2, z: 110, s: '火力齐射！', color: '#ffaa44' });
+        this.emit({ k: 'sfx', id: 'bow', v: 0.8 });
+        for (const u of rangedShooters) {
+          u.ref.salvoShot = 1;
+          u.atkTimer = 0;
+        }
+      });
+    }
+
+    if (this.has(team, 'tactic_reinforcements')) {
+      once('tactic_reinf_warn', 6, () => {
+        this.emit({ k: 'text', x: this.rowX(team, 'back'), y: ARENA_D / 2, z: 100, s: '增援波次接近中（3s）！', color: '#c06bff' });
+      });
+      once('tactic_reinf_spawn', 9, () => {
+        const owner = live[0];
+        if (!owner) return;
+        const reinfX = this.rowX(team, 'back');
+        const reinfMob = s.plan.act === 1 ? 'zombie' : s.plan.act === 2 ? 'magma_cube' : s.plan.act === 3 ? 'enderman' : 'baby_sifter';
+        this.emit({ k: 'text', x: reinfX, y: ARENA_D / 2, z: 100, s: '敌军增援到达！', color: '#c06bff' });
+        this.emit({ k: 'sfx', id: 'horn' });
+        this.summon(owner, reinfMob, reinfX, ARENA_D * 0.35, 0.65, { fx: 'summon' });
+        this.summon(owner, reinfMob, reinfX, ARENA_D * 0.65, 0.65, { fx: 'summon' });
+      });
+    }
     if (this.has(team, 'tnt'))
       once('tnt', 2, () => {
         const c = this.densest(foe, 90);
@@ -1666,6 +1710,10 @@ export class Battle {
         src.empower = false;
         d *= 2;
       }
+      if (src.ref.salvoShot && kind !== 'dot') {
+        src.ref.salvoShot = 0;
+        d *= 1.4;
+      }
     }
     if (src && kind !== 'dot' && !src.flying) {
       const dh = src.gh - t.gh;
@@ -1680,6 +1728,10 @@ export class Battle {
     if (o.proj) d *= t.fx.projTaken;
     if (o.fire) d *= t.fx.fireTaken;
     if (t.auraT > 0) d *= 0.85;
+    if (this.has(t.team, 'tactic_shield_wall') && (t.row === 'back' || t.isRanged)) {
+      const hasFront = this.live[t.team].some((u) => u.alive && !u.structure && (u.row === 'front' || u.mob.role === 'tank' || u.mob.role === 'melee'));
+      if (hasFront) d *= 0.65;
+    }
     if (this.fortTeam !== null && !t.flying && this.fortTeam[tidx(cellX(t.x), cellY(t.y))] === t.team) d *= FORT_TAKEN;
     const armor = src && src.fx.breach > 0 ? t.armor * (1 - src.fx.breach) : t.armor;
     if (kind === 'phys') d *= 1 - armor;
