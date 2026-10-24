@@ -12,6 +12,7 @@ import type { BattleConfig, BattleResult } from '../battle/sim.ts';
 import { EVENTS, EVENT_MAP } from './events.ts';
 import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
+import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 
 export const RUN_VERSION = 3;
 
@@ -65,6 +66,8 @@ export type Pending =
       brew?: string[];
       /** Elite affix on every enemy card (不祥之兆 II+, data/items.ts AFFIXES). */
       affix?: string;
+      /** Symmetric battlefield rule, shown before deployment. */
+      modifier?: string;
     }
   | {
       type: 'result';
@@ -164,6 +167,8 @@ export interface RunState {
   stats: RunStats;
   bosses: string[];
   usedEnc: string[];
+  /** Battlefield modifiers already drawn from the current shuffle bag. */
+  usedModifiers?: string[];
   uidSeq: number;
   /** Potions armed for the next battle. */
   armed: string[];
@@ -305,6 +310,7 @@ export function createRun(commander: string, omen: number, seed = randomSeed()):
     },
     bosses,
     usedEnc: [],
+    usedModifiers: [],
     uidSeq: 1,
     armed: [],
     over: false,
@@ -479,6 +485,24 @@ export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'even
   return { hp, atk };
 }
 
+function rollBattleModifier(s: RunState, kind: 'battle' | 'elite' | 'boss', row: number): string | undefined {
+  if (kind === 'boss' || (s.act === 1 && row < 2)) return undefined;
+  const tier = tierForRow(row);
+  const chance = kind === 'elite' ? 0.35 : tier === 0 ? 0.2 : tier === 1 ? 0.45 : 0.7;
+  return withRng(s, (r) => {
+    if (!r.chance(chance)) return undefined;
+    const used = s.usedModifiers ?? (s.usedModifiers = []);
+    let pool = BATTLE_MODIFIERS.filter((m) => !used.includes(m.id));
+    if (!pool.length) {
+      used.length = 0;
+      pool = BATTLE_MODIFIERS.slice();
+    }
+    const modifier = r.pick(pool);
+    used.push(modifier.id);
+    return modifier.id;
+  });
+}
+
 function makeBattle(s: RunState, node: MapNode): Pending {
   const kind = node.type as 'battle' | 'elite' | 'boss';
   // A chain-made ambush takes the place of the next ordinary fight.
@@ -502,9 +526,10 @@ function makeBattle(s: RunState, node: MapNode): Pending {
   else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
   else if ((kind === 'elite' || kind === 'boss') && s.omen >= 4) enchantEnemies(s, cards, 1, 2);
   const m = enemyMuls(s, kind, node.row);
+  const modifier = rollBattleModifier(s, kind, node.row);
   const biome = kind === 'boss' ? BOSS_BIOME[enc.id] ?? 'plains' : withRng(s, (r) => pickBiome(r, s.act, node.row));
   return {
-    type: 'battle', kind, enc: enc.id, name: enc.name, desc: enc.desc, cards, hpMul: m.hp, atkMul: m.atk, affix,
+    type: 'battle', kind, enc: enc.id, name: enc.name, desc: enc.desc, cards, hpMul: m.hp, atkMul: m.atk, affix, modifier,
     seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: 1, biome, tseed: withRng(s, (r) => r.int(1, 2 ** 31)), brew: brewFor(s),
   };
 }
@@ -569,13 +594,17 @@ export function battleTerrain(p: Extract<Pending, { type: 'battle' }>): Terrain 
 }
 
 export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }>, headless = false): BattleConfig {
+  const modifierFlags = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier]?.flags : undefined;
   const player = buildSide(
     s.team.map((c) => ({ mob: c.mob, star: c.star, row: c.row, enchant: c.enchant, enchantLv: c.enchantLv, bonus: c.bonus, uid: c.uid, anchor: p.deploy?.[c.uid] })),
-    { relics: s.relics, potions: [], commander: s.commander, act: s.act, builds: p.build },
+    { relics: s.relics, potions: [], commander: s.commander, act: s.act, builds: p.build, flags: modifierFlags },
   );
   const enemy = buildSide(
     p.cards.map(([mob, star, row, count, enchant, enchantLv]) => ({ mob, star, row: row ?? mobDef(mob).defaultRow, count, enchant, enchantLv })),
-    { relics: [], potions: [], act: s.act, hpMul: p.hpMul, atkMul: p.atkMul, affix: p.affix, flags: p.kind === 'boss' && s.omen >= 5 ? ['omen_enrage'] : undefined },
+    {
+      relics: [], potions: [], act: s.act, hpMul: p.hpMul, atkMul: p.atkMul, affix: p.affix,
+      flags: [...(modifierFlags ?? []), ...(p.kind === 'boss' && s.omen >= 5 ? ['omen_enrage'] : [])],
+    },
   );
   if (p.bossHp !== undefined) for (const c of enemy.cards) if (mobDef(c.mob).boss) c.startHp = p.bossHp;
   return { seed: p.seed, sides: [player, enemy], boss: p.kind === 'boss', headless, terrain: battleTerrain(p) };
@@ -656,7 +685,9 @@ export function resolveBattle(s: RunState, res: BattleResult) {
   const follow: Pending[] = [];
   if (win) {
     s.stats.battlesWon++;
-    const em = withRng(s, (r) => battleEmeralds(s, p.kind, row, r)) + res.emeralds;
+    const baseEmeralds = withRng(s, (r) => battleEmeralds(s, p.kind, row, r));
+    const rewardMul = p.modifier ? (BATTLE_MODIFIER_MAP[p.modifier]?.rewardMul ?? 1) : 1;
+    const em = Math.round(baseEmeralds * rewardMul) + res.emeralds;
     gainEmeralds(s, em);
     let potion: string | undefined;
     let missed: string | undefined;

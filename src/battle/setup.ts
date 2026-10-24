@@ -55,6 +55,7 @@ export function sideSynergies(cards: { mob: string }[], relics: string[]) {
 export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
   const relics = new Set(ctx.relics);
   const potions = new Set(ctx.potions);
+  const rules = new Set(ctx.flags ?? []);
   const { active } = sideSynergies(cards, ctx.relics);
   const syn: Partial<Record<Family, number>> = {};
   for (const [f, t] of Object.entries(active)) if (t >= 0) syn[f as Family] = t;
@@ -204,6 +205,23 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
           fx.lifesteal += 0.1;
           break;
       }
+
+    // ── Symmetric battlefield modifiers ──
+    if (!m.structure) {
+      if (rules.has('battle_frenzy')) {
+        atkSpd *= 1.18;
+        moveSpd *= 1.1;
+      }
+      if (rules.has('battle_fog') && ranged) rangeMul *= 0.75;
+      if (rules.has('battle_fragile')) {
+        hpMul *= 0.88;
+        atkMul *= 1.1;
+      }
+      if (rules.has('battle_gale')) {
+        moveSpd *= 1.1;
+        fx.knock += ranged ? 12 : 22;
+      }
+    }
 
 
     // ── Synergies ──

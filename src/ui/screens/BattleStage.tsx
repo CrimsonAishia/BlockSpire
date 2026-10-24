@@ -15,6 +15,7 @@ import { RichText } from '../components/rich.tsx';
 import { Hint } from '../components/hints.tsx';
 import { ComboList } from './TeamPanel.tsx';
 import { AFFIX_MAP, ENCHANT_MAP, enchantName } from '../../data/items.ts';
+import { BATTLE_MODIFIER_MAP } from '../../data/battleModifiers.ts';
 
 type BattleP = Extract<Pending, { type: 'battle' }>;
 const KIND_NAME = { battle: '战斗', elite: '精英战斗', boss: '首领战', event: '事件战斗' };
@@ -68,6 +69,7 @@ function DeployHud({
   const mine = estimatePower(config.sides[0]);
   const theirs = estimatePower(config.sides[1]) * (p.bossHp ?? 1);
   const formationThreat = encounterThreat({ cards: p.cards });
+  const modifier = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier] : undefined;
   const ratio = mine / Math.max(0.01, theirs);
   const verdict = ratio > 1.3 ? ['优势', '#7dff9f'] : ratio > 0.92 ? ['均势', '#ffe14a'] : ratio > 0.7 ? ['劣势', '#ffa64d'] : ['危险', '#ff5a5a'];
   return (
@@ -79,6 +81,11 @@ function DeployHud({
         <div class="omen-note">
           敌方强度：{p.kind !== 'boss' && <>编队 {Math.round(formationThreat)} · </>}生命 ×{p.hpMul.toFixed(2)} · 攻击 ×{p.atkMul.toFixed(2)}
         </div>
+        {modifier && (
+          <div class="omen-note" style={{ color: modifier.color }}>
+            ⚔ 战场规则「{modifier.name}」：{modifier.desc} 胜利绿宝石 +{Math.round((modifier.rewardMul - 1) * 100)}%。
+          </div>
+        )}
         {p.bossHp !== undefined && <div class="gold-t">首领带伤再战：剩余 {Math.round(p.bossHp * 100)}% 生命</div>}
         {p.affix && (
           <div class="omen-note" style={{ color: AFFIX_MAP[p.affix].color }}>
