@@ -16,7 +16,7 @@ import { EVENTS, EVENT_MAP } from './events.ts';
 import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
-import { rollEnemyTactics, type EnemyTacticId } from '../data/enemyTactics.ts';
+import { rollEnemyTactics } from '../data/enemyTactics.ts';
 
 export const RUN_VERSION = 4;
 
@@ -624,11 +624,6 @@ export function dynamicFormation(
     }
   };
 
-  if (!shouldAddSupport || cards.length >= targetCards) {
-    fixRows(cards);
-    return cards;
-  }
-
   const baseThreat = encounterThreat({ cards: baseCards });
   const [start, end] = tier === 0 ? [0, 3] : tier === 1 ? [4, 8] : [9, 11];
   const rawProgress = Math.max(0, Math.min(1, (row - start) / Math.max(1, end - start)));
@@ -640,6 +635,46 @@ export function dynamicFormation(
   const targetBudget = normalizedThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
   const maxBudget = targetBudget * (kind === 'elite' ? 1.15 : 1.1);
 
+  // Star 3 promotion decision and budget reservation (Section 5)
+  const key = kind === 'elite' ? 'elite' : tier === 0 ? 'tier0' : tier === 1 ? 'tier1' : 'tier2';
+  const star3Chance = pol.star3Chance?.[key] ?? 0;
+  const star3Cap = pol.star3Cap?.[key] ?? 0;
+  const templateStar3 = cards.filter((c) => c[1] >= 3).length;
+
+  let wantPromotion = false;
+  let reservedStar3Budget = 0;
+  if (templateStar3 < star3Cap && star3Chance > 0 && rng.chance(star3Chance)) {
+    wantPromotion = true;
+    const baseCands = cards
+      .filter((c) => {
+        const m = mobDef(c[0]);
+        return !m.boss && !m.structure && c[1] < 3;
+      })
+      .map((c) => {
+        const m = mobDef(c[0]);
+        const curStar = c[1];
+        const curCost = (MOB_COST[c[0]]?.[curStar - 1] ?? 4) * ((c[3] ?? unitCount(m, curStar)) / unitCount(m, curStar));
+        const normalCount3 = unitCount(m, 3);
+        const newCount = c[3] !== undefined ? Math.max(1, Math.round(normalCount3 * (c[3] / unitCount(m, curStar)))) : undefined;
+        const newCost = (MOB_COST[c[0]]?.[2] ?? 8) * ((newCount ?? normalCount3) / normalCount3);
+        const deltaCost = Math.max(1, newCost - curCost);
+        const isTheme = baseCards.some((bc) => bc[0] === c[0]);
+        const score = (curStar === 2 ? 100 : 0) + (isTheme ? 10 : 0) - deltaCost * 2;
+        return { deltaCost, score, mob: c[0] };
+      })
+      .sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
+
+    if (baseCands.length > 0) {
+      reservedStar3Budget = baseCands[0].deltaCost;
+    } else {
+      reservedStar3Budget = 4;
+    }
+  }
+
+  const effectiveMaxBudget = wantPromotion
+    ? Math.min(maxBudget, targetBudget * 1.08) - reservedStar3Budget
+    : maxBudget;
+
   const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act).flatMap((e) => e.cards.map((c) => c[0])))]
     .filter((id) => {
       const m = mobDef(id);
@@ -647,109 +682,176 @@ export function dynamicFormation(
     })
     .sort();
 
-  if (!actMobs.length) {
-    fixRows(cards);
-    return cards;
-  }
+  if (shouldAddSupport && actMobs.length) {
+    while (cards.length < targetCards) {
+      const curThreat = encounterThreat({ cards });
+      const remainingBudget = effectiveMaxBudget - curThreat;
+      if (remainingBudget <= 0.4 && cards.length >= Math.min(baseCards.length + 1, targetCards)) break;
 
-  while (cards.length < targetCards) {
-    const curThreat = encounterThreat({ cards });
-    const remainingBudget = maxBudget - curThreat;
-    if (remainingBudget <= 0.4 && cards.length >= Math.min(baseCards.length + 1, targetCards)) break;
+      const trySynergy = rng.chance(pol.synergyChance);
+      const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
+      const hasFront = cards.some((c) => ['tank', 'melee'].includes(mobDef(c[0]).role));
+      const hasBack = cards.some((c) => ['ranged', 'caster', 'support', 'bomber'].includes(mobDef(c[0]).role));
 
-    const trySynergy = rng.chance(pol.synergyChance);
-    const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
-    const hasFront = cards.some((c) => ['tank', 'melee'].includes(mobDef(c[0]).role));
-    const hasBack = cards.some((c) => ['ranged', 'caster', 'support', 'bomber'].includes(mobDef(c[0]).role));
-
-    interface ScoredCandidate {
-      mob: string;
-      star: number;
-      row: Row;
-      count?: number;
-      score: number;
-      threat: number;
-    }
-
-    const scored: ScoredCandidate[] = [];
-
-    for (const mob of actMobs) {
-      const m = mobDef(mob);
-      const star = tier === 2 && (row >= 8 || pol.omen >= 4) && cards.length >= 3 && rng.chance(pol.omen >= 4 ? 0.35 : 0.2) ? 2 : 1;
-      const normalCount = unitCount(m, star);
-      const fullCost = MOB_COST[mob]?.[star - 1] ?? 4;
-
-      let chosenCount: number | undefined = undefined;
-      let actualCost = fullCost;
-
-      const forceWeakened = pol.weakenedSupportOnly;
-      if (forceWeakened || curThreat + fullCost > maxBudget) {
-        const scale = forceWeakened ? 0.6 : 0.65;
-        const scaledCount = Math.max(1, Math.round(normalCount * scale));
-        actualCost = fullCost * (scaledCount / normalCount);
-        if (curThreat + actualCost <= maxBudget * 1.05) {
-          chosenCount = scaledCount;
-        } else if (cards.length < targetCards && remainingBudget > 0.5) {
-          const minCount = Math.max(1, Math.round(normalCount * 0.5));
-          actualCost = fullCost * (minCount / normalCount);
-          chosenCount = minCount;
-        } else {
-          continue;
-        }
+      interface ScoredCandidate {
+        mob: string;
+        star: number;
+        row: Row;
+        count?: number;
+        score: number;
+        threat: number;
       }
 
-      let score = 0;
+      const scored: ScoredCandidate[] = [];
 
-      // 1. Synergy (+10 if activates a new family tier, +5 if upgrades)
-      if (trySynergy) {
-        const synAfter = computeSynergies([...cards.map((c) => mobDef(c[0]).families), m.families]).active;
-        for (const [f, t] of Object.entries(synAfter)) {
-          const prev = synBefore[f as Family] ?? -1;
-          if (t > prev) {
-            score += prev < 0 ? 10 : 5;
+      for (const mob of actMobs) {
+        const m = mobDef(mob);
+        const star = tier === 2 && (row >= 8 || pol.omen >= 4) && cards.length >= 3 && rng.chance(pol.omen >= 4 ? 0.35 : 0.2) ? 2 : 1;
+        const normalCount = unitCount(m, star);
+        const fullCost = MOB_COST[mob]?.[star - 1] ?? 4;
+
+        let chosenCount: number | undefined = undefined;
+        let actualCost = fullCost;
+
+        const forceWeakened = pol.weakenedSupportOnly;
+        if (forceWeakened || curThreat + fullCost > effectiveMaxBudget) {
+          const scale = forceWeakened ? 0.6 : 0.65;
+          const scaledCount = Math.max(1, Math.round(normalCount * scale));
+          actualCost = fullCost * (scaledCount / normalCount);
+          if (curThreat + actualCost <= effectiveMaxBudget * 1.05) {
+            chosenCount = scaledCount;
+          } else if (cards.length < targetCards && remainingBudget > 0.5) {
+            const minCount = Math.max(1, Math.round(normalCount * 0.5));
+            actualCost = fullCost * (minCount / normalCount);
+            chosenCount = minCount;
+          } else {
+            continue;
           }
         }
+
+        let score = 0;
+
+        // 1. Synergy (+10 if activates a new family tier, +5 if upgrades)
+        if (trySynergy) {
+          const synAfter = computeSynergies([...cards.map((c) => mobDef(c[0]).families), m.families]).active;
+          for (const [f, t] of Object.entries(synAfter)) {
+            const prev = synBefore[f as Family] ?? -1;
+            if (t > prev) {
+              score += prev < 0 ? 10 : 5;
+            }
+          }
+        }
+
+        // 2. Role filling
+        if (!hasFront && ['tank', 'melee'].includes(m.role)) score += 6;
+        if (!hasBack && ['ranged', 'caster', 'support'].includes(m.role)) score += 6;
+
+        // 3. Theme affinity (+3 if shares any family with existing cards)
+        if (m.families.some((f) => cards.some((c) => mobDef(c[0]).families.includes(f)))) {
+          score += 3;
+        }
+
+        // 4. Role redundancy
+        const sameRoleCount = cards.filter((c) => mobDef(c[0]).role === m.role).length;
+        if (sameRoleCount >= 2) score -= 3;
+
+        // 5. Duplicate card penalty
+        if (cards.some((c) => c[0] === mob)) score -= 6;
+
+        scored.push({
+          mob,
+          star,
+          row: m.defaultRow,
+          count: chosenCount,
+          score,
+          threat: actualCost,
+        });
       }
 
-      // 2. Role filling
-      if (!hasFront && ['tank', 'melee'].includes(m.role)) score += 6;
-      if (!hasBack && ['ranged', 'caster', 'support'].includes(m.role)) score += 6;
+      if (!scored.length) break;
 
-      // 3. Theme affinity (+3 if shares any family with existing cards)
-      if (m.families.some((f) => cards.some((c) => mobDef(c[0]).families.includes(f)))) {
-        score += 3;
+      scored.sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
+
+      const valid = scored.filter((s) => s.score >= 0);
+      const pickPool = valid.length ? valid.slice(0, Math.min(2, valid.length)) : scored.slice(0, 1);
+      if (!pickPool.length) break;
+
+      const chosen = rng.pick(pickPool);
+      if (chosen.count !== undefined) {
+        cards.push([chosen.mob, chosen.star, chosen.row, chosen.count]);
+      } else {
+        cards.push([chosen.mob, chosen.star, chosen.row]);
       }
-
-      // 4. Role redundancy
-      const sameRoleCount = cards.filter((c) => mobDef(c[0]).role === m.role).length;
-      if (sameRoleCount >= 2) score -= 3;
-
-      // 5. Duplicate card penalty
-      if (cards.some((c) => c[0] === mob)) score -= 6;
-
-      scored.push({
-        mob,
-        star,
-        row: m.defaultRow,
-        count: chosenCount,
-        score,
-        threat: actualCost,
-      });
     }
+  }
 
-    if (!scored.length) break;
+  // Step 4: Promote selected non-boss, non-structure card to ★3
+  if (wantPromotion) {
+    const promoCandidates = cards
+      .map((card) => {
+        const m = mobDef(card[0]);
+        if (m.boss || m.structure || card[1] >= 3) return null;
+        const curStar = card[1];
+        const curCost = (MOB_COST[card[0]]?.[curStar - 1] ?? 4) * ((card[3] ?? unitCount(m, curStar)) / unitCount(m, curStar));
+        const normalCount3 = unitCount(m, 3);
+        const newCount = card[3] !== undefined ? Math.max(1, Math.round(normalCount3 * (card[3] / unitCount(m, curStar)))) : undefined;
+        const newCost = (MOB_COST[card[0]]?.[2] ?? 8) * ((newCount ?? normalCount3) / normalCount3);
+        const deltaCost = newCost - curCost;
+        const isTheme = baseCards.some((bc) => bc[0] === card[0]);
+        const score = (curStar === 2 ? 100 : 0) + (isTheme ? 10 : 0) - deltaCost * 2;
+        return {
+          card,
+          curStar,
+          curCount: card[3],
+          newCount,
+          deltaCost,
+          score,
+          mob: card[0],
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null);
 
-    scored.sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
+    promoCandidates.sort((a, b) => b.score - a.score || a.mob.localeCompare(b.mob));
 
-    const valid = scored.filter((s) => s.score >= 0);
-    const pickPool = valid.length ? valid.slice(0, Math.min(2, valid.length)) : scored.slice(0, 1);
-    if (!pickPool.length) break;
+    const threatLimit = targetBudget * 1.08;
 
-    const chosen = rng.pick(pickPool);
-    if (chosen.count !== undefined) {
-      cards.push([chosen.mob, chosen.star, chosen.row, chosen.count]);
-    } else {
-      cards.push([chosen.mob, chosen.star, chosen.row]);
+    for (const cand of promoCandidates) {
+      cand.card[1] = 3;
+      if (cand.card[3] !== undefined) cand.card[3] = cand.newCount;
+
+      let curThreat = encounterThreat({ cards });
+      if (curThreat <= threatLimit) {
+        break;
+      }
+
+      // Over budget: try dropping one non-core weak support card (from newly added support cards)
+      if (cards.length > baseCards.length) {
+        let weakestIdx = -1;
+        let weakestThreat = Infinity;
+        for (let i = baseCards.length; i < cards.length; i++) {
+          if (cards[i] === cand.card) continue;
+          const t = encounterThreat({ cards: [cards[i]] });
+          if (t < weakestThreat) {
+            weakestThreat = t;
+            weakestIdx = i;
+          }
+        }
+
+        if (weakestIdx !== -1) {
+          const removedCard = cards[weakestIdx];
+          cards.splice(weakestIdx, 1);
+          curThreat = encounterThreat({ cards });
+          if (curThreat <= threatLimit) {
+            break;
+          }
+          // Put the card back
+          cards.splice(weakestIdx, 0, removedCard);
+        }
+      }
+
+      // Still exceeds budget, revert candidate
+      cand.card[1] = cand.curStar;
+      cand.card[3] = cand.curCount;
     }
   }
 

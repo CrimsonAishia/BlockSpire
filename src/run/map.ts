@@ -50,11 +50,25 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
   for (const n of Object.values(nodes)) for (const nx of n.next) (parents[nx] ??= []).push(n.id);
 
   const ordered = Object.values(nodes).sort((a, b) => a.row - b.row || a.col - b.col);
+  const policy = difficultyPolicy(omen);
+  const gateRows = new Set<number>();
+  if (policy.requiredEliteGates === 1) {
+    gateRows.add(rng.int(7, 10));
+  } else if (policy.requiredEliteGates >= 2) {
+    gateRows.add(rng.int(3, 5));
+    gateRows.add(rng.int(8, 10));
+  }
+
   for (const n of ordered) {
-    if (n.row === 0) n.type = 'battle';
-    else if (n.row === 6) n.type = 'treasure';
-    else if (n.row === MAP_ROWS - 1) n.type = 'rest';
-    else {
+    if (gateRows.has(n.row)) {
+      n.type = 'elite';
+    } else if (n.row === 0) {
+      n.type = 'battle';
+    } else if (n.row === 6) {
+      n.type = 'treasure';
+    } else if (n.row === MAP_ROWS - 1) {
+      n.type = 'rest';
+    } else {
       const pTypes = (parents[n.id] ?? []).map((id) => nodes[id].type);
       const siblings = (parents[n.id] ?? []).flatMap((id) => nodes[id].next).filter((id) => id !== n.id && nodes[id].row === n.row);
       const sibTypes = siblings.map((id) => nodes[id].type);
@@ -69,8 +83,11 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
       };
       add('battle', 45);
       add('event', 22);
-      const policy = difficultyPolicy(omen);
-      if (n.row >= (policy.omen >= 1 ? 3 : 4) && !pTypes.includes('elite')) add('elite', policy.eliteWeight);
+      const isAdjToGate = gateRows.has(n.row - 1) || gateRows.has(n.row + 1);
+      const prevRowHasElite = ordered.some((m) => m.row === n.row - 1 && m.type === 'elite');
+      if (!isAdjToGate && !prevRowHasElite && n.row >= (policy.omen >= 1 ? 3 : 4) && !pTypes.includes('elite')) {
+        add('elite', policy.eliteWeight);
+      }
       if (n.row >= 4 && n.row !== MAP_ROWS - 2 && !pTypes.includes('rest')) add('rest', 11);
       if (n.row >= 2 && !pTypes.includes('shop')) add('shop', 9);
       n.type = rng.weighted(opts, w);

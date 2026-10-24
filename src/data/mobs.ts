@@ -288,8 +288,8 @@ export const MOBS: MobDef[] = [
     id: 'shulker', name: '潜影贝', rarity: 'pink', families: ['ender', 'construct'], role: 'ranged',
     hp: 240, atk: 16, cd: 2.0, range: 320, speed: 0, armor: 0.1, radius: 18, size: 50,
     count: [2, 2, 3], ai: 'shulker', projectile: 'shulker_bullet', defaultRow: 'back',
-    skill: { name: '漂浮弹', desc: '发射追踪弹，命中使目标漂浮 1.5 秒（无法行动）并在落地时受到伤害。闭壳时护甲 +40%。不能行走，射程内没有敌人时会传送到战场附近（冷却 6 秒）。' },
-    star3: '每次发射 2 枚追踪弹。',
+    skill: { name: '漂浮弹', desc: '发射追踪弹，命中有 20%/30%/40% 几率使目标漂浮 1.5 秒（无法行动）并在落地时受到伤害。闭壳时护甲 +40%。不能行走，射程内没有敌人时会传送到战场附近（冷却 6 秒）。' },
+    star3: '每次发射 2 枚追踪弹（双弹共享一次浮空判定）。',
     flavor: '末地城的门卫，被打中你就得飞一会儿了。',
   },
   {

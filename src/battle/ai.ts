@@ -956,9 +956,11 @@ export const BEHAVIORS: Record<string, Behavior> = {
         const others = b.live[(1 - u.team) as 0 | 1].filter((e) => e !== t && !e.structure);
         targets.push(others.length ? b.rng.pick(others) : t);
       }
+      const levitateChance = [0.2, 0.3, 0.4][Math.max(0, Math.min(2, u.star - 1))];
+      const levitates = b.rng.chance(levitateChance);
       for (const tt of targets)
         fire(u, tt, b, 'shulker_bullet', atk, (p) => {
-          p.lev = 1.5;
+          if (levitates) p.lev = 1.5;
         });
       b.emit({ k: 'sfx', id: 'shulker' });
     },

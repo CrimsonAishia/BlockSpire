@@ -1,4 +1,4 @@
-export const DIFFICULTY_RULES_VERSION = 3;
+export const DIFFICULTY_RULES_VERSION = 4;
 
 export interface DifficultyPolicy {
   omen: 0 | 1 | 2 | 3 | 4 | 5;
@@ -12,6 +12,9 @@ export interface DifficultyPolicy {
   supportChance: number;
   fifthCardChance: number;
   eliteWeight: number;
+  requiredEliteGates: number;
+  star3Chance: { tier0: number; tier1: number; tier2: number; elite: number };
+  star3Cap: { tier0: number; tier1: number; tier2: number; elite: number };
   shopPriceMul: number;
   restHeal: number;
   heartsPenalty: number;
@@ -46,6 +49,9 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     supportChance: 0.0,
     fifthCardChance: 0.0,
     eliteWeight: 15,
+    requiredEliteGates: 0,
+    star3Chance: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
+    star3Cap: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
     shopPriceMul: 1.0,
     restHeal: 2,
     heartsPenalty: 0,
@@ -74,6 +80,9 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     supportChance: 0.35,
     fifthCardChance: 0.0,
     eliteWeight: 24,
+    requiredEliteGates: 0,
+    star3Chance: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
+    star3Cap: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
     shopPriceMul: 1.0,
     restHeal: 2,
     heartsPenalty: 0,
@@ -109,7 +118,10 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     synergyChance: 0.45,
     supportChance: 0.6,
     fifthCardChance: 0.0,
-    eliteWeight: 24,
+    eliteWeight: 26,
+    requiredEliteGates: 0,
+    star3Chance: { tier0: 0, tier1: 0, tier2: 0.05, elite: 0.1 },
+    star3Cap: { tier0: 0, tier1: 0, tier2: 1, elite: 1 },
     shopPriceMul: 1.0,
     restHeal: 2,
     heartsPenalty: 0,
@@ -126,7 +138,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     newRules: [
       '敌方生命 +35%、攻击 +20%、编队预算 +30%。',
       '精英战敌军固定拥有 1 个战术，且敌人携带随机词缀。',
-      '敌方更容易形成基础家族羁绊与阵型协同。',
+      '敌方更容易形成基础家族羁绊与阵型协同；后期偶见 ★3 敌军。',
     ],
     rules: [
       '敌方生命 +15%、攻击 +10%、编队预算 +15%。',
@@ -134,7 +146,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
       '敌方优先修正前后排职责脱节，常规遭遇偏向预算上半区。',
       '敌方生命 +35%、攻击 +20%、编队预算 +30%。',
       '精英战敌军固定拥有 1 个战术，且敌人携带随机词缀。',
-      '敌方更容易形成基础家族羁绊与阵型协同。',
+      '敌方更容易形成基础家族羁绊与阵型协同；后期偶见 ★3 敌军。',
     ],
   },
   {
@@ -148,7 +160,10 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     synergyChance: 0.65,
     supportChance: 0.85,
     fifthCardChance: 0.0,
-    eliteWeight: 24,
+    eliteWeight: 30,
+    requiredEliteGates: 1,
+    star3Chance: { tier0: 0, tier1: 0.1, tier2: 0.3, elite: 0.5 },
+    star3Cap: { tier0: 0, tier1: 1, tier2: 1, elite: 1 },
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -165,6 +180,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     newRules: [
       '敌方生命 +55%、攻击 +30%、编队预算 +45%。',
       '中后期普通战稳定四卡，约 35% 获得 1 个战术；敌方卡牌配备附魔。',
+      '每幕至少包含 1 场必经精英战，不可选路规避；高难敌军开始出现 ★3 晋升。',
       '商店价格上涨 15%，开局少 1 颗心。',
     ],
     rules: [
@@ -173,9 +189,10 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
       '敌方优先修正前后排职责脱节，常规遭遇偏向预算上半区。',
       '敌方生命 +35%、攻击 +20%、编队预算 +30%。',
       '精英战敌军固定拥有 1 个战术，且敌人携带随机词缀。',
-      '敌方更容易形成基础家族羁绊与阵型协同。',
+      '敌方更容易形成基础家族羁绊与阵型协同；后期偶见 ★3 敌军。',
       '敌方生命 +55%、攻击 +30%、编队预算 +45%。',
       '中后期普通战稳定四卡，约 35% 获得 1 个战术；敌方卡牌配备附魔。',
+      '每幕至少包含 1 场必经精英战，不可选路规避；高难敌军开始出现 ★3 晋升。',
       '商店价格上涨 15%，开局少 1 颗心。',
     ],
   },
@@ -190,7 +207,10 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     synergyChance: 0.8,
     supportChance: 0.95,
     fifthCardChance: 0.2,
-    eliteWeight: 24,
+    eliteWeight: 34,
+    requiredEliteGates: 1,
+    star3Chance: { tier0: 0.05, tier1: 0.25, tier2: 0.55, elite: 0.75 },
+    star3Cap: { tier0: 1, tier1: 1, tier2: 1, elite: 2 },
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -207,7 +227,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     newRules: [
       '敌方生命 +75%、攻击 +40%、编队预算 +62%。',
       '扎营休息只回复 1 颗心；五卡阵容与双战术精英开始出现。',
-      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔。',
+      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔；敌军 ★3 明显增多。',
     ],
     rules: [
       '敌方生命 +15%、攻击 +10%、编队预算 +15%。',
@@ -215,13 +235,14 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
       '敌方优先修正前后排职责脱节，常规遭遇偏向预算上半区。',
       '敌方生命 +35%、攻击 +20%、编队预算 +30%。',
       '精英战敌军固定拥有 1 个战术，且敌人携带随机词缀。',
-      '敌方更容易形成基础家族羁绊与阵型协同。',
+      '敌方更容易形成基础家族羁绊与阵型协同；后期偶见 ★3 敌军。',
       '敌方生命 +55%、攻击 +30%、编队预算 +45%。',
       '中后期普通战稳定四卡，约 35% 获得 1 个战术；敌方卡牌配备附魔。',
+      '每幕至少包含 1 场必经精英战，不可选路规避；高难敌军开始出现 ★3 晋升。',
       '商店价格上涨 15%，开局少 1 颗心。',
       '敌方生命 +75%、攻击 +40%、编队预算 +62%。',
       '扎营休息只回复 1 颗心；五卡阵容与双战术精英开始出现。',
-      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔。',
+      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔；敌军 ★3 明显增多。',
     ],
   },
   {
@@ -235,7 +256,10 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     synergyChance: 0.9,
     supportChance: 1.0,
     fifthCardChance: 0.6,
-    eliteWeight: 24,
+    eliteWeight: 38,
+    requiredEliteGates: 2,
+    star3Chance: { tier0: 0.1, tier1: 0.45, tier2: 0.8, elite: 1.0 },
+    star3Cap: { tier0: 1, tier1: 1, tier2: 2, elite: 2 },
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -251,6 +275,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     eliteTacticsCount: 2,
     newRules: [
       '终局挑战：敌方生命 +100%、攻击 +50%、编队预算 +80%。',
+      '每幕至少包含 2 场必经精英战，无法通过选路规避；高难敌军高频配备 ★3 核心。',
       '中后期敌军以五卡成型编队为主，常规战必带战术，精英固定双战术。',
       '所有首领进入强化两阶段，最终首领需面对连续阶段作战。',
     ],
@@ -260,14 +285,16 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
       '敌方优先修正前后排职责脱节，常规遭遇偏向预算上半区。',
       '敌方生命 +35%、攻击 +20%、编队预算 +30%。',
       '精英战敌军固定拥有 1 个战术，且敌人携带随机词缀。',
-      '敌方更容易形成基础家族羁绊与阵型协同。',
+      '敌方更容易形成基础家族羁绊与阵型协同；后期偶见 ★3 敌军。',
       '敌方生命 +55%、攻击 +30%、编队预算 +45%。',
       '中后期普通战稳定四卡，约 35% 获得 1 个战术；敌方卡牌配备附魔。',
+      '每幕至少包含 1 场必经精英战，不可选路规避；高难敌军开始出现 ★3 晋升。',
       '商店价格上涨 15%，开局少 1 颗心。',
       '敌方生命 +75%、攻击 +40%、编队预算 +62%。',
       '扎营休息只回复 1 颗心；五卡阵容与双战术精英开始出现。',
-      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔。',
+      '第 1 阶级以上普通战 65% 带战术，首领与精英配备强力附魔；敌军 ★3 明显增多。',
       '终局挑战：敌方生命 +100%、攻击 +50%、编队预算 +80%。',
+      '每幕至少包含 2 场必经精英战，无法通过选路规避；高难敌军高频配备 ★3 核心。',
       '中后期敌军以五卡成型编队为主，常规战必带战术，精英固定双战术。',
       '所有首领进入强化两阶段，最终首领需面对连续阶段作战。',
     ],
