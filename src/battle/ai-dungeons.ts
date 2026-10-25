@@ -1,6 +1,6 @@
 import type { Battle } from './sim.ts';
 import { ARENA_D, ARENA_W, type Unit } from './unit.ts';
-import { cool, dist, foesOf, type Behavior } from './ai.ts';
+import { chargeMove, cool, dist, foesOf, startCharge, type Behavior } from './ai.ts';
 
 const clampX = (u: Unit, x: number) => Math.max(u.radius, Math.min(ARENA_W - u.radius, x));
 const clampY = (y: number) => Math.max(10, Math.min(ARENA_D - 10, y));
@@ -16,6 +16,37 @@ function cardAllies(u: Unit, b: Battle) {
 function isCardLead(u: Unit, b: Battle) {
   const c = cardAllies(u, b);
   return c.length > 0 && c[0].id === u.id;
+}
+
+function vineBurrowToFoe(u: Unit, b: Battle) {
+  const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
+  if (foes.length === 0) return;
+  const e = foes.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), foes[0]);
+  const homeX = u.team === 0 ? -1 : 1;
+  const angle = (b.rng.range(-1, 1) * Math.PI) / 3;
+  const d = b.rng.range(70, 100);
+  const nx = clampX(u, e.x + homeX * Math.cos(angle) * d);
+  const ny = clampY(e.y + Math.sin(angle) * d);
+
+  b.emit({ k: 'boom', x: u.x, y: u.y, r: 25, color: '#2ed573', big: false });
+  b.emit({ k: 'tele', x: u.x, y: u.y, x2: nx, y2: ny, z: u.gz });
+  b.emit({ k: 'sfx', id: 'teleport' });
+
+  u.x = u.px = nx;
+  u.y = u.py = ny;
+  b.teleported(u);
+  u.target = e;
+  u.facing = e.x > u.x ? 1 : -1;
+  u.retarget = 1.0;
+
+  b.emit({ k: 'text', x: nx, y: ny, z: u.gz + u.z + u.size, s: '藤蔓破土!', color: '#2ed573' });
+  b.emit({ k: 'boom', x: nx, y: ny, r: 35, color: '#2ed573', big: false });
+
+  if (u.star >= 3) {
+    b.aoe(nx, ny, 80, u.team, (foe) => {
+      b.slow(foe, 0.25, 0.15, 2.0);
+    });
+  }
 }
 
 export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
@@ -447,14 +478,36 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
 
   // 15. 毒刺藤 (poison_quill_vine)
   poison_quill_vine: {
+    init(u, b) {
+      u.ab.burrowT = 0.3 + b.rng.range(0, 0.25);
+    },
+    tick(u, b, dt) {
+      if (u.ab.burrowT !== undefined && u.ab.burrowT > 0) {
+        u.ab.burrowT -= dt;
+        if (u.ab.burrowT <= 0) {
+          u.ab.burrowT = 0;
+          vineBurrowToFoe(u, b);
+        }
+      }
+
+      const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
+      if (foes.length > 0) {
+        const inReach = foes.some((f) => dist(u, f) <= b.rangeOf(u));
+        if (!inReach && cool(u, 'vine_reburrow', dt, 3)) {
+          vineBurrowToFoe(u, b);
+        }
+      }
+
+      const t = u.target && u.target.alive ? u.target : foes[0];
+      if (t && Math.abs(t.x - u.x) > 2) {
+        u.facing = t.x > u.x ? 1 : -1;
+      }
+    },
     onHit(u, t, dealt, b) {
       if (dealt <= 0) return;
-      const cdKey = `vine_poison_cd_c${u.card}`;
-      const last = b.sides[u.team].timers[cdKey] ?? -999;
-      if (b.t - last >= 5) {
-        b.sides[u.team].timers[cdKey] = b.t;
-        const dur = u.star >= 3 ? 4 : 3;
-        b.poison(t, b.atkOf(u) * 0.12, dur, 1, u);
+      const dur = u.star >= 3 ? 4.5 : 3;
+      b.poison(t, b.atkOf(u) * 0.35, dur, 1, u);
+      if (cool(u, 'vine_poison_text', 0.1, 2)) {
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '剧毒喷吐!', color: '#2ed573' });
       }
     },
@@ -514,22 +567,32 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
   // 18. 红石方块 (redstone_cube)
   redstone_cube: {
     tick(u, b, dt) {
-      if (!isCardLead(u, b)) return;
-      if (cool(u, 'cube_roll', dt, 6)) {
+      const cdKey = `cube_roll_c${u.card}`;
+      const last = b.sides[u.team].timers[cdKey] ?? -999;
+      if (b.t - last >= 6 && !u.ref.charge) {
         const t = u.target && u.target.alive ? u.target : foesOf(u, b).find((f) => f.alive && !f.structure);
-        if (t && dist(u, t) <= 60) {
-          u.ab.cube_roll = 6;
-          b.emit({ k: 'boom', x: t.x, y: t.y, r: 30, color: '#ff4757', big: false });
-          b.damage(u, t, b.atkOf(u) * 0.8, 'phys', { melee: true });
-          b.knock(t, u.x, u.y, 15);
-          if (u.star >= 3) {
-            u.mass *= 1.43;
-            b.addTimedAction(2.0, () => {
-              if (u.alive) u.mass /= 1.43;
-            });
+        if (t) {
+          const d = dist(u, t);
+          if (d >= 20 && d <= 180) {
+            b.sides[u.team].timers[cdKey] = b.t;
+            startCharge(u, t, 30);
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '滚石撞击!', color: '#ff4757' });
+            b.emit({ k: 'sfx', id: 'ram' });
+            if (u.star >= 3) {
+              u.mass *= 1.43;
+              b.addTimedAction(2.0, () => {
+                if (u.alive) u.mass /= 1.43;
+              });
+            }
           }
         }
       }
+    },
+    move(u, b, dt) {
+      if (u.ref.charge) {
+        return chargeMove(u, b, dt, { mul: 0.8, knock: 25, stun: 0.2, all: false, speed: 220 });
+      }
+      return false;
     },
   },
 

@@ -1149,6 +1149,7 @@ export class Battle {
     u.moving = false;
     u.atkTimer = u.cd;
     u.animAtk = 0.22;
+    if (t && Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
     if (b.attack) b.attack(u, t, this);
     else this.basicAttack(u, t);
   }

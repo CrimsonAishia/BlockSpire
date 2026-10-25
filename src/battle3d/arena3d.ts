@@ -1257,7 +1257,8 @@ export class Arena3D {
         v.h = h;
         // Mirror toward the facing direction as seen from the camera; turning folds through 0.
         const yawC = Math.atan2(camPos.x - x, camPos.z - z);
-        const want = u.facing * Math.cos(yawC) >= 0 ? 1 : -1;
+        const baseFacing = u.mob.id === 'poison_quill_vine' ? -1 : 1;
+        const want = u.facing * baseFacing * Math.cos(yawC) >= 0 ? 1 : -1;
         if (v.flipCur === undefined) v.flipCur = want;
         v.flipCur += Math.sign(want - v.flipCur) * Math.min(Math.abs(want - v.flipCur), dt * 13);
         // Spinning attacks (幽匿舞者 and the afterimage it leaves behind) twirl the picture.
@@ -1384,6 +1385,10 @@ export class Arena3D {
             sx *= 1.12;
           }
           if (u.levT > 0) rot += Math.sin(this.time * 6) * 0.15;
+          if (u.alive && u.ref.charge && id === 'redstone_cube') {
+            rot -= (u.facing || 1) * this.time * 22;
+            lift += 0.12 * h;
+          }
         } else {
           // Topples backwards and flattens while it fades.
           const t = Math.min(1, u.deadT / 0.35);
