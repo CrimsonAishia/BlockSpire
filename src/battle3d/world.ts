@@ -385,9 +385,11 @@ export function buildWorld(t: Terrain): World {
       case F.BOULDER:
         solid.box(x0, h, z0, x0 + 1, h + th, z0 + 1, { top: grid.s[i] === S.END_STONE ? 'obsidian' : 'cobble', side: grid.s[i] === S.END_STONE ? 'obsidian' : 'cobble' });
         break;
-      case F.PILLAR:
-        solid.box(x0, h, z0, x0 + 1, h + th, z0 + 1, { top: 'obsidian', side: 'obsidian' });
+      case F.PILLAR: {
+        const tile = t.biome.startsWith('d33_') && (grid.s[i] === S.SANDSTONE || grid.s[i] === S.COBBLE) ? TOP[grid.s[i]][0] : 'obsidian';
+        solid.box(x0, h, z0, x0 + 1, h + th, z0 + 1, { top: tile, side: tile });
         break;
+      }
       case F.WALL:
         solid.box(x0, h, z0, x0 + 1, h + th, z0 + 1, { top: 'cobble', side: 'cobble' });
         break;

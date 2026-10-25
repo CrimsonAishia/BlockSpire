@@ -178,6 +178,10 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
       atkMul *= 1.1;
       atkSpd *= 1.1;
     }
+    if (relics.has('cursed_crown')) {
+      atkMul *= 1.10;
+      hpMul *= 0.94;
+    }
     if (relics.has('nether_star')) {
       hpMul *= 1.25;
       atkMul *= 1.25;

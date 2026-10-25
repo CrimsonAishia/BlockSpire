@@ -96,7 +96,7 @@ export const ITEMS: ItemDef[] = [
   I({ id: 'regeneration', name: '再生药水', kind: 'drink', target: 'none', radius: 0, tier: 'common', price: 28, potion: true, icon: 'potion_regeneration', color: '#ff7eb6', desc: '20 秒内友军每秒回复 2% 最大生命。' }),
   I({ id: 'turtle', name: '神龟药水', kind: 'drink', target: 'none', radius: 0, tier: 'uncommon', price: 32, potion: true, icon: 'potion_turtle', color: '#7c8f3c', desc: '友军受到伤害 -25%、移速 -15%，持续到战斗结束。' }),
   I({ id: 'fire_resistance', name: '抗火药水', kind: 'drink', target: 'none', radius: 0, tier: 'common', price: 20, potion: true, icon: 'potion_fire_resistance', color: '#ff9d2e', desc: '友军立即熄火，之后免疫燃烧，火焰伤害 -40%。' }),
-  I({ id: 'invisibility', name: '隐身药水', kind: 'drink', target: 'none', radius: 0, tier: 'uncommon', price: 28, potion: true, icon: 'potion_invisibility', color: '#c9ced6', desc: '5 秒内友军无法被选为目标，期间首次攻击伤害 +50%。' }),
+  I({ id: 'invisibility', name: '隐身药水', kind: 'drink', target: 'none', radius: 0, tier: 'uncommon', price: 28, potion: true, icon: 'potion_invisibility', color: '#c9ced6', desc: '7 秒内友军无法被选为目标，期间首次攻击伤害 +50%。' }),
   // ── 喷溅 / 滞留药水：扔到目标处 ──
   I({ id: 'splash_healing', name: '喷溅型治疗药水', kind: 'splash', target: 'area', radius: 2.5, tier: 'common', price: 28, potion: true, icon: 'item_splash_healing', color: '#ff4d6d', desc: '范围内友军回复 30% 最大生命。亡灵敌人反而受到伤害。' }),
   I({ id: 'splash_harming', name: '喷溅型伤害药水', kind: 'splash', target: 'area', radius: 2.5, tier: 'common', price: 28, potion: true, icon: 'item_splash_harming', color: '#8e2a5e', desc: '范围内敌人受到 70 点魔法伤害（随幕数提升）。亡灵敌人反而被治疗。' }),
@@ -126,6 +126,17 @@ export const ITEMS: ItemDef[] = [
   I({ id: 'egg_creeper', name: '苦力怕刷怪蛋', kind: 'egg', target: 'own', radius: 1.2, tier: 'uncommon', price: 40, spawn: ['creeper', 2], icon: 'item_egg_creeper', color: '#4fae35', desc: '在我方半场召唤 2 只苦力怕：它们会冲向敌人最密集处自爆。' }),
   I({ id: 'egg_copper_golem', name: '铜傀儡刷怪蛋', kind: 'egg', target: 'own', radius: 1.2, tier: 'rare', price: 50, spawn: ['copper_golem', 2], icon: 'item_egg_copper_golem', color: '#c7703e', desc: '召唤 2 只铜傀儡（1.21.9 新生物）：头顶避雷针，每 5 秒引一道闪电劈向附近敌人。' }),
   I({ id: 'egg_iron_golem', name: '铁傀儡刷怪蛋', kind: 'egg', target: 'own', radius: 1.2, tier: 'rare', price: 80, spawn: ['iron_golem', 1], icon: 'item_egg_iron_golem', color: '#d9d5cd', desc: '召唤 1 只铁傀儡，持续到本场战斗结束。' }),
+  // ── V3.3 遗迹远征消耗品 ──
+  I({ id: 'corrupted_beacon_charge', name: '腐化信标充能', kind: 'tool', target: 'area', radius: 1.2, tier: 'rare', price: 52, icon: 'corrupted_beacon', color: '#bd00ff', desc: '从我方后排中心射向落点，持续 2 秒：沿线每 0.5 秒造成魔法伤害。' }),
+  I({ id: 'death_cap_mushroom', name: '狂战蘑菇', kind: 'tool', target: 'none', radius: 0, tier: 'uncommon', price: 32, icon: 'death_cap_mushroom', color: '#e74c3c', desc: '全体友军攻速 +30%、移速 +15%，持续 5 秒。' }),
+  I({ id: 'iron_hide_charm', name: '铁皮护符碎片', kind: 'tool', target: 'none', radius: 0, tier: 'uncommon', price: 34, icon: 'iron_hide_amulet', color: '#95a5a6', desc: '全体友军减伤 20%，持续 5 秒。' }),
+  I({ id: 'healing_totem', name: '治疗图腾', kind: 'tool', target: 'own', radius: 2.5, tier: 'uncommon', price: 36, icon: 'regeneration_totem', color: '#2ecc71', desc: '放置治疗图腾 6 秒：每秒治疗范围内生命比例最低的 3 名友军各 4% 最大生命。' }),
+  I({ id: 'light_feather', name: '轻羽', kind: 'tool', target: 'area', radius: 2.0, tier: 'uncommon', price: 28, icon: 'light_feather', color: '#f1c40f', desc: '范围内友军沿远离最近敌人方向跃退，获得 6% 最大生命护盾 3 秒。' }),
+  I({ id: 'firework_quiver', name: '烟花箭袋', kind: 'tool', target: 'none', radius: 0, tier: 'rare', price: 40, icon: 'firework_arrow', color: '#e67e22', desc: '接下来 6 秒内，远程卡下一次射击命中产生范围魔法爆炸。' }),
+  I({ id: 'buzzy_nest', name: '便携蜂巢', kind: 'tool', target: 'own', radius: 1.0, tier: 'uncommon', price: 34, icon: 'buzzy_nest', color: '#f39c12', desc: '放置持续 8 秒的蜂巢，第 0/3/6 秒各召唤 1 只蜜蜂协助战斗。' }),
+  I({ id: 'shock_powder', name: '震荡粉末', kind: 'tool', target: 'area', radius: 2.2, tier: 'uncommon', price: 30, icon: 'item_splash_slowness', color: '#bdc3c7', desc: '造成魔法伤害并眩晕 0.6 秒（首领改为移速 -10%）。' }),
+  I({ id: 'ghost_cloak', name: '幽影斗篷', kind: 'tool', target: 'none', radius: 0, tier: 'rare', price: 42, icon: 'potion_invisibility', color: '#9b59b6', desc: '友军获得投射物闪避 +25 个百分点，持续 4 秒。' }),
+  I({ id: 'corrupted_seeds', name: '腐化种子', kind: 'tool', target: 'area', radius: 2.2, tier: 'uncommon', price: 30, icon: 'item_cobweb', color: '#27ae60', desc: '放置 6 秒荆棘区，持续造成魔法伤害，地面敌人移速 -25%。' }),
 ];
 export const ITEM_MAP: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 
@@ -198,8 +209,8 @@ export const RELICS: RelicDef[] = [
   // 稀有
   { id: 'diamond_sword', name: '钻石剑', tier: 'rare', desc: '所有友军 +12% 暴击率（暴击造成 175% 伤害）。' },
   { id: 'spyglass', name: '望远镜', tier: 'rare', desc: '远程单位射程 +20%，对 250 距离外目标伤害 +15%。' },
-  { id: 'bell', name: '钟', tier: 'rare', desc: '开战时敲响：所有敌人发光 6 秒，期间受到伤害 +20%。' },
-  { id: 'tnt', name: 'TNT', tier: 'rare', desc: '开战 2 秒后在敌方最密集处引爆，造成 100 点伤害（随幕数提升）。' },
+  { id: 'bell', name: '钟', tier: 'rare', desc: '开战时敲响：所有敌人发光 10 秒，期间受到伤害 +20%。' },
+  { id: 'tnt', name: 'TNT', tier: 'rare', desc: '开战 4 秒后在敌方最密集处引爆，造成 100 点伤害（随幕数提升）。' },
   { id: 'gunpowder', name: '火药', tier: 'rare', desc: '友军阵亡时 30% 几率爆炸，对周围敌人造成其最大生命 25% 的伤害。' },
   { id: 'ender_pearl', name: '末影珍珠', tier: 'rare', desc: '后排单位首次被近战攻击时，传送回己方后方。' },
   { id: 'compass', name: '指南针', tier: 'rare', desc: '战斗胜利后的开箱奖励额外多 1 个选项。' },
@@ -252,6 +263,19 @@ export const RELICS: RelicDef[] = [
   { id: 'sculk_catalyst', name: '幽匿催发体', tier: 'boss', desc: '任意敌人死亡时，所有友军回复 2% 最大生命；但无法在营火休息。' },
   { id: 'conduit', name: '潮涌核心', tier: 'boss', desc: '每 3 秒对一名随机敌人造成 45 点雷击伤害（随幕数提升）；商店价格 +20%。' },
   { id: 'dragon_breath', name: '龙息', tier: 'boss', desc: '药水类物品效果翻倍，物品栏 +1；但战斗不再掉落物品。' },
+  // V3.3 遗迹远征宝物
+  { id: 'corrupted_beacon_core', name: '腐化信标核心', tier: 'legendary', tag: '灵魂流', desc: '灵魂达到 12 时消耗 12，从后排中心向最近敌人发射持续 2 秒光束，每 0.5 秒造成魔法伤害（全场最多 3 次）。' },
+  { id: 'mycelium_spores', name: '迅捷菌丝', tier: 'rare', tag: '近战流', desc: '开战 4 秒使全体近战友军攻速提升 25%，持续 7 秒；其后每 10 秒触发一次（全场最多 3 次）。' },
+  { id: 'iron_hide_amulet', name: '铁皮护符', tier: 'rare', tag: '坦克流', desc: '各前排卡牌首次有单位生命低于 40% 时，存活单位获得 15% 减伤，持续 4 秒（每张卡牌仅生效一次）。' },
+  { id: 'totem_grove', name: '图腾根系', tier: 'rare', tag: '治疗流', desc: '每隔 8 秒治疗生命比例最低的 2 名友军各 5% 最大生命。' },
+  { id: 'feather_knot', name: '轻羽结', tier: 'common', tag: '后排防切', desc: '各后排卡牌首次遭受近战直接命中时，存活单位移速提升 25% 并获得 8% 最大生命护盾，持续 4 秒（每张卡牌仅生效一次）。' },
+  { id: 'firework_mechanism', name: '烟花机括', tier: 'rare', tag: '远程流', desc: '各远程卡牌每第 6 次射击，首个命中目标周围产生范围爆炸造成魔法伤害（冷却 4 秒）。' },
+  { id: 'hive_heart', name: '蜂巢之心', tier: 'rare', tag: '召唤流', desc: '开战 4 秒后召唤 2 只蜜蜂，第 12、20 秒各补充 1 只（最多同时 2 只，存在 10 秒）。' },
+  { id: 'gong_fragment', name: '弱化铜锣碎片', tier: 'rare', tag: '虚弱流', desc: '开战 4 秒使攻击力最高的 2 名敌人攻击力降低 25%，持续 8 秒（仅一次）。' },
+  { id: 'soul_vessel', name: '灵魂容器', tier: 'common', tag: '灵魂流', desc: '灵魂上限提升至 36；每场首次达到 24 灵魂时额外获得 6 灵魂。' },
+  { id: 'temporal_sand', name: '停滞沙漏', tier: 'rare', tag: '技能流', desc: '全体友军首次施放自身主动技能后，该技能下次冷却缩短 15%（每单位一次）。' },
+  { id: 'amber_contract', name: '琥珀契据', tier: 'common', tag: '经济流', desc: '每幕首次在商店购买消耗品后返还 8 绿宝石（每幕仅一次）。' },
+  { id: 'cursed_crown', name: '失落王冠', tier: 'boss', tag: '强化流', desc: '全体友军非持续伤害 +10%，最大生命 -6%。' },
 ];
 export const RELIC_MAP = Object.fromEntries(RELICS.map((r) => [r.id, r]));
 

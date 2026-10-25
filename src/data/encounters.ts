@@ -146,6 +146,28 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('ev_enderman', '被激怒的末影人', 1, 'event', undefined, [['enderman', 1], ['endermite', 1]]),
   E('ev_rift_sift', '裂隙彼端', 2, 'event', undefined, [['baby_sifter', 1], ['bearded_sifter', 1], ['nester', 1]]),
   E('ev_sift_guard', '祭坛守卫', 4, 'event', undefined, [['echo_golem', 1, 'front', 3], ['sculk_slasher', 1], ['tall_sifter', 1]]),
+
+  // ───── V3.3 遗迹远征遭遇模板 ─────
+  E('a1_forest_scout', '林桥斥候', 1, 'battle', 0, [['skeleton', 1, 'back'], ['spider', 1, 'front']]),
+  E('a1_forest_blast', '深林跃袭', 1, 'battle', 2, [['leaper', 1, 'mid'], ['poison_quill_vine', 1, 'back'], ['wolf', 1, 'front']]),
+  E('a1e_forest_royal', '藤蔓卫队', 1, 'elite', undefined, [['skeleton_vanguard', 1, 'front'], ['whisperer', 1, 'mid'], ['poison_quill_vine', 1, 'back']]),
+  E('a1_tomb_patrol', '王墓巡逻', 1, 'battle', 0, [['husk', 1, 'front'], ['skeleton', 1, 'back']]),
+  E('a1_tomb_ritual', '魂火祭仪', 1, 'battle', 2, [['skeleton_vanguard', 1, 'front'], ['soul_wisp', 1, 'back'], ['zombie', 1, 'mid']]),
+  E('a1e_tomb_priest', '墓穴祭司', 1, 'elite', undefined, [['necromancer', 1, 'back'], ['skeleton_vanguard', 1, 'front']]),
+  E('a2_forge_workers', '熔炉工役', 2, 'battle', 0, [['blaze', 1, 'back'], ['wither_skeleton', 1, 'front']]),
+  E('a2_forge_guard', '熔炉守卫', 2, 'battle', 2, [['redstone_golem', 1, 'front'], ['blaze', 1, 'back'], ['redstone_cube', 1, 'mid']]),
+  E('a2e_forge_overload', '过载锻炉', 2, 'elite', undefined, [['redstone_golem', 1, 'front'], ['blaze', 2, 'back'], ['piglin_brute', 1, 'mid']]),
+  E('a2_canyon_scout', '峡谷先遣', 2, 'battle', 0, [['pillager', 2, 'back'], ['mountaineer', 1, 'front']]),
+  E('a2_canyon_ice', '冰霜裂谷', 2, 'battle', 2, [['iceologer', 1, 'back'], ['stray', 2, 'back'], ['royal_guard', 1, 'front']]),
+  E('a2e_canyon_storm', '风暴隘口', 2, 'elite', undefined, [['windcaller', 1, 'back'], ['squall_golem', 1, 'front'], ['pillager', 2, 'back']]),
+  E('a3_halls_gate', '高厅门禁', 3, 'battle', 0, [['royal_guard', 1, 'front'], ['pillager', 2, 'back'], ['vindicator', 2, 'mid']]),
+  E('a3_halls_circle', '法阵枢纽', 3, 'battle', 2, [['enchanter', 1, 'back'], ['geomancer', 1, 'back'], ['royal_guard', 2, 'front']]),
+  E('a3e_halls_court', '灾厄禁卫', 3, 'elite', undefined, [['enchanter', 2, 'back'], ['windcaller', 1, 'mid'], ['royal_guard', 2, 'front']]),
+  E('a3_void_bridge', '虚空残桥', 3, 'battle', 0, [['endermite', 2, 'front'], ['enderman', 1, 'mid'], ['soul_wisp', 1, 'back']]),
+  E('a3_void_flame', '虚空冷火', 3, 'battle', 2, [['wraith', 2, 'mid'], ['shulker', 1, 'back'], ['enderman', 2, 'front']]),
+  E('a3e_void_watch', '回响凝视', 3, 'elite', undefined, [['drowned_necromancer', 2, 'back'], ['wraith', 1, 'mid'], ['shulker', 2, 'back']]),
+  E('a1b_nameless', '首领 · 无名者', 1, 'boss', undefined, [['nameless_one', 1, 'back'], ['skeleton_vanguard', 1, 'front']]),
+  E('a2b_redstone_monstrosity', '首领 · 红石巨兽', 2, 'boss', undefined, [['redstone_monstrosity', 1, 'front'], ['blaze', 1, 'back']]),
 ];
 
 export const ENC_MAP: Record<string, EncounterDef> = Object.fromEntries(ENCOUNTERS.map((e) => [e.id, e]));

@@ -82,7 +82,7 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       for (const u of allies) u.burnT = 0;
       break;
     case 'invisibility':
-      for (const u of allies) if (!u.structure) u.invisT = Math.max(u.invisT, 5);
+      for (const u of allies) if (!u.structure) u.invisT = Math.max(u.invisT, 7);
       break;
     // ── splash / lingering ──
     case 'splash_healing':
@@ -271,6 +271,123 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       }
       b.emit({ k: 'sfx', id: 'heal' });
       break;
+    // ── V3.3 遗迹远征消耗品 ──
+    case 'corrupted_beacon_charge': {
+      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      const rearX = team === 0 ? 40 : ARENA_W - 40;
+      const rearY = ARENA_D / 2;
+      b.emit({ k: 'beam', a: { x: rearX, y: rearY, gz: 0, z: 20 } as any, b: { x, y, gz: 0, z: 20 } as any, color: '#bd00ff', t: 2.0 });
+      b.emit({ k: 'sfx', id: 'laser' });
+      for (let step = 0; step < 4; step++) {
+        setTimeout(() => {
+          if (!b.over) {
+            let hit = 0;
+            b.aoe(x, y, 65, team, (e) => {
+              if (hit >= 5) return;
+              hit++;
+              b.damage(null, e, D * 0.25, 'magic', { noCrit: true });
+            });
+          }
+        }, step * 500);
+      }
+      break;
+    }
+    case 'death_cap_mushroom':
+      b.addBuff(team, 'atkSpd', 1.30, 5);
+      b.addBuff(team, 'move', 1.15, 5);
+      b.emit({ k: 'sfx', id: 'potion_drink' });
+      break;
+    case 'iron_hide_charm':
+      b.addBuff(team, 'taken', 0.80, 5);
+      b.emit({ k: 'sfx', id: 'potion_drink' });
+      break;
+    case 'healing_totem': {
+      for (const u of allies) {
+        if (u.mob.id === 'healing_totem_unit') {
+          u.alive = false;
+          u.hp = 0;
+        }
+      }
+      const owner = allies[0] ?? null;
+      if (owner) {
+        const totem = b.summon(owner, 'healing_totem_unit', x, y, 1, { lifespan: 6, fx: 'summon' });
+        if (totem) {
+          totem.ref.team = team;
+          totem.ref.totemR = r;
+        }
+      }
+      break;
+    }
+    case 'light_feather': {
+      boom('#f1c40f');
+      b.aoeAllies(x, y, r, team, (a) => {
+        if (a.structure || a.boss) return;
+        a.shield = Math.min(a.maxHp * 0.3, a.shield + a.maxHp * 0.06);
+        const foes = b.live[(1 - team) as 0 | 1].filter((f) => f.alive && !f.structure);
+        let nearest: Unit | null = null;
+        let nd = Infinity;
+        for (const f of foes) {
+          const d = Math.hypot(f.x - a.x, f.y - a.y);
+          if (d < nd) {
+            nd = d;
+            nearest = f;
+          }
+        }
+        let dx = 0, dy = 0;
+        if (nearest && nd > 0.1) {
+          dx = ((a.x - nearest.x) / nd) * 60;
+          dy = ((a.y - nearest.y) / nd) * 60;
+        } else {
+          dx = a.team === 0 ? -60 : 60;
+        }
+        const nx = Math.max(a.radius, Math.min(ARENA_W - a.radius, a.x + dx));
+        const ny = Math.max(10, Math.min(ARENA_D - 10, a.y + dy));
+        b.emit({ k: 'tele', x: a.x, y: a.y, x2: nx, y2: ny, z: a.gz + a.z });
+        a.x = a.px = nx;
+        a.y = a.py = ny;
+      });
+      break;
+    }
+    case 'firework_quiver': {
+      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      side.timers['firework_quiver'] = b.t + 6;
+      side.timers['firework_dmg'] = 0.6 * D;
+      b.emit({ k: 'sfx', id: 'wind' });
+      break;
+    }
+    case 'buzzy_nest': {
+      for (const u of allies) {
+        if (u.mob.id === 'buzzy_nest_unit') {
+          u.alive = false;
+          u.hp = 0;
+        }
+      }
+      const owner = allies[0] ?? null;
+      if (owner) b.summon(owner, 'buzzy_nest_unit', x, y, 1, { lifespan: 8, fx: 'summon' });
+      break;
+    }
+    case 'shock_powder': {
+      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      boom('#bdc3c7');
+      b.aoe(x, y, r, team, (e) => {
+        b.damage(null, e, 0.5 * D, 'magic', { noCrit: true });
+        if (e.boss) b.slow(e, 0.10, 0, 0.6);
+        else b.stun(e, 0.6);
+      });
+      break;
+    }
+    case 'ghost_cloak':
+      for (const u of allies) {
+        if (!u.structure) u.ref.ghostCloak = b.t + 4;
+      }
+      b.emit({ k: 'sfx', id: 'teleport' });
+      break;
+    case 'corrupted_seeds': {
+      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      boom('#27ae60');
+      b.addZone({ x, y, r, dur: 6, team, dps: 0.12 * D, kind: 'goo', src: null });
+      break;
+    }
     default:
       if (def.spawn) spawnEgg(b, team, def.spawn[0], def.spawn[1], x, y);
   }

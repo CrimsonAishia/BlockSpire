@@ -148,6 +148,8 @@ export class Battle {
   itemsUsed: [string[], string[]] = [[], []];
   /** Thrown items still in the air. */
   pendingItems: { t: number; team: 0 | 1; id: string; x: number; y: number }[] = [];
+  /** Timed callbacks tied to battle time (this.t) */
+  timedActions: { at: number; fn: () => void }[] = [];
   /** Commander skill charges left and skills used, per side. */
   skillLeft: [number, number] = [0, 0];
   skillsUsed: [string[], string[]] = [[], []];
@@ -178,6 +180,13 @@ export class Battle {
   private gridHead = new Int32Array(GW * GH);
   private gridNext = new Int32Array(512);
 
+  // V3.3 Soul Resource
+  souls: [number, number] = [0, 0];
+  maxSouls: [number, number] = [30, 30];
+  soulLock: [number, number] = [0, 0];
+  soulEnemyKills: [number, number] = [0, 0];
+  hasSoulMechanic: [boolean, boolean] = [false, false];
+
   constructor(cfg: BattleConfig) {
     resetIds();
     this.rng = new Rng(cfg.seed);
@@ -195,6 +204,16 @@ export class Battle {
       fireImmune: false,
       echo: 0,
     })) as unknown as [SideState, SideState];
+
+    for (const team of [0, 1] as const) {
+      if (this.has(team, 'soul_vessel')) this.maxSouls[team] = 36;
+      if (this.has(team, 'corrupted_beacon_core') || this.has(team, 'soul_vessel')) {
+        this.hasSoulMechanic[team] = true;
+      }
+      for (const cp of cfg.sides[team].cards) {
+        if (cp.mob === 'soul_wisp') this.hasSoulMechanic[team] = true;
+      }
+    }
     // Each battle gets its own copy: explosions reshape it, and retries must start pristine.
     this.terrain = cloneTerrain(cfg.terrain ?? generateTerrain('plains', cfg.seed));
     // Commander skills; deployment builds go up before anyone spawns and use up charges.
@@ -347,7 +366,7 @@ export class Battle {
       const foe = (1 - team) as 0 | 1;
       const has = (f: string) => this.has(team, f);
       for (const u of this.live[team]) if (has('enchanted_apple')) u.shield = u.maxHp * 0.3;
-      if (has('bell')) for (const e of this.live[foe]) e.glowT = 6;
+      if (has('bell')) for (const e of this.live[foe]) e.glowT = 10;
       if (has('nether_star')) {
         let best = -1;
         let bestHp = -1;
@@ -412,6 +431,42 @@ export class Battle {
     return true;
   }
 
+  addSouls(team: 0 | 1, amount: number) {
+    if (amount <= 0) return;
+    const before = this.souls[team];
+    this.souls[team] = Math.min(this.maxSouls[team], this.souls[team] + amount);
+    if (this.has(team, 'soul_vessel') && before < 24 && this.souls[team] >= 24 && !this.sides[team].timers['soul_vessel_proc']) {
+      this.sides[team].timers['soul_vessel_proc'] = 1;
+      this.souls[team] = Math.min(this.maxSouls[team], this.souls[team] + 6);
+      this.emit({ k: 'text', x: team === 0 ? 50 : ARENA_W - 50, y: ARENA_D / 2, z: 30, s: '灵魂容器 +6!', color: '#00d2d3' });
+    }
+  }
+
+  triggerCorruptedBeacon(team: 0 | 1) {
+    const rearX = team === 0 ? 40 : ARENA_W - 40;
+    const rearY = ARENA_D / 2;
+    const foes = this.live[(1 - team) as 0 | 1].filter((f) => f.alive && !f.structure);
+    if (foes.length === 0) return;
+    foes.sort((a, b) => Math.hypot(a.x - rearX, a.y - rearY) - Math.hypot(b.x - rearX, b.y - rearY));
+    const target = foes[0];
+    const allies = this.live[team].filter((a) => a.alive && !a.structure && !a.isSummon);
+    const avgAtk = allies.length > 0 ? allies.reduce((sum, a) => sum + this.atkOf(a), 0) / allies.length : 20;
+    this.emit({ k: 'beam', a: { x: rearX, y: rearY, gz: 0, z: 20 } as any, b: target, color: '#bd00ff', t: 2.0 });
+    this.emit({ k: 'sfx', id: 'laser' });
+    for (let step = 0; step < 4; step++) {
+      this.addTimedAction(step * 0.5, () => {
+        if (!this.over) {
+          let count = 0;
+          this.aoe(target.x, target.y, 75, team, (e) => {
+            if (count >= 4) return;
+            count++;
+            this.damage(null, e, avgAtk * 0.4, 'magic', { noCrit: true });
+          });
+        }
+      });
+    }
+  }
+
   addBuff(team: 0 | 1, k: BuffKind, v: number, until: number) {
     this.sides[team].buffs.push({ k, v, until });
   }
@@ -464,6 +519,16 @@ export class Battle {
         if (it.t <= 0) applyItem(this, it.team, it.id, it.x, it.y);
       }
       this.pendingItems = this.pendingItems.filter((it) => it.t > 0);
+    }
+    if (this.timedActions.length > 0) {
+      const ready: (() => void)[] = [];
+      const keep: { at: number; fn: () => void }[] = [];
+      for (const a of this.timedActions) {
+        if (this.t >= a.at) ready.push(a.fn);
+        else keep.push(a);
+      }
+      this.timedActions = keep;
+      for (const fn of ready) fn();
     }
     this.sideTick(0, dt);
     this.sideTick(1, dt);
@@ -1109,6 +1174,52 @@ export class Battle {
     }
     // 筛界: Sift attacks leave an echo that makes the next hit on the target land harder.
     if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, 0.15);
+
+    // firework_mechanism: 远程卡每第 6 次射击，首个命中目标周围产生范围爆炸 0.35A 魔伤
+    if (this.has(u.team, 'firework_mechanism') && ranged && !u.structure && !u.isSummon) {
+      u.ab.fireworkShots = (u.ab.fireworkShots ?? 0) + 1;
+      const cdKey = `fw_mech_c${u.card}`;
+      const cd = this.sides[u.team].timers[cdKey] ?? 0;
+      if (u.ab.fireworkShots >= 6 && this.t >= cd) {
+        u.ab.fireworkShots = 0;
+        this.sides[u.team].timers[cdKey] = this.t + 4;
+        const allies = this.live[u.team].filter((a) => !a.structure && !a.isSummon);
+        const avgAtk = allies.length > 0 ? allies.reduce((s, a) => s + this.atkOf(a), 0) / allies.length : 20;
+        this.emit({ k: 'boom', x: t.x, y: t.y, r: 45, color: '#ff6ad5', big: false });
+        this.emit({ k: 'sfx', id: 'firework' });
+        let hit = 0;
+        this.aoe(t.x, t.y, 45, u.team, (e) => {
+          if (hit >= 3) return;
+          hit++;
+          this.damage(u, e, avgAtk * 0.35, 'magic', { noCrit: true });
+        });
+      }
+    }
+
+    // firework_quiver item active
+    const fwQuiverExpiry = this.sides[u.team].timers['firework_quiver'] ?? 0;
+    if (ranged && this.t < fwQuiverExpiry && !u.ref.quiverHit) {
+      u.ref.quiverHit = true;
+      const dmg = this.sides[u.team].timers['firework_dmg'] ?? 50;
+      this.emit({ k: 'boom', x: t.x, y: t.y, r: 45, color: '#e67e22', big: false });
+      let count = 0;
+      this.aoe(t.x, t.y, 45, u.team, (e) => {
+        if (count >= 4) return;
+        count++;
+        this.damage(u, e, dmg, 'magic', { noCrit: true });
+      });
+    }
+
+    // Soul generation on hit for soul cards
+    if (dealt > 0 && !u.structure && !u.isSummon && u.mob.id === 'soul_wisp') {
+      const lastHitKey = `soul_hit_c${u.card}`;
+      const lastHit = this.sides[u.team].timers[lastHitKey] ?? 0;
+      if (this.t - lastHit >= 2.0) {
+        this.sides[u.team].timers[lastHitKey] = this.t;
+        this.addSouls(u.team, 1);
+      }
+    }
+
     this.beh(u).onHit?.(u, t, dealt, this);
   }
 
@@ -1365,6 +1476,10 @@ export class Battle {
     this.delayed.push(d);
   }
 
+  addTimedAction(delaySeconds: number, fn: () => void) {
+    this.timedActions.push({ at: this.t + Math.max(0, delaySeconds), fn });
+  }
+
   private updateZones(dt: number) {
     for (const z of this.zones) {
       z.t += dt;
@@ -1414,6 +1529,23 @@ export class Battle {
             this.aoe(d.x, d.y, d.r, d.team, (e) => {
               this.damage(d.src, e, d.dmg, 'phys', { melee: true, noCrit: true });
               this.emit({ k: 'hit', x: e.x, y: e.y, z: e.gz + e.z + e.size * 0.5, big: true, color: '#7ff5de' });
+            });
+          } else if (d.kind === 'pillar') {
+            this.emit({ k: 'boom', x: d.x, y: d.y, r: d.r, color: '#e67e22', big: false });
+            this.emit({ k: 'sfx', id: 'slash', v: 0.6 });
+            this.aoe(d.x, d.y, d.r, d.team, (e) => {
+              this.damage(d.src, e, d.dmg, 'magic', { noCrit: true });
+              this.knock(e, d.x, d.y, 25);
+              if (d.src && d.src.star >= 3) {
+                this.slow(e, 0.2, 0, 2);
+              }
+            });
+          } else if (d.kind === 'ice_drop') {
+            this.emit({ k: 'boom', x: d.x, y: d.y, r: d.r, color: '#70a1ff', big: false });
+            this.emit({ k: 'sfx', id: 'potion_break', v: 0.6 });
+            this.aoe(d.x, d.y, d.r, d.team, (e) => {
+              this.damage(d.src, e, d.dmg, 'magic', { noCrit: true });
+              this.slow(e, 0.20, (d.src && d.src.star >= 3) ? 0.10 : 0, 2);
             });
           } else if (d.kind === 'tnt') {
             // TNT doesn't care whose side you are on.
@@ -1593,7 +1725,7 @@ export class Battle {
       });
     }
     if (this.has(team, 'tnt'))
-      once('tnt', 2, () => {
+      once('tnt', 4, () => {
         const c = this.densest(foe, 90);
         if (!c) return;
         const bm = this.boomMul(team);
@@ -1632,6 +1764,74 @@ export class Battle {
           this.emit({ k: 'text', x: low.x, y: low.y, z: low.gz + low.z + low.size, s: '护盾', color: '#cfe8ff' });
         }
       });
+
+    // ── V3.3 遗迹远征宝物效果 ──
+    if (this.has(team, 'mycelium_spores')) {
+      for (const at of [4, 14, 24]) {
+        once(`mycelium_${at}`, at, () => {
+          this.emit({ k: 'text', x: this.rowX(team, 'front'), y: ARENA_D / 2, z: 90, s: '迅捷菌丝!', color: '#2ed573' });
+          for (const u of live) {
+            if (!u.structure && !u.isSummon && u.row === 'front') {
+              u.atkSpd *= 1.25;
+              this.addTimedAction(7, () => { if (u.alive) u.atkSpd /= 1.25; });
+            }
+          }
+        });
+      }
+    }
+
+    if (this.has(team, 'totem_grove')) {
+      every('totem_grove', 8, 8, () => {
+        const friendlies = live.filter((u) => !u.structure && !u.isSummon);
+        if (!friendlies.length) return;
+        friendlies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+        for (let i = 0; i < Math.min(2, friendlies.length); i++) {
+          const a = friendlies[i];
+          this.heal(a, a.maxHp * 0.05, null);
+          this.emit({ k: 'heal', x: a.x, y: a.y, z: a.gz + a.z + a.size });
+        }
+      });
+    }
+
+    if (this.has(team, 'hive_heart')) {
+      for (const [at, count] of [[4, 2], [12, 1], [20, 1]] as const) {
+        once(`hive_heart_${at}`, at, () => {
+          const bees = live.filter((u) => u.alive && u.isSummon && u.mob.id === 'bee');
+          const owner = live[0];
+          if (!owner) return;
+          for (let i = 0; i < count && bees.length + i < 2; i++) {
+            this.summon(owner, 'bee', owner.x, owner.y + (i ? 20 : -20), 0.5, { lifespan: 10, fx: 'summon' });
+          }
+        });
+      }
+    }
+
+    if (this.has(team, 'gong_fragment')) {
+      once('gong_fragment', 4, () => {
+        const foes = this.live[foe].filter((e) => !e.structure && !e.isSummon);
+        if (!foes.length) return;
+        foes.sort((a, b) => b.atk - a.atk);
+        this.emit({ k: 'sfx', id: 'bell' });
+        for (let i = 0; i < Math.min(2, foes.length); i++) {
+          const e = foes[i];
+          e.atk *= 0.75;
+          this.emit({ k: 'text', x: e.x, y: e.y, z: e.gz + e.z + e.size, s: '铜锣虚弱!', color: '#eccc68' });
+          this.addTimedAction(8, () => { if (e.alive) e.atk /= 0.75; });
+        }
+      });
+    }
+
+    if (this.has(team, 'corrupted_beacon_core') && this.souls[team] >= 12 && this.t >= this.soulLock[team]) {
+      const used = s.timers['beacon_core_count'] ?? 0;
+      const cd = s.timers['beacon_core_cd'] ?? 0;
+      if (used < 3 && this.t >= cd) {
+        this.souls[team] -= 12;
+        this.soulLock[team] = this.t + 1.0;
+        s.timers['beacon_core_count'] = used + 1;
+        s.timers['beacon_core_cd'] = this.t + 12.0;
+        this.triggerCorruptedBeacon(team);
+      }
+    }
   }
 
   /** 火焰弹: a side's explosions are bigger and hit harder. */
@@ -1678,6 +1878,10 @@ export class Battle {
       if (o.proj && t.fx.projDodge > 0 && this.rng.chance(t.fx.projDodge)) {
         this.blink(t, 70);
         if (this.syn(t.team, 'ender') >= 1) t.critNext = true;
+        return -1;
+      }
+      if (o.proj && t.ref.ghostCloak && this.t < t.ref.ghostCloak && this.rng.chance(0.25)) {
+        this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: 0, c: NUM_DODGE });
         return -1;
       }
     }
@@ -1743,6 +1947,45 @@ export class Battle {
       t.echoMul = 0;
     }
     if (o.proj && t.ref.witherArmor) d *= 0.5;
+    if (o.proj && src) {
+      const dx = src.x - t.x;
+      const dy = src.y - t.y;
+      const hyp = Math.hypot(dx, dy);
+      if (hyp > 0.1 && (dx * t.facing) / hyp >= 0.64) {
+        if (t.mob.id === 'skeleton_vanguard') {
+          d *= t.star >= 3 ? 0.70 : 0.75;
+        } else if (t.mob.id === 'royal_guard' && !t.ref.enraged) {
+          d *= 0.80;
+        }
+      }
+    }
+    if (this.has(t.team, 'iron_hide_amulet') && !t.structure && !t.isSummon && t.row === 'front') {
+      const cardKey = `iron_hide_c${t.card}`;
+      if (!this.sides[t.team].timers[cardKey] && (t.hp - d) / t.maxHp < 0.40) {
+        this.sides[t.team].timers[cardKey] = 1;
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '铁皮护符!', color: '#95a5a6' });
+        for (const a of this.live[t.team]) {
+          if (a.card === t.card && a.alive && !a.structure) {
+            a.takenMul *= 0.85;
+            this.addTimedAction(4, () => { if (a.alive) a.takenMul /= 0.85; });
+          }
+        }
+      }
+    }
+    if (this.has(t.team, 'feather_knot') && !t.structure && !t.isSummon && (t.row === 'back' || t.isRanged) && o.melee) {
+      const cardKey = `feather_knot_c${t.card}`;
+      if (!this.sides[t.team].timers[cardKey]) {
+        this.sides[t.team].timers[cardKey] = 1;
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '轻羽结!', color: '#f1c40f' });
+        for (const a of this.live[t.team]) {
+          if (a.card === t.card && a.alive && !a.structure) {
+            a.moveSpd *= 1.25;
+            a.shield = Math.min(a.maxHp * 0.3, a.shield + a.maxHp * 0.08);
+            this.addTimedAction(4, () => { if (a.alive) a.moveSpd /= 1.25; });
+          }
+        }
+      }
+    }
     if (t.shield > 0) {
       const a = Math.min(t.shield, d);
       t.shield -= a;
@@ -1842,6 +2085,10 @@ export class Battle {
     }
     if (!silent) this.beh(t).onDeath?.(t, this, killer);
     const foe = (1 - t.team) as 0 | 1;
+    if (!silent && !t.isSummon && !t.structure && this.hasSoulMechanic[foe] && this.soulEnemyKills[foe] < 12) {
+      this.soulEnemyKills[foe]++;
+      this.addSouls(foe, 1);
+    }
     if (!silent && this.has(t.team, 'gunpowder') && !t.structure && this.rng.chance(0.3)) {
       const bm = this.boomMul(t.team);
       const dmg = t.maxHp * 0.25 * bm.d;
@@ -2200,6 +2447,7 @@ export const PROJ_SPEC: Record<ProjectileKind, { mode: 0 | 1 | 2; speed: number;
   dragon_fireball: { mode: 0, speed: 300, arc: 30, aoe: 70, lead: false, color: '#d36bff', magic: true },
   ice_ball: { mode: 0, speed: 380, arc: 24, aoe: 0, lead: true, color: '#cfeeff' },
   chin_spike: { mode: 2, speed: 300, arc: 0, aoe: 0, lead: false, color: '#ffcf6a' },
+  quill: { mode: 2, speed: 320, arc: 0, aoe: 0, lead: false, color: '#27ae60' },
   goo: { mode: 0, speed: 260, arc: 60, aoe: 0, lead: false, color: '#e8d84a' },
 };
 

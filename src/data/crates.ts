@@ -11,6 +11,7 @@ export interface CrateDef {
   act: number;
   pool: Record<Rarity, string[]>;
   color: string;
+  expedition?: boolean;
 }
 
 export const CRATES: CrateDef[] = [
@@ -102,6 +103,67 @@ export const CRATES: CrateDef[] = [
       pink: ['tall_sifter', 'sprout'],
       red: ['sculk_slasher', 'singer'],
       gold: ['sculk_dancer', 'warden'],
+    },
+  },
+  // ───────────── V3.3 遗迹远征 · 6 种新宝箱 ─────────────
+  {
+    id: 'royal_tomb', name: '「王墓仪仗」补给箱', desc: '掩埋在流沙地下的古代墓室。偏向亡灵与盾阵。', theme: ['undead'], act: 1, color: '#bfa760', expedition: true,
+    pool: {
+      blue: ['skeleton', 'zombie', 'key_golem'],
+      purple: ['skeleton_vanguard', 'soul_wisp', 'husk'],
+      pink: ['wraith', 'wither_skeleton'],
+      red: ['necromancer', 'illusioner'],
+      gold: ['giant', 'wither'],
+    },
+  },
+  {
+    id: 'highblock', name: '「高厅军械」补给箱', desc: '灾厄高厅的华丽军械箱。偏向灾厄与战术配合。', theme: ['illager'], act: 1, color: '#a3907c', expedition: true,
+    pool: {
+      blue: ['wolf', 'snow_golem', 'key_golem'],
+      purple: ['geomancer', 'mountaineer', 'pillager', 'vindicator'],
+      pink: ['enchanter', 'royal_guard', 'iceologer', 'evoker'],
+      red: ['windcaller', 'ravager'],
+      gold: ['warden'],
+    },
+  },
+  {
+    id: 'verdant', name: '「藤蔓秘藏」补给箱', desc: '缠绕着巨型藤蔓的深林宝箱。偏向野兽与节肢。', theme: ['beast', 'arthropod'], act: 1, color: '#4fa85b', expedition: true,
+    pool: {
+      blue: ['wolf', 'bee', 'spider'],
+      purple: ['whisperer', 'poison_quill_vine', 'cave_spider'],
+      pink: ['leaper', 'hoglin'],
+      red: ['creaking', 'iron_golem'],
+      gold: ['giant'],
+    },
+  },
+  {
+    id: 'gale', name: '「风暴远征」补给箱', desc: '来自嚎风山巅的试炼宝箱。偏向击退与突进。', theme: ['illager', 'construct'], act: 2, color: '#6aa5d8', expedition: true,
+    pool: {
+      blue: ['goat', 'snow_golem', 'redstone_cube'],
+      purple: ['mountaineer', 'geomancer', 'stray'],
+      pink: ['iceologer', 'squall_golem', 'royal_guard'],
+      red: ['windcaller', 'breeze'],
+      gold: ['warden'],
+    },
+  },
+  {
+    id: 'gilded_forge', name: '「镀金熔铸」补给箱', desc: '余烬锻造厂出炉的重型装甲箱。偏向构造体与重装前排。', theme: ['construct', 'nether'], act: 2, color: '#d4883b', expedition: true,
+    pool: {
+      blue: ['redstone_cube', 'skeleton', 'slime'],
+      purple: ['geomancer', 'pillager', 'creeper'],
+      pink: ['squall_golem', 'blaze', 'piglin_brute'],
+      red: ['redstone_golem', 'iron_golem'],
+      gold: ['wither'],
+    },
+  },
+  {
+    id: 'obsidian_archive', name: '「黑曜秘库」补给箱', desc: '刻有虚空符文的坚硬黑曜石秘库。偏向末影、深海与灵魂召唤。', theme: ['ender', 'undead', 'aquatic'], act: 3, color: '#6c4bb8', expedition: true,
+    pool: {
+      blue: ['key_golem', 'endermite', 'silverfish'],
+      purple: ['soul_wisp', 'drowned', 'phantom'],
+      pink: ['wraith', 'shulker', 'guardian'],
+      red: ['drowned_necromancer', 'necromancer', 'elder_guardian'],
+      gold: ['warden'],
     },
   },
 ];
@@ -222,4 +284,12 @@ export function rollCrate(rng: Rng, crate: CrateDef, grade: CrateGrade, ctx: Ope
 
 export function cratesForAct(act: number): CrateDef[] {
   return CRATES.filter((c) => c.id !== 'ominous' && c.act <= act);
+}
+
+export function baseCratesForAct(act: number): CrateDef[] {
+  return CRATES.filter((c) => c.id !== 'ominous' && !c.expedition && c.act <= act);
+}
+
+export function expeditionCratesForAct(act: number): CrateDef[] {
+  return CRATES.filter((c) => Boolean(c.expedition) && c.act <= act);
 }

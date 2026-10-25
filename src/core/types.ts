@@ -37,6 +37,7 @@ export type ProjectileKind =
   | 'dragon_fireball'
   | 'ice_ball'
   | 'chin_spike'
+  | 'quill'
   | 'goo';
 
 export type Immunity = 'burn' | 'poison' | 'wither' | 'knockback' | 'slow' | 'stun';

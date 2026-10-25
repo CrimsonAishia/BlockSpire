@@ -819,6 +819,281 @@ EVENTS.push(
       },
     ],
   },
+
+  // ───── V3.3 遗迹远征事件 ─────
+  {
+    id: 'rescue_merchant', name: '林间囚车', acts: [1, 2], art: 'village_exchange',
+    when: (s) => !chain(s, 'merchant'),
+    text: '一辆倾覆的村民货运囚车陷在路边泥沼中，四周游荡着灾厄巡逻队。车厢里传来呼救声。',
+    choices: (s) => [
+      {
+        label: '救援商人', desc: '击退护卫灾厄小队。胜利后获得 18 绿宝石，开启商人链。',
+        run: (s) => ({
+          text: '你拔出武器冲向囚车！',
+          then: [makeEventBattle(s, s.act === 1 ? 'a1_outpost' : 'ev_trader_pillagers', 'rescue_merchant')],
+        }),
+      },
+      leave,
+    ],
+    winRewards: {
+      rescue_merchant: (s) => {
+        setChain(s, 'merchant', 1);
+        gainEmeralds(s, 18);
+        toast(s, '商人已被营救！商人链已开启。', 'good');
+        return [];
+      },
+    },
+  },
+  {
+    id: 'merchant_stock', name: '新开的小铺', acts: [2, 3], art: 'village_exchange',
+    when: (s) => chain(s, 'merchant') === 1,
+    priority: true,
+    text: '你在林道旁看到了之前搭救的商人。他已经支起了一顶小帐篷，摆出了压箱底的货物。',
+    choices: (s) => [
+      {
+        label: '购买特供道具', desc: '支付 26 绿宝石，三选一：狂战蘑菇 / 铁皮碎片 / 轻羽。',
+        disabled: needMoney(s, 26) ?? (s.potions.length >= s.potionSlots ? '物品栏已满' : undefined),
+        run: (s) => {
+          s.emeralds -= 26;
+          setChain(s, 'merchant', 2);
+          return {
+            text: '商人感激地把密封的瓶子递给你。',
+            tone: 'good',
+            then: [{
+              type: 'potion_choice',
+              choices: ['death_cap_mushroom', 'iron_hide_charm', 'light_feather'],
+              skippable: false,
+            }],
+          };
+        },
+      },
+      {
+        label: '领取谢礼', desc: '免费领取 1 件消耗道具并告别。',
+        disabled: s.potions.length >= s.potionSlots ? '物品栏已满' : undefined,
+        run: (s, r) => {
+          setChain(s, 'merchant', 2);
+          const p = rollItem(r);
+          s.potions.push(p);
+          return { text: `商人送给你一瓶【${p}】作为答谢。`, tone: 'good' };
+        },
+      },
+      {
+        label: '道别离开', desc: '不购买任何东西并离开。',
+        run: (s) => {
+          setChain(s, 'merchant', 2);
+          return { text: '你与商人告别，继续赶路。' };
+        },
+      },
+    ],
+  },
+  {
+    id: 'ancient_contract', name: '远古契约', acts: [2, 3], art: 'ancient_gateway',
+    when: (s) => !chain(s, 'ancient'),
+    text: '一座布满古老符文的石碑立在岔路口，碑文用远古文字铭刻着通往失落试炼的契约。',
+    choices: (s) => [
+      {
+        label: '签订契约', desc: '支付 35 绿宝石，将后续道路中的一座门扉固定为远古试炼。',
+        disabled: needMoney(s, 35),
+        run: (s) => {
+          s.emeralds -= 35;
+          setChain(s, 'ancient', 1);
+          return { text: '符文石碑亮起暗红色的光芒，契约已成。', tone: 'good' };
+        },
+      },
+      leave,
+    ],
+  },
+  {
+    id: 'ancient_gate', name: '远古门扉', acts: [2, 3], art: 'ancient_gateway',
+    when: (s) => chain(s, 'ancient') === 1,
+    priority: true,
+    text: '契约指引的远古门扉已然开启，门后传来沉重的巨响与幽火的呼啸。',
+    choices: (s) => [
+      {
+        label: '挑战远古试炼', desc: '挑战首领试炼。胜利后从稀有宝物中三选一。',
+        run: (s) => ({
+          text: '你跨入远古大门，试炼开始了！',
+          then: [makeEventBattle(s, s.act === 2 ? 'a2b_redstone_monstrosity' : 'a1b_nameless', 'ancient_gate')],
+        }),
+      },
+      {
+        label: '放弃契约', desc: '返还 15 绿宝石并终止契约。',
+        run: (s) => {
+          setChain(s, 'ancient', 2);
+          gainEmeralds(s, 15);
+          return { text: '你收回了残留的契约符石，大门缓缓闭合。', tone: 'neutral' };
+        },
+      },
+    ],
+    winRewards: {
+      ancient_gate: (s) => {
+        setChain(s, 'ancient', 2);
+        toast(s, '远古试炼胜利！', 'good');
+        return [{
+          type: 'relic_choice',
+          title: '远古试炼赏赐',
+          choices: relicChoices(s, 3, ['rare', 'legendary']),
+          skippable: false,
+        }];
+      },
+    },
+  },
+  {
+    id: 'secret_crypt', name: '隐秘地窖', acts: [1, 2, 3], art: 'ancient_gateway',
+    text: '你在废墟的石板下发现了一处被厚实青苔锁扣封闭的地窖入口。',
+    choices: (s) => {
+      const hasKey = s.team.some((c) => c.mob === 'key_golem');
+      const crateId = s.act === 1 ? 'royal_tomb' : s.act === 2 ? 'gilded_forge' : 'obsidian_archive';
+      return [
+        {
+          label: '钥匙傀儡开锁', desc: hasKey ? '队伍中的钥匙傀儡伸出钥匙，免费开启地窖宝箱！' : '队伍中没有钥匙傀儡。',
+          disabled: !hasKey ? '缺少钥匙傀儡' : undefined,
+          run: (s) => ({
+            text: '钥匙傀儡灵巧地转动锁芯，锁扣应声弹开！',
+            tone: 'good',
+            then: [openCrate(s, crateId, 'elite', '地窖宝藏')],
+          }),
+        },
+        {
+          label: '破锁开启', desc: '支付 25 绿宝石撬开地窖。',
+          disabled: needMoney(s, 25),
+          run: (s) => {
+            s.emeralds -= 25;
+            return {
+              text: '你撬开了锁扣，进入了满是尘埃的地窖。',
+              tone: 'good',
+              then: [openCrate(s, crateId, 'normal', '地窖宝藏')],
+            };
+          },
+        },
+        leave,
+      ];
+    },
+  },
+  {
+    id: 'gong_shrine', name: '破损铜锣', acts: [1, 2], art: 'ancient_gateway',
+    when: (s) => !hasRelic(s, 'gong_fragment'),
+    text: '石坛上供奉着一面被劈裂的古铜锣，即使残破也散发着震慑心魄的低鸣。',
+    choices: (s) => [
+      {
+        label: '修缮铜锣', desc: '花费 35 绿宝石修复，获得宝物「弱化铜锣碎片」。',
+        disabled: needMoney(s, 35),
+        run: (s) => {
+          s.emeralds -= 35;
+          gainRelic(s, 'gong_fragment');
+          return { text: '你细心修补好裂纹，铜锣发出一声浑厚共鸣。', tone: 'good' };
+        },
+      },
+      {
+        label: '触碰机关', desc: '打一场精英战斗，胜利后直接夺取铜锣碎片。',
+        run: (s) => ({
+          text: '机关被触发，守卫从暗处显形！',
+          then: [makeEventBattle(s, s.act === 1 ? 'a1e_forest_royal' : 'a2e_forge_overload', 'gong_shrine')],
+        }),
+      },
+      leave,
+    ],
+    winRewards: {
+      gong_shrine: (s) => {
+        gainRelic(s, 'gong_fragment');
+        return [];
+      },
+    },
+  },
+  {
+    id: 'runesmith', name: '符文铁匠', acts: [2, 3], art: 'village_exchange',
+    when: (s) => s.team.some((c) => !c.enchant || (c.enchantLv ?? 2) < 3),
+    text: '一位流浪的符文铁匠正在擦拭他的锻造锤，身旁摆着各种附魔典籍。',
+    choices: (s) => [
+      {
+        label: '刻印符文', desc: '支付 30 绿宝石，从 3 本附魔书中选一本刻印。',
+        disabled: needMoney(s, 30),
+        run: (s) => {
+          s.emeralds -= 30;
+          const books = randomBooks(s, 3);
+          return {
+            text: '铁匠摊开书卷，供你挑选符文。',
+            tone: 'good',
+            then: [{
+              type: 'enchant_choice',
+              title: '符文铁匠',
+              books,
+              cost: 0,
+            }],
+          };
+        },
+      },
+      leave,
+    ],
+  },
+  {
+    id: 'bee_rescue', name: '蜂群失巢', acts: [1, 2], art: 'village_exchange',
+    when: (s) => !hasRelic(s, 'hive_heart'),
+    text: '一窝失去巢穴的蜜蜂在花丛中焦急地盘旋。',
+    choices: (s) => [
+      {
+        label: '供养蜂群', desc: '支付 40 绿宝石修筑新巢，获得宝物「蜂巢之心」。',
+        disabled: needMoney(s, 40),
+        run: (s) => {
+          s.emeralds -= 40;
+          gainRelic(s, 'hive_heart');
+          return { text: '蜜蜂们欢快地采蜜筑巢，将一枚花蜜核心赠予你。', tone: 'good' };
+        },
+      },
+      {
+        label: '引渡蜂群', desc: '交出 1 瓶消耗品，获得道具「便携蜂巢」。',
+        disabled: s.potions.length === 0 ? '背包没有消耗品' : undefined,
+        run: (s) => {
+          s.potions.pop();
+          s.potions.push('buzzy_nest');
+          return { text: '你用空瓶妥善收纳了一小撮工蜂。', tone: 'good' };
+        },
+      },
+      leave,
+    ],
+  },
+  {
+    id: 'lost_cartographer', name: '迷途测绘师', acts: [1, 2, 3], art: 'village_exchange',
+    text: '一位手持图纸的制图师正在岩壁前核对坐标。',
+    choices: (s) => [
+      {
+        label: '购买路线情报', desc: '支付 20 绿宝石，获得前进路线的情报与 1 瓶迅捷药水。',
+        disabled: needMoney(s, 20) ?? (s.potions.length >= s.potionSlots ? '物品栏已满' : undefined),
+        run: (s) => {
+          s.emeralds -= 20;
+          s.potions.push('swiftness');
+          return { text: '测绘师为你标注了近路，并附赠了一瓶提速药水。', tone: 'good' };
+        },
+      },
+      {
+        label: '出售物资', desc: '交出 1 瓶消耗品，换取 15 绿宝石。',
+        disabled: s.potions.length === 0 ? '背包没有消耗品' : undefined,
+        run: (s) => {
+          s.potions.pop();
+          gainEmeralds(s, 15);
+          return { text: '测绘师欣然买下了你的多余物资。', tone: 'neutral' };
+        },
+      },
+      leave,
+    ],
+  },
+  {
+    id: 'void_bargain', name: '虚空交易', acts: [3], art: 'ancient_gateway',
+    when: (s) => s.team.length >= 2,
+    text: '虚空暗影中浮现出一双发光的紫色眼睛。深渊的低语要求以等价的代价进行交易。',
+    choices: (s) => [
+      {
+        label: '献金换魂', desc: '支付 30 绿宝石，获得宝物「灵魂容器」。',
+        disabled: needMoney(s, 30),
+        run: (s) => {
+          s.emeralds -= 30;
+          gainRelic(s, 'soul_vessel');
+          return { text: '一枚散发幽绿冷光的虚空容器落入你的背包。', tone: 'good' };
+        },
+      },
+      leave,
+    ],
+  },
 );
 
 export const EVENT_MAP: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

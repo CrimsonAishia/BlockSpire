@@ -337,8 +337,8 @@ export interface Delayed {
   dmg: number;
   team: 0 | 1;
   src: Unit | null;
-  /** tnt hits every unit in range, both teams; goo bursts (tall sifter) and slash (afterimage strikes) hit enemies. */
-  kind: 'fang' | 'bolt' | 'tnt' | 'goo' | 'slash';
+  /** tnt hits every unit in range, both teams; goo bursts (tall sifter), slash (afterimage strikes), and pillar (geomancer) hit enemies. */
+  kind: 'fang' | 'bolt' | 'tnt' | 'goo' | 'slash' | 'pillar' | 'ice_drop';
 }
 
 export type BEvent =

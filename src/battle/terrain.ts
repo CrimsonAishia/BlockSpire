@@ -698,6 +698,8 @@ export const BOSS_BIOME: Record<string, string> = {
   a2b_wither: 'wither_altar',
   a3b_dragon: 'dragon_nest',
   a4b_monstrosity: 'sift_heart',
+  a1b_nameless: 'desert_tomb',
+  a2b_redstone_monstrosity: 'ember_forge',
 };
 
 /** Picks a biome for a normal/elite fight: early floors favour simple terrain. */

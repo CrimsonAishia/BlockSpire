@@ -6,6 +6,7 @@ import { ARENA_D, ARENA_W, IMM_POISON, type Proj, type Unit } from './unit.ts';
 import { S, cellX, cellY, hatesWater, idx, isBlocked } from './terrain.ts';
 import { TAC, bestLine, callout, countFoes, isBackliner, pushValue, safeDir } from './tactics.ts';
 import { MODERN } from './ai-modern.ts';
+import { DUNGEONS_BEHAVIORS } from './ai-dungeons.ts';
 
 export interface DamageOpts {
   proj?: boolean;
@@ -284,6 +285,7 @@ function sonic(u: Unit, t: Unit, b: Battle, len: number, width: number, dmg: num
 
 export const BEHAVIORS: Record<string, Behavior> = {
   ...MODERN,
+  ...DUNGEONS_BEHAVIORS,
   default: {},
   vex: {},
 

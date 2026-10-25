@@ -2,7 +2,7 @@
 import { Rng, randomSeed } from '../core/rng.ts';
 import type { ActMap, Card, MapNode, Rarity, Row } from '../core/types.ts';
 import { RARITIES } from '../core/types.ts';
-import { CRATE_MAP, cratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
+import { CRATE_MAP, cratesForAct, baseCratesForAct, expeditionCratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
 import { ENC_MAP, ENCOUNTERS, enemyScales, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
 import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
 import { difficultyPolicy } from '../data/difficulty.ts';
@@ -15,6 +15,8 @@ import type { BattleConfig, BattleResult } from '../battle/sim.ts';
 import { EVENTS, EVENT_MAP } from './events.ts';
 import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
+import { DUNGEONS_MAP_BY_ID } from '../data/dungeonsMaps.ts';
+import { createDungeonsTerrain } from '../battle/dungeonsTerrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 import { rollEnemyTactics } from '../data/enemyTactics.ts';
 
@@ -198,6 +200,8 @@ export interface RunState {
   submitted?: boolean;
   /** Commanders unlocked during this run (shown again on the end screen). */
   unlocked?: string[];
+  /** Act theme variant (e.g. 'creeper_crossing', 'ember_forge', etc.) */
+  actTheme?: string;
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -885,7 +889,7 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   else if ((kind === 'elite' || kind === 'boss') && pol.eliteBossEnchant) enchantEnemies(s, cards, 1, 2);
   const m = enemyMuls(s, kind, node.row);
   const modifier = rollBattleModifier(s, kind, node.row);
-  const biome = kind === 'boss' ? BOSS_BIOME[enc.id] ?? 'plains' : withRng(s, (r) => pickBiome(r, s.act, node.row));
+  const biome = kind === 'boss' ? (BOSS_BIOME[enc.id] ?? 'plains') : (s.actTheme ?? withRng(s, (r) => pickBiome(r, s.act, node.row)));
   return {
     type: 'battle', kind, enc: enc.id, name: enc.name, desc: enc.desc, cards, hpMul: m.hp, atkMul: m.atk, affix, modifier, tactics,
     seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: 1, biome, tseed: withRng(s, (r) => r.int(1, 2 ** 31)), brew: brewFor(s),
@@ -941,10 +945,15 @@ export function declineRift(s: RunState) {
 
 const terrainCache = new Map<string, Terrain>();
 export function battleTerrain(p: Extract<Pending, { type: 'battle' }>): Terrain {
-  const key = `${p.biome ?? 'plains'}:${p.tseed ?? p.seed}`;
+  const biome = p.biome ?? 'plains';
+  const key = `${biome}:${p.tseed ?? p.seed}`;
   let t = terrainCache.get(key);
   if (!t) {
-    t = generateTerrain(p.biome ?? 'plains', p.tseed ?? p.seed);
+    if (DUNGEONS_MAP_BY_ID[biome]) {
+      t = createDungeonsTerrain(biome, p.tseed ?? p.seed);
+    } else {
+      t = generateTerrain(biome, p.tseed ?? p.seed);
+    }
     if (terrainCache.size > 8) terrainCache.clear();
     terrainCache.set(key, t);
   }
@@ -1178,14 +1187,43 @@ function battleAchievements(s: RunState, p: Extract<Pending, { type: 'battle' }>
 
 export function crateOffers(s: RunState, n: number, grade: CrateGrade): CrateOffer[] {
   return withRng(s, (r) => {
-    const avail = r.shuffle(cratesForAct(s.act).slice());
+    const baseAvail = r.shuffle(baseCratesForAct(s.act).slice());
+    const expeditionAvail = expeditionCratesForAct(s.act);
     const fams = new Set(s.team.flatMap((c) => mobDef(c.mob).families));
     const out: CrateOffer[] = [];
-    const themed = avail.find((c) => c.theme.some((t) => fams.has(t)));
+
+    let expeditionPick: string | null = null;
+    if (expeditionAvail.length > 0 && r.chance(0.75)) {
+      const themeMap: Record<string, string> = {
+        desert_tomb: 'royal_tomb',
+        high_halls: 'highblock',
+        creeper_crossing: 'verdant',
+        wind_canyon: 'gale',
+        ember_forge: 'gilded_forge',
+        void_ruins: 'obsidian_archive',
+      };
+      const preferred = s.actTheme ? themeMap[s.actTheme] : null;
+      if (preferred && expeditionAvail.some((c) => c.id === preferred)) {
+        expeditionPick = preferred;
+      } else {
+        expeditionPick = r.pick(expeditionAvail).id;
+      }
+    }
+
+    const themed = baseAvail.find((c) => c.theme.some((t) => fams.has(t)));
     if (themed) out.push({ crate: themed.id, grade });
-    for (const c of avail) {
-      if (out.length >= n) break;
+    const maxBase = expeditionPick ? n - 1 : n;
+    for (const c of baseAvail) {
+      if (out.length >= maxBase) break;
       if (!out.find((o) => o.crate === c.id)) out.push({ crate: c.id, grade });
+    }
+    if (expeditionPick && !out.find((o) => o.crate === expeditionPick)) {
+      out.push({ crate: expeditionPick, grade });
+    }
+    while (out.length < n) {
+      const fallback = baseAvail.find((c) => !out.find((o) => o.crate === c.id));
+      if (!fallback) break;
+      out.push({ crate: fallback.id, grade });
     }
     if (grade === 'boss' || (grade === 'elite' && r.chance(0.15))) out[out.length - 1] = { crate: 'ominous', grade };
     return r.shuffle(out);
@@ -1507,6 +1545,14 @@ export function buyItem(s: RunState, itemId: string): boolean {
     case 'potion':
       if (s.potions.length >= s.potionSlots) return false;
       s.potions.push(it.ref);
+      if (hasRelic(s, 'amber_contract') && it.price >= 8) {
+        const actKey = `amber_contract_act${s.act}`;
+        if (!(s.stats as any)[actKey]) {
+          (s.stats as any)[actKey] = 1;
+          gainEmeralds(s, 8);
+          toast(s, '琥珀契据返还 8 绿宝石！', 'good');
+        }
+      }
       break;
     case 'relic':
       gainRelic(s, it.ref);
@@ -1745,6 +1791,15 @@ export function startAct(s: RunState, act: number) {
   if (p?.type === 'act_intro') s.queue.shift();
   if (act === s.act && s.nodeId === null && Object.keys(s.map.nodes).length) return;
   s.act = act;
+  if (act === 1) {
+    s.actTheme = withRng(s, (r) => (r.chance(0.5) ? 'creeper_crossing' : undefined));
+  } else if (act === 2) {
+    s.actTheme = withRng(s, (r) => (r.chance(0.5) ? 'ember_forge' : undefined));
+  } else if (act === 3) {
+    s.actTheme = withRng(s, (r) => (r.chance(0.3) ? 'high_halls' : undefined));
+  } else {
+    s.actTheme = undefined;
+  }
   if (!s.bosses[act - 1]) s.bosses[act - 1] = 'a4b_monstrosity';
   // 歌者 showed the way: an extra relic on arrival in the Sift.
   if (act === 4 && s.chains?.song === 3) {
