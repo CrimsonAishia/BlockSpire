@@ -576,9 +576,11 @@ export function dynamicFormation(
     } else if (pol.omen <= 2) {
       targetCards = 3;
     } else if (pol.omen === 3) {
-      targetCards = rng.chance(0.4) ? 4 : 3;
+      targetCards = act === 1 ? 3 : (rng.chance(0.4) ? 4 : 3);
     } else {
-      targetCards = 4;
+      // omen 4-5: In Act 1, keep 3 cards for fair 3v3 opening development.
+      // In Act 2+, player has 4 slots, so 4 cards is a fair 4v4.
+      targetCards = act === 1 ? 3 : 4;
     }
   } else if (tier === 1) {
     if (pol.omen === 0) {
@@ -590,10 +592,11 @@ export function dynamicFormation(
     } else if (pol.omen === 3) {
       targetCards = 4;
     } else if (pol.omen === 4) {
-      targetCards = rng.chance(0.15) ? 5 : 4;
+      targetCards = act === 1 ? 4 : (rng.chance(0.20) ? 5 : 4);
     } else {
-      // omen 5: 40% 5 cards (target 30%-50%)
-      targetCards = rng.chance(0.40) ? 5 : 4;
+      // omen 5: In Act 1, cap at 4 cards (player has 3 slots).
+      // In Act 2+, player has 4+ slots, allow 45%-50% 5 cards.
+      targetCards = act === 1 ? 4 : (rng.chance(act === 2 ? 0.45 : 0.50) ? 5 : 4);
     }
   } else {
     // tier === 2
@@ -604,12 +607,12 @@ export function dynamicFormation(
     } else if (pol.omen === 2) {
       targetCards = 4;
     } else if (pol.omen === 3) {
-      targetCards = rng.chance(0.20) ? 5 : 4;
+      targetCards = act === 1 ? 4 : (rng.chance(0.20) ? 5 : 4);
     } else if (pol.omen === 4) {
-      targetCards = rng.chance(0.50) ? 5 : 4;
+      targetCards = act === 1 ? 4 : (rng.chance(0.50) ? 5 : 4);
     } else {
-      // omen 5: default 5 cards (target 85%-100%)
-      targetCards = rng.chance(0.92) ? 5 : 4;
+      // omen 5: in Act 1, keep 4 cards (player has 3 slots); Act 2+ defaults to 5 cards (target 85%-100%)
+      targetCards = act === 1 ? 4 : (rng.chance(0.92) ? 5 : 4);
     }
   }
   targetCards = Math.max(cards.length, targetCards);
@@ -641,8 +644,32 @@ export function dynamicFormation(
 
   // Star 3 promotion decision and budget reservation (Section 5)
   const key = kind === 'elite' ? 'elite' : tier === 0 ? 'tier0' : tier === 1 ? 'tier1' : 'tier2';
-  const star3Chance = pol.star3Chance?.[key] ?? 0;
-  const star3Cap = pol.star3Cap?.[key] ?? 0;
+  let star3Chance = pol.star3Chance?.[key] ?? 0;
+  let star3Cap = pol.star3Cap?.[key] ?? 0;
+
+  // Act-aware star-3 scaling:
+  // Act 1 is the developmental incubator:
+  // - Tier 0 & Tier 1: no star-3 promotions (0%), ensuring early floors are pure development
+  // - Tier 2: gentle preview with low chance (capped at 1)
+  // - Elite: Gate 1 (row 5) has lower chance (25%/40%), Gate 2 (row 8-10) higher (50%/75%), capped at 1
+  if (act === 1) {
+    if (tier === 0 || tier === 1) {
+      star3Chance = 0;
+      star3Cap = 0;
+    } else if (tier === 2) {
+      star3Chance = pol.omen >= 5 ? 0.35 : pol.omen === 4 ? 0.25 : 0.15;
+      star3Cap = Math.min(1, star3Cap);
+    } else if (kind === 'elite') {
+      star3Cap = 1;
+      star3Chance = row <= 6 ? (pol.omen >= 5 ? 0.40 : 0.25) : (pol.omen >= 5 ? 0.75 : 0.50);
+    }
+  } else if (act === 2) {
+    // Act 2: smooth difficulty recovery
+    if (tier === 0) {
+      star3Chance = pol.omen >= 5 ? 0.20 : 0.10;
+      star3Cap = Math.min(1, star3Cap);
+    }
+  }
   const templateStar3 = cards.filter((c) => c[1] >= 3).length;
 
   let wantPromotion = false;
@@ -882,8 +909,8 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   const pol = difficultyPolicy(s.omen);
   const affix = kind === 'elite' && pol.eliteAffix && !(s.act === 1 && node.row === 0) ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
   const tier = tierForRow(node.row);
-  const tactics = withRng(s, (r) => rollEnemyTactics(r.fork(node.row * 9901 + s.act * 53), s.omen, kind, tier));
-  if (kind === 'battle' && pol.normalEnchant && !(s.act === 1 && node.row < 2)) enchantEnemies(s, cards, 1, 2);
+  const tactics = withRng(s, (r) => rollEnemyTactics(r.fork(node.row * 9901 + s.act * 53), s.omen, kind, tier, s.act));
+  if (kind === 'battle' && pol.normalEnchant && !(s.act === 1 && node.row < 2)) enchantEnemies(s, cards, 1, s.act === 1 && node.row < 6 ? 1 : 2);
   else if (kind === 'battle' && tier === 2) enchantEnemies(s, cards, 1, 1);
   else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
   else if ((kind === 'elite' || kind === 'boss') && pol.eliteBossEnchant) enchantEnemies(s, cards, 1, 2);

@@ -56,39 +56,78 @@ export const ENEMY_TACTIC_MAP: Record<EnemyTacticId, EnemyTacticDef> = Object.fr
 ) as Record<EnemyTacticId, EnemyTacticDef>;
 
 /**
- * Rolls tactics for an encounter according to Omen rules:
- * - Omen 0-1: 0 tactics
- * - Omen 2: Elites get 1 tactic
- * - Omen 3: Tier 1+ battles 35% get 1 tactic, Elites get 1 tactic
- * - Omen 4: Tier 1+ battles 65% get 1 tactic, Elites get 2 compatible tactics
- * - Omen 5: Tier 1+ battles get 1 tactic, Elites get 2 compatible tactics
+ * Rolls tactics for an encounter according to Omen rules and Act progression:
+ * - Act 1 (Development Runway):
+ *   - Elites get at most 1 tactic (even on Omen 4-5) and exclude hunt_backline.
+ *   - Tier 0-1 regular battles get 0 tactics.
+ *   - Tier 2 regular battles get 1 tactic preview (Omen 4: 35%, Omen 5: 50%).
+ * - Act 2 (Smooth Transition & Difficulty Recovery):
+ *   - Tier 0 regular battles get 1 tactic (Omen 4: 35%, Omen 5: 50%) to adapt to 4th slot.
+ *   - Tier 1+ regular battles get 1 tactic (Omen 4: 65%, Omen 5: 100%).
+ *   - Elites restore dual tactics (Omen 4-5 get 2 tactics).
+ * - Act >= 3 (Endgame Peak):
+ *   - Full original intensity rules.
  */
 export function rollEnemyTactics(
   rng: Rng,
   omen: number,
   kind: 'battle' | 'elite' | 'boss',
   tier: 0 | 1 | 2,
+  act = 2,
 ): EnemyTacticId[] {
   if (omen <= 0) return [];
   if (kind === 'boss') return []; // Bosses have custom phase 2 mechanics
 
   let count = 0;
-  if (kind === 'elite') {
-    if (omen === 1) count = 0;
-    else if (omen <= 3) count = 1;
-    else count = 2; // omen 4, 5
-  } else if (kind === 'battle' && tier >= 1) {
-    if (omen <= 2) count = 0;
-    else if (omen === 3) count = rng.chance(0.35) ? 1 : 0;
-    else if (omen === 4) count = rng.chance(0.65) ? 1 : 0;
-    else if (omen >= 5) count = 1;
+  if (act === 1) {
+    if (kind === 'elite') {
+      if (omen === 1) count = 0;
+      else count = 1; // Even on Omen 4-5, Act 1 elites are capped at 1 tactic
+    } else if (kind === 'battle' && tier === 2) {
+      if (omen <= 3) count = 0;
+      else if (omen === 4) count = rng.chance(0.35) ? 1 : 0;
+      else if (omen >= 5) count = rng.chance(0.50) ? 1 : 0;
+    }
+  } else if (act === 2) {
+    if (kind === 'elite') {
+      if (omen === 1) count = 0;
+      else if (omen <= 3) count = 1;
+      else count = 2; // Omen 4-5 restore 2 tactics in Act 2
+    } else if (kind === 'battle') {
+      if (tier === 0) {
+        if (omen <= 3) count = 0;
+        else if (omen === 4) count = rng.chance(0.35) ? 1 : 0;
+        else if (omen >= 5) count = rng.chance(0.50) ? 1 : 0;
+      } else {
+        if (omen <= 2) count = 0;
+        else if (omen === 3) count = rng.chance(0.35) ? 1 : 0;
+        else if (omen === 4) count = rng.chance(0.65) ? 1 : 0;
+        else if (omen >= 5) count = 1;
+      }
+    }
+  } else {
+    // Act >= 3 or default general check
+    if (kind === 'elite') {
+      if (omen === 1) count = 0;
+      else if (omen <= 3) count = 1;
+      else count = 2; // omen 4, 5
+    } else if (kind === 'battle' && tier >= 1) {
+      if (omen <= 2) count = 0;
+      else if (omen === 3) count = rng.chance(0.35) ? 1 : 0;
+      else if (omen === 4) count = rng.chance(0.65) ? 1 : 0;
+      else if (omen >= 5) count = 1;
+    }
   }
 
   if (count <= 0) return [];
 
-  const available = ENEMY_TACTICS.map((t) => t.id);
-  const picked: EnemyTacticId[] = [];
+  let available = ENEMY_TACTICS.map((t) => t.id);
+  // In Act 1, exclude hunt_backline because the player only has 3 slots and cannot protect backline yet
+  if (act === 1) {
+    available = available.filter((id) => id !== 'hunt_backline');
+  }
 
+  const picked: EnemyTacticId[] = [];
   for (let i = 0; i < count; i++) {
     const valid = available.filter((id) => {
       if (picked.includes(id)) return false;

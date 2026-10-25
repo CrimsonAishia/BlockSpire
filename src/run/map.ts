@@ -55,8 +55,16 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
   if (policy.requiredEliteGates === 1) {
     gateRows.add(rng.int(7, 10));
   } else if (policy.requiredEliteGates >= 2) {
-    gateRows.add(rng.int(3, 5));
-    gateRows.add(rng.int(8, 10));
+    if (act === 1) {
+      // Act 1 developmental pacing: Gate 1 is fixed at row 5 (right before row 6 treasure),
+      // avoiding unfair checkmates on rows 3-4 and giving players floors 0-4 to establish their core.
+      rng.int(3, 5); // consume RNG call to preserve stream determinism
+      gateRows.add(5);
+      gateRows.add(rng.int(8, 10));
+    } else {
+      gateRows.add(rng.int(3, 5));
+      gateRows.add(rng.int(8, 10));
+    }
   }
 
   for (const n of ordered) {
