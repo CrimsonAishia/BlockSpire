@@ -199,8 +199,10 @@ export const MODERN: Record<string, Behavior> = {
     attack(u, t, b) {
       const rain = arrowRain(u, b);
       u.ab.n = (u.ab.n ?? 0) + 1;
-      const atk = b.atkOf(u);
-      if (rain || (u.star >= 3 && u.ab.n % 3 === 0)) for (const s of [-0.2, 0, 0.2]) fire(u, t, b, 'arrow', atk, undefined, { spread: s });
+      const innate = u.star >= 3 && u.ab.n % 3 === 0;
+      const baseAtk = b.atkOf(u);
+      const atk = innate && rain ? baseAtk * 1.15 : baseAtk;
+      if (rain || innate) for (const s of [-0.2, 0, 0.2]) fire(u, t, b, 'arrow', atk, undefined, { spread: s });
       else fire(u, t, b, 'arrow', atk);
     },
     onProjHit(u, p, t, b) {
@@ -280,7 +282,7 @@ export const MODERN: Record<string, Behavior> = {
         for (const o of b.live[u.team]) if (!o.structure && Math.hypot(o.x - a.x, o.y - a.y) < r) sc += 1.5 - o.hpFrac;
         if (sc > best) (best = sc), (bx = a.x), (by = a.y);
       }
-      b.addZone({ x: bx, y: by, r, dur: u.star >= 3 ? 9 : 6, team: u.team, dps: 0.02, kind: 'bloom', src: u, haste: u.star >= 3 ? 1.3 : 1.2 });
+      b.addZone({ x: bx, y: by, r, dur: (u.star >= 3 ? 9 : 6) + (b.has(u.team, 'combo_pollination') ? 2 : 0), team: u.team, dps: 0.02, kind: 'bloom', src: u, haste: u.star >= 3 ? 1.3 : 1.2 });
       u.animAtk = 0.22;
       say(b, u, '古种发芽', '#ffc070');
       b.emit({ k: 'sfx', id: 'sniff' });
@@ -422,8 +424,15 @@ export const MODERN: Record<string, Behavior> = {
 
   // 筑巢者: winds up, pounces (backliners first), then catches its breath.
   nester: {
-    tick(u, _b, dt) {
+    tick(u, b, dt) {
       u.ab.pcd = (u.ab.pcd ?? 1.5) - dt;
+      if (cool(u, 'nest', dt, u.star >= 3 ? 6 : 8)) {
+        u.ab.nest = u.star >= 3 ? 6 : 8;
+        const baby = b.summon(u, 'baby_sifter', u.x + (u.team === 0 ? -20 : 20), u.y + b.rng.range(-15, 15), 0.7, { fx: 'summon', lifespan: 12 });
+        if (baby) {
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '筑巢!', color: '#ff8fb1' });
+        }
+      }
     },
     move(u, b, dt) {
       if (u.ab.pause > 0) {

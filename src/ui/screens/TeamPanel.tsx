@@ -219,11 +219,18 @@ export function ComboList({ mobs, compact }: { mobs: string[]; compact?: boolean
           </div>
         ))}
         {!compact &&
-          near.slice(0, 4).map((c) => (
-            <div key={c.id} class="combo off">
-              <b>{c.name}</b> 还差：{c.needs.filter((g) => !g.some((m) => mobs.includes(m))).map((g) => g.map((m) => mobName(m)).join(' / ')).join('、') || '另一种同类生物'}
-            </div>
-          ))}
+          near.slice(0, 6).map((c) => {
+            const set = [...new Set(mobs)];
+            const missingGroups = c.needs.filter((g) => !g.some((m) => set.includes(m)));
+            const missingDesc = missingGroups.length
+              ? missingGroups.map((g) => g.map((m) => mobName(m)).join(' / ')).join('、')
+              : '另一种同类生物';
+            return (
+              <div key={c.id} class="combo off">
+                <b>{c.name}</b> 还差：{missingDesc}
+              </div>
+            );
+          })}
       </div>
     </>
   );

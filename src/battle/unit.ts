@@ -54,6 +54,7 @@ export interface UnitFx {
   density: number;
   windBurst: number;
   freezeHit: number;
+  enderNonDot: number;
 }
 
 export function baseFx(): UnitFx {
@@ -63,6 +64,7 @@ export function baseFx(): UnitFx {
     firstHitMul: 1, killAtk: 0, vsHighHp: 0, vsBurning: 0, revive: 0, regen: 0, dmgTaken: 1, projTaken: 1, fireTaken: 1,
     farBonus: 0, pearl: false, burnMul: 1, poisonMul: 1,
     vsUndead: 0, vsArthropod: 0, baneSlow: 0, breach: 0, density: 0, windBurst: 0, freezeHit: 0,
+    enderNonDot: 0,
   };
 }
 
@@ -195,6 +197,15 @@ export class Unit {
   regenT = 0;
   regenRate = 0;
   shield = 0;
+  timedShields: { id: string; amount: number; timer: number }[] = [];
+  lastSynShield = 0;
+  erosionStacks = 0;
+  erosionTimer = 0;
+  huntMarkT = 0;
+  desertEmpowerMul = 0;
+  desertEmpowerT = 0;
+  wolfHasteUsed = false;
+  undeadRevived = false;
   auraT = 0;
   dotAcc = 0;
   dotTick = 0;
@@ -255,6 +266,65 @@ export class Unit {
   }
   get hpFrac() {
     return this.hp / this.maxHp;
+  }
+
+  addSynergyShield(id: string, amount: number, dur: number): number {
+    const cap = this.maxHp * 0.4;
+    let s = this.timedShields.find((x) => x.id === id);
+    if (s) {
+      s.amount = Math.max(s.amount, amount);
+      s.timer = Math.max(s.timer, dur);
+    } else {
+      s = { id, amount, timer: dur };
+      this.timedShields.push(s);
+    }
+    const sum = this.timedShields.reduce((a, b) => a + b.amount, 0);
+    if (sum > cap && sum > 0) {
+      const mul = cap / sum;
+      for (const item of this.timedShields) item.amount *= mul;
+    }
+    this.syncShield();
+    return s.amount;
+  }
+
+  syncShield() {
+    const synTotal = this.timedShields.reduce((a, b) => a + b.amount, 0);
+    const base = Math.max(0, this.shield - (this.lastSynShield || 0));
+    this.lastSynShield = synTotal;
+    this.shield = base + synTotal;
+  }
+
+  consumeShield(d: number): { absorbed: number; synAbsorbed: number } {
+    if (this.shield <= 0 || d <= 0) return { absorbed: 0, synAbsorbed: 0 };
+    const totalAbsorbed = Math.min(this.shield, d);
+    let rem = totalAbsorbed;
+    let synAbsorbed = 0;
+    for (let i = 0; i < this.timedShields.length && rem > 0; i++) {
+      const s = this.timedShields[i];
+      const take = Math.min(s.amount, rem);
+      s.amount -= take;
+      rem -= take;
+      synAbsorbed += take;
+    }
+    this.timedShields = this.timedShields.filter((s) => s.amount > 0.001);
+    this.lastSynShield = this.timedShields.reduce((a, b) => a + b.amount, 0);
+    this.shield -= totalAbsorbed;
+    return { absorbed: totalAbsorbed, synAbsorbed };
+  }
+
+  tickShields(dt: number) {
+    if (!this.timedShields.length) return;
+    let changed = false;
+    for (const s of this.timedShields) {
+      s.timer -= dt;
+      if (s.timer <= 0) changed = true;
+    }
+    if (changed) {
+      const expiredAmt = this.timedShields.filter((s) => s.timer <= 0).reduce((a, b) => a + b.amount, 0);
+      this.timedShields = this.timedShields.filter((s) => s.timer > 0);
+      this.lastSynShield = this.timedShields.reduce((a, b) => a + b.amount, 0);
+      this.shield = Math.max(0, this.shield - expiredAmt);
+    }
   }
 }
 

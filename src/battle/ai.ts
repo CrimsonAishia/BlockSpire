@@ -146,11 +146,11 @@ function raidHorn(u: Unit, b: Battle) {
   b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 12, s: '袭击号角!', color: '#ffb347', tac: true });
 }
 
-/** 箭雨: with two kinds of skeleton fielded, every 4th shot of any of them is a volley. */
+/** 箭雨: with two kinds of skeleton fielded, every 3rd shot of any of them is a volley. */
 export function arrowRain(u: Unit, b: Battle) {
   if (!b.has(u.team, 'combo_arrow_rain')) return false;
   u.ab.rain = (u.ab.rain ?? 0) + 1;
-  return u.ab.rain % 4 === 0;
+  return u.ab.rain % 3 === 0;
 }
 
 export function splitSlime(u: Unit, b: Battle): Unit[] {
@@ -172,6 +172,9 @@ export function splitSlime(u: Unit, b: Battle): Unit[] {
     c.armor = u.armor;
     c.vx = Math.cos(a) * 60;
     c.vy = Math.sin(a) * 40;
+    if (b.syn(u.team, 'slime') >= 1 && c.gen === 1) {
+      c.addSynergyShield('slime_split', c.maxHp * 0.15, 4.0);
+    }
     out.push(c);
   }
   return out;
@@ -299,9 +302,12 @@ export const BEHAVIORS: Record<string, Behavior> = {
     attack(u, t, b) {
       u.ab.n = (u.ab.n ?? 0) + 1;
       const every = u.star >= 3 ? 3 : 4;
+      const innate = u.ab.n % every === 0;
+      const rain = arrowRain(u, b);
       const pierce = u.star >= 3 ? 1 : 0;
-      const atk = b.atkOf(u);
-      if (u.ab.n % every === 0) for (const s of [-0.2, 0, 0.2]) fire(u, t, b, 'arrow', atk, undefined, { spread: s, pierce });
+      const baseAtk = b.atkOf(u);
+      const atk = innate && rain ? baseAtk * 1.15 : baseAtk;
+      if (innate || rain) for (const s of [-0.2, 0, 0.2]) fire(u, t, b, 'arrow', atk, undefined, { spread: s, pierce });
       else fire(u, t, b, 'arrow', atk, undefined, { pierce });
     },
   },
@@ -309,6 +315,17 @@ export const BEHAVIORS: Record<string, Behavior> = {
   spider: {
     tick(u, _b, dt) {
       u.ab.pcd = (u.ab.pcd ?? 1.2) - dt;
+    },
+    onHit(u, t, _d, b) {
+      if (b.has(u.team, 'combo_venom_web') && t.poisonT > 0) {
+        const card = b.cards[u.card];
+        card.ref = card.ref ?? {};
+        if ((card.ref.webSlowCd ?? 0) <= b.t) {
+          card.ref.webSlowCd = b.t + 2.0;
+          b.slow(t, 0.20, 0, 2.0);
+          b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '蛛网缠绕!', color: '#b0794c' });
+        }
+      }
     },
     move(u, b, dt) {
       const L = u.ref.leap as { sx: number; sy: number; tx: number; ty: number; t: number; dur: number; tgt: Unit } | null;
@@ -426,17 +443,26 @@ export const BEHAVIORS: Record<string, Behavior> = {
   },
 
   bee: {
-    tick(u, _b, dt) {
+    tick(u, b, dt) {
       if (u.star >= 3 && u.ab.stung) {
         u.ab.regrow -= dt;
         if (u.ab.regrow <= 0) u.ab.stung = 0;
+      } else if (u.ab.stung && b.has(u.team, 'combo_pollination') && !u.isSummon) {
+        const hasSniffer = b.live[u.team].some((a) => a.alive && !a.isSummon && a.mob.id === 'sniffer');
+        if (hasSniffer) {
+          u.ab.regrow = (u.ab.regrow ?? 10) - dt;
+          if (u.ab.regrow <= 0) {
+            u.ab.stung = 0;
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '毒刺再生!', color: '#ffec3d' });
+          }
+        }
       }
     },
     attack(u, t, b) {
       const atk = b.atkOf(u);
       if (!u.ab.stung) {
         u.ab.stung = 1;
-        u.ab.regrow = 8;
+        u.ab.regrow = u.star >= 3 ? 8 : 10;
         b.meleeHit(u, t, atk * 3);
         b.poison(t, atk * 0.6, 5, 3, u);
         b.emit({ k: 'sfx', id: 'sting' });
@@ -673,6 +699,15 @@ export const BEHAVIORS: Record<string, Behavior> = {
   cave_spider: {
     onHit(u, t, _d, b) {
       b.poison(t, b.atkOf(u) * 0.5, 4, u.star >= 3 ? 5 : 3, u);
+      if (b.has(u.team, 'combo_venom_web') && t.poisonT > 0) {
+        const card = b.cards[u.card];
+        card.ref = card.ref ?? {};
+        if ((card.ref.webSlowCd ?? 0) <= b.t) {
+          card.ref.webSlowCd = b.t + 2.0;
+          b.slow(t, 0.20, 0, 2.0);
+          b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '蛛网缠绕!', color: '#b0794c' });
+        }
+      }
     },
   },
 
@@ -1121,6 +1156,25 @@ export const BEHAVIORS: Record<string, Behavior> = {
       fire(u, t, b, 'wind_charge', b.atkOf(u), (p) => {
         p.knock = 160;
       });
+    },
+    onProjHit(u, p, t, b) {
+      if (p.kind === 'wind_charge' && b.has(u.team, 'combo_fanned_flame') && t.burnT > 0) {
+        const cd = b.sides[u.team].timers.fanned_flame_cd ?? 0;
+        if (b.t >= cd) {
+          b.sides[u.team].timers.fanned_flame_cd = b.t + 2.0;
+          const foes = b.live[(1 - u.team) as 0 | 1].filter((e) => e !== t && e.alive && !e.structure && e.burnT <= 0 && Math.hypot(e.x - t.x, e.y - t.y) <= 90);
+          foes.sort((a, b2) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b2.x - t.x, b2.y - t.y));
+          const spreadTargets = foes.slice(0, 2);
+          const spreadDps = t.burnDps * 0.5;
+          for (const st of spreadTargets) {
+            b.burn(st, spreadDps, 2, u);
+            b.emit({ k: 'hit', x: st.x, y: st.y, z: st.gz + st.z + st.size * 0.5, big: false, color: '#ff7a3d' });
+          }
+          if (spreadTargets.length > 0) {
+            b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size + 8, s: '风助烈焰!', color: '#ff7a3d' });
+          }
+        }
+      }
     },
     onProjExplode(u, p, x, y, b) {
       if (u.star >= 3 && p.kind === 'wind_charge') {

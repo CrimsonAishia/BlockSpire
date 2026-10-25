@@ -45,7 +45,10 @@ export function synergyBonus(relics: string[]): Partial<Record<Family, number>> 
 }
 
 export function sideSynergies(cards: { mob: string }[], relics: string[]) {
-  const distinct = [...new Set(cards.map((c) => c.mob))];
+  const distinct = [...new Set(cards.filter((c) => {
+    const m = mobDef(c.mob);
+    return !m.boss && !m.structure;
+  }).map((c) => c.mob))];
   return computeSynergies(
     distinct.map((m) => mobDef(m).families),
     synergyBonus(relics),
@@ -160,6 +163,8 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     if (relics.has('hay_bale') && has('beast') && !m.boss) count += 1;
     if (relics.has('netherite_plate') && m.role === 'tank') hpMul *= 1.2;
     if (combos.has('village_guard') && (m.id === 'snow_golem' || m.id === 'copper_golem')) hpMul *= 1.25;
+    if (combos.has('monument') && m.id === 'drowned') fx.projTaken *= 0.85;
+    if (combos.has('venom_web') && (m.id === 'spider' || m.id === 'cave_spider' || m.id === 'bogged')) fx.poisonMul *= 1.2;
     if (relics.has('saddle') && has('beast')) {
       moveSpd *= 1.25;
       fx.firstHitMul = 2;
@@ -231,29 +236,36 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     // ── Synergies ──
     const tier = (f: Family) => (has(f) && !m.boss && !m.structure ? (syn[f] ?? -1) : -1);
     const baseAtk = () => m.atk * starStatMul(m, c.star) * atkMul;
-    if (tier('undead') >= 0) fx.lifesteal += tier('undead') >= 2 ? 0.2 : 0.12;
-    if (tier('undead') >= 1) fx.revive = tier('undead') >= 2 ? 0.6 : 0.35;
-    if (tier('arthropod') >= 0) atkSpd *= 1.2;
+    if (tier('undead') >= 0) {
+      fx.lifesteal += tier('undead') >= 2 ? 0.22 : 0.16;
+      hpMul *= 1.10;
+    }
+    if (tier('undead') >= 1) fx.revive = 1.0;
+    if (tier('arthropod') >= 0) atkSpd *= 1.25;
     if (tier('arthropod') >= 1) {
       fx.poisonHit = Math.max(fx.poisonHit, Math.max(3, baseAtk() * 0.25));
       fx.poisonDur = 3;
-      fx.poisonStacks = Math.max(fx.poisonStacks, 2);
+      fx.poisonStacks = Math.max(fx.poisonStacks, 3);
     }
-    if (tier('illager') >= 0) fx.vsHighHp = tier('illager') >= 2 ? 0.35 : 0.25;
+    if (tier('illager') >= 0) fx.vsHighHp = tier('illager') >= 2 ? 0.35 : 0.30;
+    if (tier('illager') >= 1) atkMul *= 1.10;
+    if (tier('illager') >= 2) atkSpd *= 1.15;
     if (tier('nether') >= 0) {
       immune |= IMM_BURN;
-      fx.burnHit = Math.max(fx.burnHit, Math.max(4, baseAtk() * 0.2));
+      fx.burnHit = Math.max(fx.burnHit, Math.max(4, baseAtk() * 0.25));
       fx.burnDur = Math.max(fx.burnDur, 2);
     }
-    if (tier('nether') >= 1) fx.vsBurning = 0.25;
-    if (tier('ender') >= 0) fx.projDodge = 0.3;
-    if (tier('construct') >= 0) armorAdd += 0.15;
+    if (tier('nether') >= 1) fx.vsBurning = 0.30;
+    if (tier('ender') >= 0) {
+      fx.projDodge = 0.3;
+      fx.enderNonDot = 0.10;
+    }
+    if (tier('construct') >= 0) armorAdd += 0.20;
     if (tier('beast') >= 0) {
       moveSpd *= 1.15;
-      atkSpd *= 1.15;
+      atkSpd *= 1.20;
     }
-    if (tier('beast') >= 1) fx.killAtk = 0.12;
-    if (tier('aquatic') >= 0) fx.regen = 0.015;
+    if (tier('aquatic') >= 0) fx.regen = 0.02;
 
     // ── Commander ──
     if (ctx.commander === 'alex' && has('beast')) {

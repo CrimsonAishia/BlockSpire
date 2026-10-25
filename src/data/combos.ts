@@ -21,7 +21,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'raid', name: '袭击队伍', color: '#c9c9c9',
     needs: [['ravager'], ILLAGERS],
-    desc: '劫掠兽每次咆哮，周围的友方灾厄村民攻速 +30%，持续 4 秒。',
+    desc: '开战 0.5 秒灾厄村民攻速 +15%（持续 4 秒）；劫掠兽每次咆哮，周围友方灾厄村民攻速 +30%（持续 4 秒）。',
   },
   {
     id: 'village_guard', name: '村庄卫队', color: '#e8e4dc',
@@ -31,17 +31,17 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'undead_brew', name: '亡者的药剂', color: '#8fbf6a',
     needs: [['witch'], UNDEAD],
-    desc: '友方女巫会朝受伤的亡灵队友扔伤害药水——亡灵被它治疗，回复量 +50%。',
+    desc: '友方女巫朝受伤亡灵扔治疗药水（回复量 +50%）；药水溢出治疗的 50% 转为护盾（上限 10% 最大生命，持续 4 秒）。',
   },
   {
     id: 'monument', name: '神殿守卫', color: '#5ee6d6',
     needs: [['guardian', 'elder_guardian'], ['drowned']],
-    desc: '守卫者的激光蓄力快 30%；溺尸的三叉戟冷却 -30%。',
+    desc: '守卫者的激光蓄力快 30%；溺尸的三叉戟冷却 -30%，受到的投射物伤害 -15%。',
   },
   {
     id: 'arrow_rain', name: '箭雨', color: '#d6d6c8',
     needs: [SKELETONS, SKELETONS],
-    desc: '两种以上的骷髅同时出战：所有骷髅类每第 4 次射击变成 3 支箭的齐射。',
+    desc: '两种以上的骷髅类同时出战：所有骷髅类每第 3 次射击变为齐射；若与自带连射同动作触发则伤害 +15%。',
   },
   {
     id: 'frost', name: '冰原猎手', color: '#9fd8ff',
@@ -51,39 +51,75 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'desert_riders', name: '沙漠游骑', color: '#d8c38a',
     needs: [['camel_husk'], ['husk', 'parched']],
-    desc: '骆驼尸壳冲刺后，周围友方尸壳和焦骸的下一次攻击伤害翻倍。',
+    desc: '开战赋予尸壳与焦骸首击伤害 +50%（持续 6 秒）；骆驼尸壳冲刺后，周围尸壳与焦骸的下一次攻击伤害翻倍（取较高者不叠加）。',
   },
   {
     id: 'end_patrol', name: '末地巡逻', color: '#c06bff',
     needs: [['shulker'], ['enderman', 'endermite']],
-    desc: '被潜影弹浮空的敌人，受到友方末影生物的伤害 +40%。',
+    desc: '潜影弹命中使目标附加「巡猎标记」3 秒；友方末影生物对标记目标非 DOT 伤害 +25%。',
   },
   {
     id: 'sculk_song', name: '幽匿歌谣', color: '#2ee6f0',
     needs: [['singer'], ['warden', 'sculk_slasher', 'echo_golem']],
-    desc: '歌者的歌声让友方监守者与幽匿生物攻速 +20%，监守者的怒气叠加翻倍。',
+    desc: '歌者的歌声使友方监守者与幽匿生物攻速加成提升至 +40%（基础 +20%），监守者的怒气叠加翻倍。',
   },
   {
     id: 'slime_party', name: '弹跳派对', color: '#7ed957',
     needs: [['slime', 'magma_cube', 'sulfur_cube'], ['slime', 'magma_cube', 'sulfur_cube']],
-    desc: '两种以上的史莱姆类同时出战：分裂出来的小史莱姆继承 100% 属性。',
+    desc: '两种以上的史莱姆类同时出战：分裂出的子体继承 100% 生命与攻击（最多分裂两代）。',
+  },
+  {
+    id: 'wolf_armor', name: '狼铠同盟', color: '#e0b25b',
+    needs: [['wolf'], ['armadillo']],
+    desc: '开场所有原始狼获得自身最大生命 20% 护盾（持续 8 秒）；每只狼首次生命低于 50% 时，攻速 +20%（持续 4 秒，每场一次）。',
+  },
+  {
+    id: 'pollination', name: '蜂花共生', color: '#ffec3d',
+    needs: [['bee'], ['sniffer']],
+    desc: '原始蜜蜂消耗毒刺后，若原始嗅探兽存活则 10 秒后再生毒刺；嗅探兽的火把花持续时间 +2 秒。',
+  },
+  {
+    id: 'venom_web', name: '毒网围猎', color: '#b0794c',
+    needs: [['spider', 'cave_spider'], ['bogged']],
+    desc: '蜘蛛、洞穴蜘蛛与沼骸施加的中毒伤害 +20%；蜘蛛有效普攻命中中毒敌人使其移速 -20%（持续 2 秒，每张蜘蛛卡 2 秒冷却）。',
+  },
+  {
+    id: 'storm_fuse', name: '引雷爆破', color: '#7fd8ff',
+    needs: [['creeper'], ['drowned', 'copper_golem']],
+    desc: '开场 1 秒为一只未充能的原始苦力怕充能；此后每 6 秒若引雷成员存活再充能一只。',
+  },
+  {
+    id: 'fanned_flame', name: '风助烈焰', color: '#ff7a3d',
+    needs: [['breeze'], ['blaze', 'ghast']],
+    desc: '旋风人的风弹命中燃烧目标后，将其燃烧传播给 90 范围内至多两名敌人（50% DOT，持续 2 秒，全队 2 秒冷却）。',
+  },
+  {
+    id: 'glowing_nest', name: '微光护巢', color: '#ff8fb1',
+    needs: [['blub'], ['nester']],
+    desc: '噗噗存活时，筑巢者召唤物出生获得自身最大生命 15% 护盾（持续 4 秒），且首次普攻伤害 +20%。',
   },
 ];
 export const COMBO_MAP: Record<string, ComboDef> = Object.fromEntries(COMBOS.map((c) => [c.id, c]));
+
+function matchNeeds(needs: string[][], available: string[], groupIdx = 0, used = new Set<string>()): boolean {
+  if (groupIdx >= needs.length) return true;
+  const group = needs[groupIdx];
+  for (const m of available) {
+    if (group.includes(m) && !used.has(m)) {
+      used.add(m);
+      if (matchNeeds(needs, available, groupIdx + 1, used)) return true;
+      used.delete(m);
+    }
+  }
+  return false;
+}
 
 /** Combos switched on by a set of fielded mobs (each group satisfied by a different mob). */
 export function activeCombos(mobs: string[]): string[] {
   const set = [...new Set(mobs)];
   const out: string[] = [];
   for (const c of COMBOS) {
-    const used = new Set<string>();
-    const ok = c.needs.every((g) => {
-      const m = set.find((x) => g.includes(x) && !used.has(x));
-      if (!m) return false;
-      used.add(m);
-      return true;
-    });
-    if (ok) out.push(c.id);
+    if (matchNeeds(c.needs, set)) out.push(c.id);
   }
   return out;
 }

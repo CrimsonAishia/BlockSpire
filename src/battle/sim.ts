@@ -89,6 +89,7 @@ export interface CardStat {
   kills: number;
   emeralds: number;
   anchorUsed: boolean;
+  ref?: Record<string, any>;
 }
 
 export interface BattleResult {
@@ -124,6 +125,8 @@ export interface SideState {
   fireImmune: boolean;
   /** 回响碎片 stacks (allies lost this battle). */
   echo: number;
+  beastKillStacks: number;
+  aquaticAvgAtk: number;
 }
 
 const GC = 40;
@@ -203,6 +206,8 @@ export class Battle {
       buffs: [] as SideState['buffs'],
       fireImmune: false,
       echo: 0,
+      beastKillStacks: 0,
+      aquaticAvgAtk: 0,
     })) as unknown as [SideState, SideState];
 
     for (const team of [0, 1] as const) {
@@ -236,7 +241,7 @@ export class Battle {
         this.plans.push(c);
         this.cards.push({
           team, mob: c.mob, star: c.star, enchant: c.enchant, uid: c.uid, spawned: 0, alive: 0, dmg: 0, taken: 0, heal: 0,
-          kills: 0, emeralds: 0, anchorUsed: false,
+          kills: 0, emeralds: 0, anchorUsed: false, ref: {},
         });
       });
       const auto = autoAnchors(this.terrain, team, side.cards.map((c) => ({ mob: mobDef(c.mob), row: c.row })));
@@ -326,6 +331,14 @@ export class Battle {
     u.alpha = opts.alpha ?? 1;
     u.facing = owner.team === 0 ? 1 : -1;
     this.initUnit(u);
+    if (owner.mob.id === 'nester' && this.has(owner.team, 'combo_glowing_nest')) {
+      const hasBlub = this.live[owner.team].some((a) => a.alive && !a.isSummon && a.mob.id === 'blub');
+      if (hasBlub && (opts.gen ?? 0) === 0 && opts.fx !== 'ghost') {
+        u.addSynergyShield('glowing_nest', u.maxHp * 0.15, 4.0);
+        u.fx = { ...u.fx, firstHitMul: Math.max(u.fx.firstHitMul, 1.20) };
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '微光护巢!', color: '#ff8fb1' });
+      }
+    }
     this.live[u.team].push(u);
     this.emit({ k: 'spawn', u, fx: opts.fx ?? 'poof' });
     return u;
@@ -365,6 +378,56 @@ export class Battle {
     for (const team of [0, 1] as const) {
       const foe = (1 - team) as 0 | 1;
       const has = (f: string) => this.has(team, f);
+
+      const aquaticUnits = this.live[team].filter((u) => u.mob.families.includes('aquatic') && !u.structure && !u.boss && !u.isSummon);
+      this.sides[team].aquaticAvgAtk = aquaticUnits.length ? aquaticUnits.reduce((sum, u) => sum + u.atk, 0) / aquaticUnits.length : 20;
+
+      if (this.syn(team, 'beast') >= 2) {
+        this.sides[team].beastKillStacks = 2;
+      }
+
+      if (this.syn(team, 'construct') >= 0) {
+        for (const u of this.live[team]) {
+          if (u.mob.families.includes('construct') && !u.structure && !u.boss && !u.isSummon) {
+            u.addSynergyShield('construct_start', u.maxHp * 0.08, 6);
+            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '构装护盾', color: '#c9c9c9' });
+          }
+        }
+      }
+
+      if (this.syn(team, 'aquatic') >= 0) {
+        for (const u of this.live[team]) {
+          if (u.mob.families.includes('aquatic') && !u.structure && !u.boss && !u.isSummon) {
+            u.addSynergyShield('aquatic_start', u.maxHp * 0.10, 6);
+            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '潮汐护盾', color: '#3fc6d6' });
+          }
+        }
+      }
+
+      if (this.syn(team, 'ender') >= 1) {
+        for (const u of this.live[team]) {
+          if (u.mob.families.includes('ender')) u.critNext = true;
+        }
+      }
+
+      if (has('combo_wolf_armor')) {
+        for (const u of this.live[team]) {
+          if (u.mob.id === 'wolf' && !u.isSummon) {
+            u.addSynergyShield('wolf_armor', u.maxHp * 0.20, 8);
+            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '狼铠!', color: '#e0b25b' });
+          }
+        }
+      }
+
+      if (has('combo_desert_riders')) {
+        for (const u of this.live[team]) {
+          if (u.mob.id === 'husk' || u.mob.id === 'parched' || u.mob.id === 'camel_husk') {
+            u.desertEmpowerMul = 1.5;
+            u.desertEmpowerT = 6.0;
+          }
+        }
+      }
+
       for (const u of this.live[team]) if (has('enchanted_apple')) u.shield = u.maxHp * 0.3;
       if (has('bell')) for (const e of this.live[foe]) e.glowT = 10;
       if (has('nether_star')) {
@@ -484,7 +547,7 @@ export class Battle {
   addCard(team: 0 | 1, plan: CardPlan): number {
     this.plans.push(plan);
     this.cards.push({
-      team, mob: plan.mob, star: plan.star, spawned: 0, alive: 0, dmg: 0, taken: 0, heal: 0, kills: 0, emeralds: 0, anchorUsed: false,
+      team, mob: plan.mob, star: plan.star, spawned: 0, alive: 0, dmg: 0, taken: 0, heal: 0, kills: 0, emeralds: 0, anchorUsed: false, ref: {},
     });
     return this.plans.length - 1;
   }
@@ -936,6 +999,11 @@ export class Battle {
     if (u.weakT > 0) a *= 1 - u.weakMul;
     if (u.blindT > 0) a *= 0.8;
     if (u.killStacks > 0) a *= 1 + u.fx.killAtk * u.killStacks;
+    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 1) {
+      const beastPct = this.syn(u.team, 'beast') >= 2 ? 0.10 : 0.08;
+      const stacks = this.sides[u.team].beastKillStacks || 0;
+      if (stacks > 0) a *= 1 + beastPct * stacks;
+    }
     if (!u.flying) a *= terrainAtkMul(u.mob, this.surf(u));
     const echo = this.sides[u.team].echo;
     if (echo > 0) a *= 1 + 0.03 * echo;
@@ -1173,7 +1241,7 @@ export class Battle {
       }
     }
     // 筛界: Sift attacks leave an echo that makes the next hit on the target land harder.
-    if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, 0.15);
+    if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, this.syn(u.team, 'sift') >= 2 ? 0.30 : 0.20);
 
     // firework_mechanism: 远程卡每第 6 次射击，首个命中目标周围产生范围爆炸 0.35A 魔伤
     if (this.has(u.team, 'firework_mechanism') && ranged && !u.structure && !u.isSummon) {
@@ -1383,7 +1451,15 @@ export class Battle {
     if (this.beh(p.src).onProjLand?.(p.src, p, p.tx, p.ty, this)) return;
     if (p.special === 'heal') {
       this.aoeAllies(p.tx, p.ty, 60, p.team, (a) => {
+        const hpBefore = a.hp;
         this.heal(a, p.dmg, p.src);
+        const healed = a.hp - hpBefore;
+        const overheal = p.dmg - healed;
+        if (overheal > 0 && this.has(p.team, 'combo_undead_brew') && a.mob.families.includes('undead')) {
+          const shAmt = Math.min(a.maxHp * 0.10, overheal * 0.50);
+          a.addSynergyShield('undead_brew', shAmt, 4.0);
+          this.emit({ k: 'text', x: a.x, y: a.y, z: a.gz + a.z + a.size, s: '药水护盾', color: '#8fbf6a' });
+        }
       });
       this.emit({ k: 'boom', x: p.tx, y: p.ty, r: 60, color: '#ff6fa8', big: false });
       return;
@@ -1440,6 +1516,10 @@ export class Battle {
     // Projectile dodges / reflections happen in damage() via onDamaged, signalled by `proj`.
     const dealt = this.damage(src, t, p.dmg, p.dk, { proj: true, fire: p.fire, projRef: p });
     if (dealt < 0) return; // dodged or reflected
+    if (p.kind === 'shulker_bullet' && this.has(p.team, 'combo_end_patrol')) {
+      t.huntMarkT = 3.0;
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '巡猎标记!', color: '#c06bff' });
+    }
     this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.z + t.size * 0.5, big: false, color: PROJ_SPEC[p.kind].color });
     this.projStatus(p, t);
     if (p.knock > 0) this.knock(t, p.x - p.vx * 0.05, p.y - p.vy * 0.05, p.knock);
@@ -1660,7 +1740,9 @@ export class Battle {
     const ill = this.syn(team, 'illager');
     if (ill >= 1)
       once('vex', 0.6, () => {
-        const owner = live.find((u) => u.mob.families.includes('illager')) ?? live[0];
+        const illagers = live.filter((u) => u.alive && !u.isSummon && u.mob.families.includes('illager'));
+        illagers.sort((a, b) => b.star - a.star || a.card - b.card);
+        const owner = illagers[0] ?? live[0];
         if (!owner) return;
         const n = ill >= 2 ? 6 : 3;
         for (let i = 0; i < n; i++)
@@ -1747,23 +1829,89 @@ export class Battle {
         const e = this.rng.pick(foes);
         this.lightning(null, e.x, e.y, 45 * (1 + 0.6 * (s.plan.act - 1)), 30);
       });
-    if (this.syn(team, 'aquatic') >= 1)
-      every('storm', 4, 2.5, () => {
+    const hasAliveFamily = (f: Family) => live.some((u) => u.alive && !u.isSummon && !u.structure && !u.boss && u.mob.families.includes(f));
+
+    if (this.syn(team, 'aquatic') >= 1 && hasAliveFamily('aquatic')) {
+      const period = this.syn(team, 'aquatic') >= 2 ? 3 : 4;
+      every('storm', period, 2.5, () => {
         const foes = this.live[foe].filter((e) => !e.structure);
         if (!foes.length) return;
         const e = this.rng.pick(foes);
         const src = live.find((u) => u.mob.families.includes('aquatic')) ?? null;
-        this.lightning(src, e.x, e.y, 40 + e.maxHp * 0.06, 34);
-      });
-    if (this.syn(team, 'construct') >= 1)
-      every('cshield', 6, 3, () => {
-        let low: Unit | null = null;
-        for (const u of live) if (!u.structure && (!low || u.hpFrac < low.hpFrac)) low = u;
-        if (low) {
-          low.shield += low.maxHp * 0.2;
-          this.emit({ k: 'text', x: low.x, y: low.y, z: low.gz + low.z + low.size, s: '护盾', color: '#cfe8ff' });
+        const avgAtk = this.sides[team].aquaticAvgAtk || 20;
+        const dmg = 40 + Math.min(e.maxHp * 0.06, 3 * avgAtk);
+        this.lightning(src, e.x, e.y, dmg, 34);
+        if (this.syn(team, 'aquatic') >= 2) {
+          const aquaticAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('aquatic'));
+          aquaticAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.id - b.id);
+          for (const a of aquaticAllies.slice(0, 2)) {
+            this.heal(a, a.maxHp * 0.08, null);
+          }
         }
       });
+    }
+
+    if (this.syn(team, 'construct') >= 1 && hasAliveFamily('construct')) {
+      every('cshield', 5, 1, () => {
+        const allies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon);
+        allies.sort((a, b) => a.hpFrac - b.hpFrac || a.hp - b.hp || a.id - b.id);
+        const count = this.syn(team, 'construct') >= 2 ? 2 : 1;
+        const pct = this.syn(team, 'construct') >= 2 ? 0.25 : 0.20;
+        for (const target of allies.slice(0, count)) {
+          target.addSynergyShield('construct_periodic', target.maxHp * pct, 5);
+          this.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.z + target.size, s: '构装护盾', color: '#cfe8ff' });
+        }
+      });
+    }
+
+    if (this.syn(team, 'sift') >= 1 && hasAliveFamily('sift')) {
+      every('sift_heal', 6, 3, () => {
+        const siftAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('sift'));
+        siftAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.hp - b.hp || a.id - b.id);
+        const count = this.syn(team, 'sift') >= 2 ? 2 : 1;
+        const pct = this.syn(team, 'sift') >= 2 ? 0.12 : 0.08;
+        for (const target of siftAllies.slice(0, count)) {
+          this.heal(target, target.maxHp * pct, null);
+        }
+      });
+    }
+
+    if (this.syn(team, 'beast') >= 1 && hasAliveFamily('beast')) {
+      every('beast_time', 10, 10, () => {
+        const cur = this.sides[team].beastKillStacks || 0;
+        if (cur < 3) {
+          this.sides[team].beastKillStacks = cur + 1;
+          this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 80, s: `野性觉醒 +${this.sides[team].beastKillStacks}`, color: '#e0b25b' });
+        }
+      });
+    }
+
+    if (this.has(team, 'combo_raid')) {
+      once('raid_start', 0.5, () => {
+        for (const u of live) {
+          if (['pillager', 'vindicator', 'evoker', 'illusioner', 'witch'].includes(u.mob.id)) {
+            u.hasteT = Math.max(u.hasteT, 4);
+            u.hasteMul = Math.max(u.hasteMul, 1.15);
+          }
+        }
+      });
+    }
+
+    if (this.has(team, 'combo_storm_fuse')) {
+      const chargeOne = () => {
+        const hasParticipant = live.some((u) => u.alive && (u.mob.id === 'drowned' || u.mob.id === 'copper_golem' || u.mob.id === 'creeper'));
+        if (!hasParticipant) return;
+        const creepers = live
+          .filter((u) => u.alive && !u.isSummon && u.mob.id === 'creeper' && !u.ref.charged && u.star < 3)
+          .sort((a, b) => a.id - b.id);
+        if (creepers.length > 0) {
+          creepers[0].ref.charged = 1;
+          this.emit({ k: 'text', x: creepers[0].x, y: creepers[0].y, z: creepers[0].gz + creepers[0].size + 8, s: '引雷充能!', color: '#7fd8ff' });
+        }
+      };
+      once('storm_fuse_start', 1.0, chargeOne);
+      every('storm_fuse_every', 6.0, 7.0, chargeOne);
+    }
 
     // ── V3.3 遗迹远征宝物效果 ──
     if (this.has(team, 'mycelium_spores')) {
@@ -1888,8 +2036,9 @@ export class Battle {
     let d = amount;
     let crit = false;
     if (src) {
-      if (src.fx.vsHighHp > 0 && t.hpFrac > 0.6) d *= 1 + src.fx.vsHighHp;
+      if (src.fx.vsHighHp > 0 && t.hpFrac > 0.5) d *= 1 + src.fx.vsHighHp;
       if (src.fx.vsBurning > 0 && t.burnT > 0) d *= 1 + src.fx.vsBurning;
+      if (src.fx.enderNonDot > 0 && kind !== 'dot') d *= 1 + src.fx.enderNonDot;
       if (!o.noCrit && kind !== 'dot') {
         const chance = src.fx.crit + (src.critNext ? 1 : 0);
         if (chance > 0 && this.rng.next() < chance) {
@@ -1904,7 +2053,7 @@ export class Battle {
       // Natural enemies (wolves vs skeletons, cold vs fire...).
       d *= counterMul(src.mob.id, t.mob.id);
       if (src.team !== t.team) {
-        if (t.levT > 0 && src.mob.families.includes('ender') && this.has(src.team, 'combo_end_patrol')) d *= 1.4;
+        if (src.mob.families.includes('ender') && t.huntMarkT > 0 && this.has(src.team, 'combo_end_patrol') && kind !== 'dot') d *= 1.25;
         if ((t.chill > 0 || t.slowT > 0 || t.freezeT > 0) && COLD_MOBS.has(src.mob.id) && this.has(src.team, 'combo_frost')) d *= 1.2;
       }
       if (src.fx.vsUndead > 0 && t.mob.families.includes('undead')) d *= 1 + src.fx.vsUndead;
@@ -1912,7 +2061,11 @@ export class Battle {
       if (src.fx.density > 0 && (t.stunned || t.z > t.alt + 8)) d *= 1 + src.fx.density;
       if (src.empower && kind !== 'dot') {
         src.empower = false;
+        src.desertEmpowerMul = 0;
         d *= 2;
+      } else if (src.desertEmpowerT > 0 && src.desertEmpowerMul > 0 && kind !== 'dot') {
+        d *= src.desertEmpowerMul;
+        src.desertEmpowerMul = 0;
       }
       if (src.ref.salvoShot && kind !== 'dot') {
         src.ref.salvoShot = 0;
@@ -1937,7 +2090,8 @@ export class Battle {
       if (hasFront) d *= 0.65;
     }
     if (this.fortTeam !== null && !t.flying && this.fortTeam[tidx(cellX(t.x), cellY(t.y))] === t.team) d *= FORT_TAKEN;
-    const armor = src && src.fx.breach > 0 ? t.armor * (1 - src.fx.breach) : t.armor;
+    const erodedArmor = Math.max(0, t.armor - t.erosionStacks * 0.06);
+    const armor = Math.min(0.75, src && src.fx.breach > 0 ? erodedArmor * (1 - src.fx.breach) : erodedArmor);
     if (kind === 'phys') d *= 1 - armor;
     else if (kind === 'magic') d *= 1 - armor * 0.5;
     if (t.ref.closed) d *= 0.6;
@@ -1987,11 +2141,10 @@ export class Battle {
       }
     }
     if (t.shield > 0) {
-      const a = Math.min(t.shield, d);
-      t.shield -= a;
-      d -= a;
+      const { absorbed } = t.consumeShield(d);
+      d -= absorbed;
       if (d <= 0) {
-        this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(a), c: NUM_DOT });
+        this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(absorbed), c: NUM_DOT });
         return 0;
       }
     }
@@ -2008,10 +2161,31 @@ export class Battle {
         v: Math.round(d), c: crit ? NUM_CRIT : kind === 'true' ? NUM_TRUE : kind === 'magic' ? NUM_MAGIC : NUM_PHYS,
       });
     if (src && src.alive && kind !== 'dot' && src.fx.lifesteal > 0) this.heal(src, d * src.fx.lifesteal, null, true);
+    if (src && src.alive && kind !== 'dot' && this.syn(src.team, 'nether') >= 2 && src.mob.families.includes('nether') && t.burnT > 0) {
+      this.heal(src, d * 0.10, null, true);
+    }
+    if (d > 0 && src && src.mob.families.includes('arthropod') && this.syn(src.team, 'arthropod') >= 2) {
+      const sc = this.cards[src.card];
+      sc.ref = sc.ref ?? {};
+      if ((sc.ref.erosionCd ?? 0) <= this.t) {
+        sc.ref.erosionCd = this.t + 1.0;
+        t.erosionStacks = Math.min(3, t.erosionStacks + 1);
+        t.erosionTimer = 4.0;
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: `蚀甲 ${t.erosionStacks}`, color: '#b0794c' });
+      }
+    }
     if (o.melee && src && src.alive && t.fx.thorns > 0 && !o.noThorns)
       this.damage(t, src, d * t.fx.thorns, 'true', { noThorns: true, noCrit: true, noDodge: true });
     if (t.hp <= 0) this.kill(t, src);
-    else this.beh(t).afterDamaged?.(t, src, d, this);
+    else {
+      if (t.mob.id === 'wolf' && !t.isSummon && !t.wolfHasteUsed && t.hpFrac < 0.5 && this.has(t.team, 'combo_wolf_armor')) {
+        t.wolfHasteUsed = true;
+        t.hasteT = Math.max(t.hasteT, 4.0);
+        t.hasteMul = Math.max(t.hasteMul, 1.20);
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '狼铠狂怒!', color: '#e0b25b' });
+      }
+      this.beh(t).afterDamaged?.(t, src, d, this);
+    }
     return d;
   }
 
@@ -2021,9 +2195,8 @@ export class Battle {
     if (cannotKill) d = Math.min(d, Math.max(0, t.hp - 1));
     if (d <= 0) return;
     if (t.shield > 0) {
-      const a = Math.min(t.shield, d);
-      t.shield -= a;
-      d -= a;
+      const { absorbed } = t.consumeShield(d);
+      d -= absorbed;
     }
     t.hp -= d;
     t.dotAcc += d;
@@ -2048,13 +2221,18 @@ export class Battle {
   kill(t: Unit, killer: Unit | null, silent = false) {
     if (!t.alive) return;
     // Undead synergy revive.
-    if (!silent && t.fx.revive > 0 && !t.revived && !t.isSummon && this.rng.chance(t.fx.revive)) {
+    if (!silent && !t.isSummon && !t.undeadRevived && this.syn(t.team, 'undead') >= 1 && t.mob.families.includes('undead')) {
+      t.undeadRevived = true;
       t.revived = true;
-      t.hp = t.maxHp * (this.has(t.team, 'soul_lantern') ? 0.7 : 0.4);
+      const tier = this.syn(t.team, 'undead');
+      const pct = this.has(t.team, 'soul_lantern') ? 0.70 : (tier >= 2 ? 0.50 : 0.35);
+      t.hp = t.maxHp * pct;
       if (this.has(t.team, 'soul_lantern')) t.atk *= 1.3;
       t.witherT = 0;
       t.burnT = 0;
       t.poisonT = 0;
+      t.hasteT = Math.max(t.hasteT, 5.0);
+      t.hasteMul = Math.max(t.hasteMul, 1.15);
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '复生!', color: '#9be36b' });
       this.emit({ k: 'spawn', u: t, fx: 'revive' });
       return;
@@ -2081,6 +2259,17 @@ export class Battle {
       kc.kills++;
       if (killer.fx.loot > 0 && kc.emeralds < 20) kc.emeralds = Math.min(20, kc.emeralds + killer.fx.loot);
       if (killer.fx.killAtk > 0 && killer.killStacks < 5) killer.killStacks++;
+      if (this.syn(killer.team, 'beast') >= 1 && killer.mob.families.includes('beast') && !t.isSummon && !t.structure) {
+        const cd = this.sides[killer.team].timers.beast_kill_cd ?? 0;
+        if (this.t >= cd) {
+          this.sides[killer.team].timers.beast_kill_cd = this.t + 2.0;
+          const cur = this.sides[killer.team].beastKillStacks || 0;
+          if (cur < 5) {
+            this.sides[killer.team].beastKillStacks = cur + 1;
+            this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.z + killer.size, s: `野性猎杀 +${this.sides[killer.team].beastKillStacks}`, color: '#e0b25b' });
+          }
+        }
+      }
       if (killer.alive) this.beh(killer).onKill?.(killer, t, this);
     }
     if (!silent) this.beh(t).onDeath?.(t, this, killer);
@@ -2127,17 +2316,21 @@ export class Battle {
     }
     if (this.has(foe, 'sculk_catalyst') && !t.isSummon) for (const a of this.live[foe]) this.heal(a, a.maxHp * 0.02, null, true);
     // 筛界 ③: the fallen enemy's soul drifts to the nearest Sift mob of the other side.
-    if (!t.structure && !t.ghost && this.syn(foe, 'sift') >= 1) {
-      let best: Unit | null = null;
-      let bd = Infinity;
-      for (const a of this.live[foe]) {
-        if (!a.alive || !a.mob.families.includes('sift') || a.hpFrac >= 1) continue;
-        const d = Math.hypot(a.x - t.x, a.y - t.y);
-        if (d < bd) (bd = d), (best = a);
-      }
-      if (best) {
-        this.emit({ k: 'beam', a: t, b: best, color: '#7ff5de', t: 0.4 });
-        this.heal(best, best.maxHp * 0.12, null);
+    if (!t.structure && !t.isSummon && !t.ghost && this.syn(foe, 'sift') >= 1) {
+      const cd = this.sides[foe].timers.sift_kill_cd ?? 0;
+      if (this.t >= cd) {
+        this.sides[foe].timers.sift_kill_cd = this.t + 1.0;
+        let best: Unit | null = null;
+        let bd = Infinity;
+        for (const a of this.live[foe]) {
+          if (!a.alive || !a.mob.families.includes('sift') || a.hpFrac >= 1) continue;
+          const d = Math.hypot(a.x - t.x, a.y - t.y);
+          if (d < bd) (bd = d), (best = a);
+        }
+        if (best) {
+          this.emit({ k: 'beam', a: t, b: best, color: '#7ff5de', t: 0.4 });
+          this.heal(best, best.maxHp * 0.12, null);
+        }
       }
     }
     // Respawn anchor: first fully wiped card revives once.
@@ -2183,6 +2376,16 @@ export class Battle {
     if (u.tauntT > 0) u.tauntT -= dt;
     if (u.hasteT > 0) u.hasteT -= dt;
     if (u.auraT > 0) u.auraT -= dt;
+    u.tickShields(dt);
+    if (u.huntMarkT > 0) u.huntMarkT -= dt;
+    if (u.desertEmpowerT > 0) {
+      u.desertEmpowerT -= dt;
+      if (u.desertEmpowerT <= 0) u.desertEmpowerMul = 0;
+    }
+    if (u.erosionTimer > 0) {
+      u.erosionTimer -= dt;
+      if (u.erosionTimer <= 0) u.erosionStacks = 0;
+    }
     if (u.burnT > 0) {
       u.burnT -= dt;
       if (u.immune & IMM_BURN) u.burnT = 0;
