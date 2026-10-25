@@ -16,6 +16,7 @@ import tarfile
 import tempfile
 import subprocess
 import getpass
+import argparse
 from typing import Tuple
 
 # 自动检查并安装 paramiko 库
@@ -41,7 +42,12 @@ for _env_name in [".env.deploy", ".env"]:
                     _line = _line.strip()
                     if _line and not _line.startswith("#") and "=" in _line:
                         _k, _v = _line.split("=", 1)
-                        os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+                        _v = _v.strip()
+                        if not (_v.startswith('"') or _v.startswith("'")):
+                            _v = _v.split("#", 1)[0].strip()
+                        else:
+                            _v = _v.strip("'\"")
+                        os.environ.setdefault(_k.strip(), _v)
         except Exception:
             pass
 
@@ -59,15 +65,49 @@ SSH_KEY_PATH = os.getenv("DEPLOY_KEY", "")                # 私钥路径（如�
 USE_SUDO = os.getenv("DEPLOY_USE_SUDO", "true").lower() in ("true", "1", "yes")
 SUDO_PASSWORD = os.getenv("DEPLOY_SUDO_PASSWORD", "")     # sudo 密码（留空则默认复用登录密码或运行时提示）
 
-# 远程部署目标路径
-REMOTE_INDEX_DIR = "/home/aishia/Develop/1panel/apps/openresty/openresty/www/sites/gBlockSpire.aishia.cc/index"
-REMOTE_DIST_DIR = f"{REMOTE_INDEX_DIR}/dist"
+# 远程部署目标路径配置
+# 默认基准目录（支持在 .env.deploy 中通过 DEPLOY_REMOTE_DIR 覆盖）
+DEFAULT_REMOTE_DIR = "/home/aishia/Develop/1panel/apps/openresty/openresty/www/sites/gBlockSpire.aishia.cc/index"
+DEPLOY_REMOTE_DIR = os.getenv("DEPLOY_REMOTE_DIR", DEFAULT_REMOTE_DIR).strip()
+# 是否在目标目录下保留/附加 dist 子目录（默认 false: 直接解压到目标目录；true: 解压到 dist 子目录）
+DEPLOY_WITH_DIST = os.getenv("DEPLOY_WITH_DIST", "false").strip().lower() in ("true", "1", "yes")
+
+# 受保护的系统关键目录，防止配置失误导致误删
+DANGEROUS_DIRS = {
+    "", "/", "/root", "/home", "/var", "/var/www", "/etc", "/usr", "/bin", "/sbin", "/lib", "/opt", "/tmp", "/dev"
+}
 # ==============================================================================
 
 
 def log(msg: str):
     now = time.strftime("%H:%M:%S")
     print(f"[{now}] {msg}")
+
+
+def validate_remote_dir(path: str) -> str:
+    """校验远程路径合法性与安全性，防止危险删除操作"""
+    cleaned = path.strip().rstrip("/")
+    if not cleaned or not cleaned.startswith("/"):
+        log(f"[错误] 远程部署路径必须是 Linux 绝对路径 (以 '/' 开头): '{path}'")
+        sys.exit(1)
+    if cleaned in DANGEROUS_DIRS or cleaned.count("/") < 2:
+        log(f"[错误] 远程部署路径 '{cleaned}' 属于系统根目录或受保护目录，为防止误删已拒绝执行！")
+        sys.exit(1)
+    return cleaned
+
+
+def resolve_deploy_paths(cli_remote_dir: str = None, cli_with_dist: bool = None) -> Tuple[str, bool, str]:
+    """计算远程基准目录、是否包含 dist 以及最终目标目录"""
+    base_dir = cli_remote_dir or DEPLOY_REMOTE_DIR
+    base_dir = validate_remote_dir(base_dir)
+
+    with_dist = DEPLOY_WITH_DIST if cli_with_dist is None else cli_with_dist
+    if with_dist:
+        target_dir = base_dir if base_dir.endswith("/dist") else f"{base_dir}/dist"
+    else:
+        target_dir = base_dir
+
+    return base_dir, with_dist, target_dir
 
 
 def check_prerequisites():
@@ -153,9 +193,9 @@ def get_ssh_client() -> Tuple[paramiko.SSHClient, str]:
         sys.exit(1)
 
 
-def deploy_to_remote(ssh: paramiko.SSHClient, local_tar: str, auth_password: str):
+def deploy_to_remote(ssh: paramiko.SSHClient, local_tar: str, auth_password: str, target_dir: str):
     """上传文件并执行远程替换部署（支持 sudo）"""
-    log("====== 步骤 4/4: 上传产物并更新远程目录 ======")
+    log(f"====== 步骤 4/4: 上传产物并更新远程目录 ({target_dir}) ======")
     remote_tar = f"/tmp/blockspire_dist_{int(time.time())}.tar.gz"
     
     # 1. SFTP 上传压缩包至世界可写的 /tmp 目录
@@ -176,23 +216,23 @@ def deploy_to_remote(ssh: paramiko.SSHClient, local_tar: str, auth_password: str
             print("\n操作已取消。")
             sys.exit(0)
 
-    # 2. 远程执行清理旧 dist、创建目录、解压新 dist
+    # 2. 远程执行清理旧目录、创建目录、解压新产物
     deploy_commands = [
-        f"rm -rf '{REMOTE_DIST_DIR}'",
-        f"mkdir -p '{REMOTE_DIST_DIR}'",
-        f"tar -xzf '{remote_tar}' -C '{REMOTE_DIST_DIR}'",
+        f"rm -rf '{target_dir}'",
+        f"mkdir -p '{target_dir}'",
+        f"tar -xzf '{remote_tar}' -C '{target_dir}'",
         f"rm -f '{remote_tar}'",
-        f"chmod -R 755 '{REMOTE_DIST_DIR}'",
+        f"chmod -R 755 '{target_dir}'",
     ]
     
     inner_cmd = " && ".join(deploy_commands)
     if USE_SUDO:
         # 使用 sudo -S 从标准输入读取密码，并由 root shell 一并执行操作
         combined_cmd = f"sudo -S -p '' bash -c \"{inner_cmd}\""
-        log("-> 正在以 sudo 权限更新远程目录并解压...")
+        log(f"-> 正在以 sudo 权限更新远程目录并解压到 '{target_dir}'...")
     else:
         combined_cmd = inner_cmd
-        log("-> 正在执行远程部署命令...")
+        log(f"-> 正在执行远程部署命令，解压到 '{target_dir}'...")
 
     stdin, stdout, stderr = ssh.exec_command(combined_cmd)
     
@@ -205,7 +245,7 @@ def deploy_to_remote(ssh: paramiko.SSHClient, local_tar: str, auth_password: str
     err = stderr.read().decode('utf-8').strip()
     
     if exit_status == 0:
-        log(f"[成功] 远程目录已更新: {REMOTE_DIST_DIR}")
+        log(f"[成功] 远程目录已更新: {target_dir}")
         if out:
             print(out)
     else:
@@ -215,21 +255,67 @@ def deploy_to_remote(ssh: paramiko.SSHClient, local_tar: str, auth_password: str
         sys.exit(1)
 
 
+def parse_args() -> argparse.Namespace:
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description="方块尖塔 (BlockSpire) 一键编译部署脚本")
+    parser.add_argument(
+        "--remote-dir",
+        type=str,
+        default=None,
+        help="远程部署目标目录 (覆盖 DEPLOY_REMOTE_DIR 配置)"
+    )
+    dist_group = parser.add_mutually_exclusive_group()
+    dist_group.add_argument(
+        "--with-dist",
+        action="store_true",
+        default=None,
+        help="解压时在目标目录后附加 dist 子目录"
+    )
+    dist_group.add_argument(
+        "--no-dist",
+        action="store_true",
+        help="解压时直接解压到目标目录，不包含 dist 子目录"
+    )
+    parser.add_argument(
+        "--skip-build",
+        action="store_true",
+        help="跳过 npm run build 前端编译步骤，直接打包现有本地 dist"
+    )
+    return parser.parse_args()
+
+
 def main():
     start_total = time.time()
     check_prerequisites()
     
+    # 解析命令行参数（可选覆盖环境变量）
+    args = parse_args()
+    cli_with_dist = False if args.no_dist else (True if args.with_dist else None)
+    remote_base_dir, with_dist, target_dir = resolve_deploy_paths(args.remote_dir, cli_with_dist)
+    
+    log(f"远程基准目录: {remote_base_dir}")
+    log(f"包含 dist 目录: {'是' if with_dist else '否'}")
+    log(f"最终解压目标: {target_dir}")
+    
     local_tar = None
     ssh = None
     try:
-        build_project()
+        if not args.skip_build:
+            build_project()
+        else:
+            log("====== 步骤 1/4: [跳过] 前端编译 (--skip-build) ======")
+            if not os.path.exists(LOCAL_DIST_DIR) or not os.listdir(LOCAL_DIST_DIR):
+                log("\n[错误] 未检测到本地 dist 产物目录！请先编译后再使用 --skip-build。")
+                sys.exit(1)
+                
         local_tar = create_tar_archive()
         ssh, auth_password = get_ssh_client()
-        deploy_to_remote(ssh, local_tar, auth_password)
+        deploy_to_remote(ssh, local_tar, auth_password, target_dir)
         
         total_time = time.time() - start_total
         print("=" * 60)
         log(f"🎉 全部发布流程圆满成功！总耗时: {total_time:.2f} 秒")
+        log(f"📂 远程目标路径: {target_dir}")
         log(f"🌐 站点访问地址: https://gBlockSpire.aishia.cc")
         print("=" * 60)
     finally:
