@@ -786,18 +786,17 @@
   text-shadow: 6px 6px 0 #222;
 }
 
-/* Battle Modifier intro announcement & persistent badge */
+/* Battle Modifier intro announcement & persistent badge (MC theme) */
 .bm-intro {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   z-index: 1000;
   pointer-events: auto;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(5, 3, 8, 0.75);
   backdrop-filter: blur(2px);
-  transition: opacity 0.25s ease-out;
+  transition: opacity 0.22s ease-out;
   cursor: pointer;
 }
 .bm-intro.fade-out {
@@ -805,19 +804,26 @@
   pointer-events: none;
 }
 .bm-intro-box {
-  background: rgba(14, 12, 18, 0.95);
-  border: 2px solid #ffcc00;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 204, 0, 0.15);
-  padding: 24px 36px;
-  border-radius: 4px;
-  text-align: center;
-  max-width: 480px;
-  width: 90%;
-  animation: bm-pop 0.25s ease-out;
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(34, 28, 42, 0.98), rgba(18, 14, 24, 0.98)),
+    url('/assets/tex/stone.png') repeat;
+  background-size: auto, 48px;
+  clip-path: var(--notch);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 2px #4b4257,
+    inset 0 0 0 4px #120e16,
+    0 16px 48px rgba(0, 0, 0, 0.85);
+  padding: 20px 24px 18px;
+  max-width: 520px;
+  width: 92%;
+  animation: bm-pop 0.22s ease-out;
+  cursor: default;
 }
 @keyframes bm-pop {
   from {
-    transform: scale(0.95);
+    transform: scale(0.94);
     opacity: 0;
   }
   to {
@@ -830,72 +836,226 @@
     animation: none !important;
   }
 }
-.bm-intro-k {
-  font-size: 14px;
-  color: #ffcc00;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+
+.bm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
-.bm-intro-name {
-  font-size: 32px;
-  font-weight: bold;
-  letter-spacing: 4px;
+.bm-modal-title {
+  font-family: var(--font-px);
+  font-size: 24px;
+  color: var(--ink);
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 2px;
+}
+
+.bm-cards-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.bm-card {
+  position: relative;
+  background: rgba(12, 9, 16, 0.9);
+  box-shadow:
+    0 0 0 1px #000,
+    inset 2px 2px 0 #050407,
+    inset -2px -2px 0 #2c2538;
+  padding: 12px 14px;
   margin-bottom: 12px;
+  text-align: left;
+}
+.bm-card:last-child {
+  margin-bottom: 0;
+}
+
+.bm-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-px);
+  font-size: 13px;
+  padding: 2px 8px;
+  background: #201a2c;
+  box-shadow: 0 0 0 1px #000;
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+
+.bm-card-title {
+  font-family: var(--font-px);
+  font-size: 24px;
+  letter-spacing: 1.5px;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 6px;
+}
+
+.bm-card-desc {
+  font-size: 14px;
+  color: #e5e0d4;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.bm-tip-well {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: rgba(45, 36, 16, 0.75);
+  box-shadow:
+    inset 1px 1px 0 #000,
+    0 0 0 1px #6b521b;
+  padding: 6px 10px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #ffe066;
+  line-height: 1.45;
+}
+.bm-tip-icon {
+  flex-shrink: 0;
+}
+.bm-tip-label {
+  font-family: var(--font-px);
+  color: var(--gold);
+  text-shadow: 1px 1px 0 #000;
+  margin-right: 4px;
+}
+
+.bm-reward-well {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(16, 38, 22, 0.75);
+  box-shadow:
+    inset 1px 1px 0 #000,
+    0 0 0 1px #1d5930;
+  padding: 6px 10px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.bm-reward-well .reward-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-px);
+  color: #6eff97;
+  text-shadow: 1px 1px 0 #000;
+}
+.bm-reward-well .symmetric-note {
+  font-size: 12px;
+  color: #9cb5a2;
+}
+
+.bm-modal-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.bm-kbd-hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Backwards-compatible aliases */
+.bm-intro-k {
+  font-family: var(--font-px);
+  font-size: 13px;
+  color: #ffcc00;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.bm-intro-name {
+  font-family: var(--font-px);
+  font-size: 26px;
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
 }
 .bm-intro-desc {
-  font-size: 16px;
-  color: #f0f0f0;
-  margin-bottom: 10px;
-  line-height: 1.4;
+  font-size: 14px;
+  color: #e5e0d4;
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 .bm-intro-reward {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: bold;
-  margin-bottom: 16px;
 }
 .bm-intro-dismiss {
   font-size: 12px;
 }
+
+/* Persistent left badge pills */
 .bm-persistent-badge {
   position: absolute;
   top: 12px;
   left: 14px;
   z-index: 100;
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .bm-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(12, 10, 16, 0.88);
-  border: 1px solid rgba(255, 204, 0, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(16, 12, 22, 0.94);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 1px #3a3344;
   cursor: pointer;
   font-size: 13px;
   color: #e6e1d6;
-  transition: all 0.15s ease;
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
 }
 .bm-pill:hover,
 .bm-pill:focus-visible {
-  border-color: #ffd700;
-  background: rgba(22, 18, 28, 0.95);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+  filter: brightness(1.15);
+  transform: translateX(2px);
+  box-shadow:
+    0 0 0 2px #000,
+    inset 0 0 0 1px var(--gold),
+    0 0 10px rgba(255, 201, 60, 0.4);
   outline: none;
+}
+.bm-pill-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .bm-pill-icon {
   color: #ffcc00;
   font-weight: bold;
 }
 .bm-pill-title {
-  font-weight: bold;
+  font-family: var(--font-px);
+  font-size: 14px;
+  text-shadow: 1px 1px 0 #000;
 }
 .bm-pill-desc {
-  color: #ccc;
-  max-width: 260px;
+  color: var(--ink-dim);
+  font-size: 12px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.bm-pill-action {
+  font-size: 11px;
+  color: var(--gold);
+  margin-left: 4px;
+  opacity: 0.85;
 }
