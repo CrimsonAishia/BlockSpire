@@ -880,10 +880,10 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'baby_ghast', name: '小恶魂', rarity: 'pink', families: ['nether'], role: 'support', flying: true, alt: 26,
-    hp: 210, atk: 0, cd: 1.0, range: 0, speed: 45, armor: 0.05, radius: 16, size: 52,
+    hp: 420, atk: 8, cd: 1.6, range: 220, speed: 35, armor: 0.15, radius: 16, size: 52, projectile: 'fireball',
     count: [2, 2, 3], ai: 'baby_ghast', defaultRow: 'back',
-    skill: { name: '痛楚共担', desc: '【战术支援】与一名核心主力产生生命联结，持续为其分担 20% 所受直接伤害（扣除自身生命）；当该主力生命低于 50% 时，赋予其相当于 20% 最大生命值的护盾持续 4 秒（冷却 12 秒）。' },
-    star3: '分担比例提升至 28%，濒危护盾提升至 30% 且附带 2 秒移速 +25%。',
+    skill: { name: '痛楚共担', desc: '【战术支援】远程吐出微弱火球轻度骚扰。与队友产生生命联结，持续为非召唤队友分担 20% 所受直接伤害（扣除自身生命）；当队友生命低于 50% 时，赋予其相当于 20% 最大生命值的护盾持续 4 秒（冷却 9 秒）。' },
+    star3: '分担比例提升至 28%，濒危护盾提升至 30%（冷却缩短至 7.5 秒）且附带 2 秒移速 +25%。',
     flavor: '漂浮在空中的幼年恶魂，发出悲鸣替最重要的领袖承受致命打击。',
   },
   {

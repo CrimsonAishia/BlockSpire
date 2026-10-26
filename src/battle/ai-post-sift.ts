@@ -1,6 +1,6 @@
 import type { Battle } from './sim.ts';
 import { ARENA_D, ARENA_W, type Unit } from './unit.ts';
-import { chargeMove, cool, dist, foesOf, fire, startCharge, type Behavior } from './ai.ts';
+import { chargeMove, cool, dist, foesOf, fire, resetCd, startCharge, type Behavior } from './ai.ts';
 
 const clampX = (u: Unit, x: number) => Math.max(u.radius, Math.min(ARENA_W - u.radius, x));
 const clampY = (y: number) => Math.max(10, Math.min(ARENA_D - 10, y));
@@ -564,12 +564,27 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   baby_ghast: {
     tick(u, b, dt) {
       if (cool(u, 'shieldCd', dt, 2)) {
-        const lowAllies = alliesOf(u, b).filter((a) => a.alive && a.card !== u.card && a.hp / a.maxHp < 0.5);
+        const lowAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.card !== u.card && a.hpFrac < 0.5);
         if (lowAllies.length > 0) {
-          u.ab.shieldCd = 12;
+          // 优先未带护盾的残血目标，再按血量比例升序排序
+          lowAllies.sort((a, c) => {
+            const aHas = a.timedShields.some((s) => s.id === 'baby_ghast_shield' && s.amount > 0 && s.timer > 0.5) ? 1 : 0;
+            const cHas = c.timedShields.some((s) => s.id === 'baby_ghast_shield' && s.amount > 0 && s.timer > 0.5) ? 1 : 0;
+            if (aHas !== cHas) return aHas - cHas;
+            return a.hpFrac - c.hpFrac;
+          });
           const target = lowAllies[0];
-          target.addSynergyShield('baby_ghast_shield', target.maxHp * (u.star >= 3 ? 0.3 : 0.2), 4.0);
+          resetCd(u, 'shieldCd', u.star >= 3 ? 7.5 : 9.0, b);
+          const shieldAmount = target.maxHp * (u.star >= 3 ? 0.3 : 0.2);
+          target.addSynergyShield('baby_ghast_shield', shieldAmount, 4.0);
           b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + 40, s: '幽魂护盾!', color: '#ff6b81' });
+          if (u.star >= 3) {
+            target.moveSpd *= 1.25;
+            b.addTimedAction(2.0, () => {
+              if (target.alive) target.moveSpd /= 1.25;
+            });
+            b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + 55, s: '幽魂疾速 +25%!', color: '#ff7979' });
+          }
         } else {
           u.ab.shieldCd = 0;
         }

@@ -2221,14 +2221,35 @@ export class Battle {
       const turtle = this.live[t.team].find((a) => a.alive && a.mob.id === 'turtle' && Math.hypot(a.x - t.x, a.y - t.y) <= 60);
       if (turtle) d *= (o.aoe || o.proj || o.fire) ? (turtle.star >= 3 ? 0.58 : 0.70) : (turtle.star >= 3 ? 0.82 : 0.88);
     }
-    // 小恶魂 (baby_ghast): 为非召唤非建筑队友分担 20% 直伤
+    // 小恶魂 (baby_ghast): 为非召唤非建筑队友分担 20% 直伤（★3 为 28%）
     if (kind !== 'dot' && !t.structure && !t.isSummon && t.mob.id !== 'baby_ghast') {
-      const ghast = this.live[t.team].find((a) => a.alive && a.mob.id === 'baby_ghast');
-      if (ghast && ghast.hp > 1) {
+      const ghasts = this.live[t.team].filter((a) => a.alive && a.mob.id === 'baby_ghast' && a.hp > 1);
+      if (ghasts.length > 0) {
+        // 选择当前生命值最高的小恶魂共同分担压力
+        const ghast = ghasts.reduce((best, cur) => (cur.hp > best.hp ? cur : best));
         const shareFrac = ghast.star >= 3 ? 0.28 : 0.20;
-        const shared = d * shareFrac;
-        d -= shared;
-        ghast.hp = Math.max(1, ghast.hp - shared);
+        const shared = Math.min(ghast.hp - 1, d * shareFrac);
+        if (shared > 0) {
+          d -= shared;
+          ghast.hp -= shared;
+          // 视觉与战斗飘字反馈：让分担效果清晰可见
+          if (shared >= 8 || !ghast.ab.lastShareText || this.t - (ghast.ab.lastShareText as number) >= 0.5) {
+            ghast.ab.lastShareText = this.t;
+            this.emit({ k: 'text', x: ghast.x, y: ghast.y, z: ghast.gz + ghast.size + 10, s: `-${Math.round(shared)}分担`, color: '#ff6b81' });
+          }
+          // 联动: 幽火引航 (combo_ghost_flame)
+          if (this.has(t.team, 'combo_ghost_flame')) {
+            const sideTimers = this.sides[t.team].timers;
+            sideTimers.ghostFlameDmg = (sideTimers.ghostFlameDmg || 0) + shared;
+            const teamMaxHp = this.live[t.team].reduce((sum, u) => sum + (u.structure ? 0 : u.maxHp), 0);
+            if (sideTimers.ghostFlameDmg >= teamMaxHp * 0.08 && (!sideTimers.ghostFlameCd || this.t >= sideTimers.ghostFlameCd)) {
+              sideTimers.ghostFlameDmg = 0;
+              sideTimers.ghostFlameCd = this.t + 8.0;
+              this.addBuff(t.team, 'fire', 1.30, this.t + 4.0);
+              this.emit({ k: 'text', x: ghast.x, y: ghast.y, z: ghast.gz + ghast.size + 15, s: '幽火引航 +30%火伤!', color: '#ff6b81' });
+            }
+          }
+        }
       }
     }
     if ((t.poisonT > 0 || t.weakT > 0) && this.has((1 - t.team) as 0 | 1, 'fermented_eye')) d *= 1.2;
