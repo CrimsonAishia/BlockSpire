@@ -1261,6 +1261,12 @@ export function crateOffers(s: RunState, n: number, grade: CrateGrade): CrateOff
         wind_canyon: 'gale',
         ember_forge: 'gilded_forge',
         void_ruins: 'obsidian_archive',
+        lonely_fortress: 'lonely_fortress',
+        overgrown_temple: 'overgrown_temple',
+        abyssal_monument: 'abyssal_monument',
+        nether_fortress: 'nether_fortress',
+        gale_sanctum: 'gale_sanctum',
+        broken_citadel: 'broken_citadel',
       };
       const preferred = s.actTheme ? themeMap[s.actTheme] : null;
       if (preferred && expeditionAvail.some((c) => c.id === preferred)) {
