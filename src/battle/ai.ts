@@ -111,6 +111,17 @@ export function cool(u: Unit, key: string, dt: number, init: number) {
   return u.ab[key] <= 0;
 }
 
+export function resetCd(u: Unit, key: string, cd: number, b?: Battle): number {
+  let finalCd = cd;
+  if (b && b.has(u.team, 'temporal_sand') && !u.ab[key + '_sand_used']) {
+    u.ab[key + '_sand_used'] = 1;
+    finalCd = cd * 0.85;
+    b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '沙漏 -15%CD', color: '#f1c40f' });
+  }
+  u.ab[key] = finalCd;
+  return finalCd;
+}
+
 /** "Backness": how deep an enemy sits on its own side. */
 export function backness(e: Unit) {
   return e.team === 0 ? ARENA_W - e.x : e.x;

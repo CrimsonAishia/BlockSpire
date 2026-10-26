@@ -462,9 +462,10 @@ export function PotionTipContent({ id }: { id: string }) {
 }
 
 export function RelicSlot({ id }: { id: string }) {
+  const r = RELIC_MAP[id];
   return (
     <Tip class="relic-slot" content={() => <RelicTipContent id={id} />}>
-      <img src={url.icon(id)} />
+      <img src={url.icon(r?.icon ?? id)} />
     </Tip>
   );
 }

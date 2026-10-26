@@ -273,32 +273,32 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     // ── V3.3 遗迹远征消耗品 ──
     case 'corrupted_beacon_charge': {
-      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      const B = 70 * K;
       const rearX = team === 0 ? 40 : ARENA_W - 40;
       const rearY = ARENA_D / 2;
       b.emit({ k: 'beam', a: { x: rearX, y: rearY, gz: 0, z: 20 } as any, b: { x, y, gz: 0, z: 20 } as any, color: '#bd00ff', t: 2.0 });
       b.emit({ k: 'sfx', id: 'laser' });
       for (let step = 0; step < 4; step++) {
-        setTimeout(() => {
+        b.addTimedAction(step * 0.5, () => {
           if (!b.over) {
             let hit = 0;
             b.aoe(x, y, 65, team, (e) => {
-              if (hit >= 5) return;
+              if (hit >= 4) return;
               hit++;
-              b.damage(null, e, D * 0.25, 'magic', { noCrit: true });
+              b.damage(null, e, 1.5 * B * 0.25, 'magic', { noCrit: true });
             });
           }
-        }, step * 500);
+        });
       }
       break;
     }
     case 'death_cap_mushroom':
-      b.addBuff(team, 'atkSpd', 1.30, 5);
-      b.addBuff(team, 'move', 1.15, 5);
+      b.addBuff(team, 'atkSpd', 1.45, b.t + 5);
+      b.addBuff(team, 'move', 1.20, b.t + 5);
       b.emit({ k: 'sfx', id: 'potion_drink' });
       break;
     case 'iron_hide_charm':
-      b.addBuff(team, 'taken', 0.80, 5);
+      b.addBuff(team, 'taken', 0.65, b.t + 5);
       b.emit({ k: 'sfx', id: 'potion_drink' });
       break;
     case 'healing_totem': {
@@ -322,7 +322,7 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       boom('#f1c40f');
       b.aoeAllies(x, y, r, team, (a) => {
         if (a.structure || a.boss) return;
-        a.shield = Math.min(a.maxHp * 0.3, a.shield + a.maxHp * 0.06);
+        a.addSynergyShield('light_feather', a.maxHp * 0.08, 3.0);
         const foes = b.live[(1 - team) as 0 | 1].filter((f) => f.alive && !f.structure);
         let nearest: Unit | null = null;
         let nd = Infinity;
@@ -349,9 +349,9 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     }
     case 'firework_quiver': {
-      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
-      side.timers['firework_quiver'] = b.t + 6;
-      side.timers['firework_dmg'] = 0.6 * D;
+      const B = 70 * K;
+      side.timers['firework_quiver'] = b.t + 8;
+      side.timers['firework_dmg'] = 0.4 * B;
       b.emit({ k: 'sfx', id: 'wind' });
       break;
     }
@@ -367,12 +367,16 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     }
     case 'shock_powder': {
-      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      const B = 70 * K;
       boom('#bdc3c7');
       b.aoe(x, y, r, team, (e) => {
-        b.damage(null, e, 0.5 * D, 'magic', { noCrit: true });
-        if (e.boss) b.slow(e, 0.10, 0, 0.6);
-        else b.stun(e, 0.6);
+        b.damage(null, e, 0.5 * B, 'magic', { noCrit: true });
+        if (e.boss) {
+          if (e.channeling) b.addPosture(e, 30);
+          else b.slow(e, 0.10, 0, 0.6);
+        } else {
+          b.stun(e, 0.6);
+        }
       });
       break;
     }
@@ -383,9 +387,9 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       b.emit({ k: 'sfx', id: 'teleport' });
       break;
     case 'corrupted_seeds': {
-      const D = [0, 70, 110, 160, 210][side.plan.act] ?? 70;
+      const B = 70 * K;
       boom('#27ae60');
-      b.addZone({ x, y, r, dur: 6, team, dps: 0.12 * D, kind: 'goo', src: null });
+      b.addZone({ x, y, r, dur: 6, team, dps: 0.15 * B, kind: 'goo', src: null });
       break;
     }
     default:

@@ -913,7 +913,7 @@ EVENTS.push(
         label: '挑战远古试炼', desc: '挑战首领试炼。胜利后从稀有宝物中三选一。',
         run: (s) => ({
           text: '你跨入远古大门，试炼开始了！',
-          then: [makeEventBattle(s, s.act === 2 ? 'a2b_redstone_monstrosity' : 'a1b_nameless', 'ancient_gate')],
+          then: [makeEventBattle(s, s.act === 3 ? 'a3e_ancient_warden' : 'a2b_redstone_monstrosity', 'ancient_gate')],
         }),
       },
       {
@@ -933,6 +933,32 @@ EVENTS.push(
           type: 'relic_choice',
           title: '远古试炼赏赐',
           choices: relicChoices(s, 3, ['rare', 'legendary']),
+          skippable: false,
+        }];
+      },
+    },
+  },
+  {
+    id: 'cauldron_trial', name: '腐化药剂试炼', acts: [2], art: 'cauldron_trial',
+    text: '一座刻满古老纹路的黑铁坩埚在遗迹中央沸腾，紫色腐化药剂不断翻滚，剧毒软泥在四周蠕动。',
+    choices: (s) => [
+      {
+        label: '接受药剂试炼', desc: '迎战腐化坩埚。胜利后获得药剂补给与宝物。',
+        run: (s) => ({
+          text: '沸腾的药剂喷涌而出，试炼开始了！',
+          then: [makeEventBattle(s, 'a2e_cauldron_trial', 'cauldron_trial')],
+        }),
+      },
+      leave,
+    ],
+    winRewards: {
+      cauldron_trial: (s, r) => {
+        toast(s, '药剂试炼胜利！', 'good');
+        addPotions(s, r, 2);
+        return [{
+          type: 'relic_choice',
+          title: '坩埚秘宝',
+          choices: relicChoices(s, 3, ['common', 'rare']),
           skippable: false,
         }];
       },

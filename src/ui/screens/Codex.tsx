@@ -13,6 +13,60 @@ import { KEYWORDS, RichText } from '../components/rich.tsx';
 import { SURFACE_INFO } from '../../battle/terrain.ts';
 import { CHARGE_RULE, COMBOS, COUNTERS } from '../../data/combos.ts';
 
+/** V3.3 & V3.4 遗迹远征专属生物 ID 集合 */
+const EXPEDITION_MOB_IDS = new Set<string>([
+  // V3.3 远征生物
+  'skeleton_vanguard', 'redstone_golem', 'soul_wisp', 'enchanter', 'geomancer',
+  'royal_guard', 'wraith', 'necromancer', 'iceologer', 'whisperer', 'windcaller',
+  'key_golem', 'mountaineer', 'leaper', 'poison_quill_vine', 'squall_golem',
+  'drowned_necromancer', 'redstone_cube',
+  // V3.4 地下城远征生物
+  'baby_zombie', 'bat', 'snow_fox', 'pumpkin_turret', 'raven',
+  'jungle_zombie', 'chicken_jockey', 'mooshroom', 'quick_vine', 'parrot',
+  'ocelot', 'panda', 'abomination_vine',
+  'sunken_skeleton', 'tropical_slime', 'pufferfish', 'glow_squid', 'gold_axolotl', 'turtle', 'dolphin',
+  'piglin_hunter', 'piglin_swordsman', 'fungus_thrower', 'baby_ghast', 'armored_piglin',
+  'rampart_captain', 'skeleton_horseman', 'llama', 'armored_mountaineer',
+  'blastling', 'snareling', 'endersent', 'soul_wizard', 'tower_wraith', 'mob_spawner', 'enderling',
+  // V3.3 & V3.4 远征首领
+  'wretched_wraith', 'jungle_abomination', 'ancient_guardian', 'wildfire',
+  'nameless_one', 'redstone_monstrosity', 'corrupted_cauldron', 'tempest_golem',
+  'vengeful_heart', 'ancient_warden',
+]);
+
+/** V3.3 & V3.4 远征专属宝物 ID 集合 */
+const EXPEDITION_RELIC_IDS = new Set<string>([
+  // V3.3 远征宝物
+  'corrupted_beacon_core', 'mycelium_spores', 'iron_hide_amulet', 'totem_grove',
+  'feather_knot', 'firework_mechanism', 'hive_heart', 'gong_fragment',
+  'soul_vessel', 'temporal_sand', 'amber_contract', 'cursed_crown',
+  // V3.4 远征常规宝物
+  'snow_armor', 'ocelot_armor', 'nourishment_satchel', 'guardian_eye',
+  'thundering_quiver', 'enchanters_tome', 'ghost_cloak_relic', 'shadow_shifter',
+  'frostbite_armor', 'full_metal_armor', 'assassins_armor', 'evocation_robe',
+  'battle_robe', 'soul_robe', 'archers_armor', 'mercenary_armor',
+  'champions_armor', 'reinforced_mail', 'grim_armor', 'mystery_armor',
+  'spelunker_armor', 'dark_armor', 'wolf_armor', 'scale_mail',
+  // V3.4 远征首领宝物
+  'frost_scythe', 'stalwart_armor', 'winter_soul_bow', 'vine_whip',
+  'shadow_walker', 'hunters_promise', 'encrusted_anchor', 'nimble_turtle',
+  'coral_blade', 'mechanized_sawblade', 'gilded_piglin_armor', 'bone_club',
+  'chill_gale_knife', 'gale_bow', 'opulent_armor', 'unstable_robes',
+  'sturdy_shulker', 'swift_striker',
+]);
+
+/** V3.3 & V3.4 远征专属消耗道具 ID 集合 */
+const EXPEDITION_ITEM_IDS = new Set<string>([
+  // V3.3 道具
+  'corrupted_beacon_charge', 'death_cap_mushroom', 'iron_hide_charm', 'healing_totem',
+  'light_feather', 'firework_quiver', 'buzzy_nest', 'shock_powder', 'ghost_cloak', 'corrupted_seeds',
+  // V3.4 道具
+  'ice_wand', 'spinblade', 'powershaker', 'updraft_tome', 'water_breathing',
+  'duplication_tome', 'fishing_rod_tool', 'wind_horn', 'weakening_gong', 'barrier_totem',
+  'love_medallion', 'harvester', 'torment_quiver', 'harpoon_quiver', 'void_quiver',
+  'emergency_satchel', 'rainbow_grass', 'wonderful_wheat', 'elemental_satchel', 'spore_bomb',
+]);
+
 type Tab = 'rules' | 'mobs' | 'relics' | 'enchants' | 'families' | 'combos' | 'achievements' | 'records';
 const TABS: [Tab, string][] = [
   ['rules', '玩法说明'],
@@ -45,54 +99,8 @@ export function Codex() {
         <div class="codex-body panel">
           {tab === 'rules' && <RulesTab />}
           {tab === 'mobs' && <MobsTab discovered={p.discovered} />}
-          {tab === 'relics' && (
-            <div class="codex-grid relics">
-              {RELICS.map((r) => {
-                const seen = p.relicsSeen.includes(r.id);
-                return (
-                  <Tip key={r.id} content={() => (seen ? <RelicTipContent id={r.id} /> : <div class="tt-gray">尚未获得{r.commander ? ` · ${COMMANDER_MAP[r.commander].name}专属` : ''}</div>)} class={`codex-relic ${seen ? '' : 'unseen'}`}>
-                    <img src={url.icon(r.id)} class="pixelated" />
-                    <div style={{ color: seen ? RELIC_TIER_INFO[r.tier].color : '#555' }}>{seen ? r.name : '？？？'}</div>
-                    {(r.tag || r.commander) && <div class="faint" style={{ fontSize: 11 }}>{r.commander ? `${COMMANDER_MAP[r.commander].name}专属` : r.tag}</div>}
-                  </Tip>
-                );
-              })}
-            </div>
-          )}
-          {tab === 'enchants' && (
-            <div class="codex-cols">
-              <div>
-                <div class="tp-sec">附魔书（每张卡牌 1 个，同名合成升级 I → III）</div>
-                {ENCHANTS.map((e) => (
-                  <div key={e.id} class="codex-line">
-                    <img src={url.icon('enchanted_book')} class="pixelated" />
-                    <span style={{ color: e.color, minWidth: 120 }}>{e.name}</span>
-                    <span class="subtle">
-                      {e.text.replace(/\{(\d)\}/g, (_, k) => e.vals[Number(k)].join('/'))}
-                      {e.only && <span class="faint">（仅{e.only === 'melee' ? '近战' : '远程'}）</span>}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div class="tp-sec">战斗物品（战斗中从物品栏使用，一次性）</div>
-                {(['drink', 'splash', 'lingering', 'tool', 'egg'] as const).map((k) => (
-                  <div key={k}>
-                    <div class="faint" style={{ fontSize: 13, margin: '6px 0 2px' }}>{ITEM_KIND_NAME[k]}</div>
-                    {POTIONS.filter((e) => e.kind === k).map((e) => (
-                      <div key={e.id} class="codex-line">
-                        <img src={itemIcon(e.id)} class="pixelated" />
-                        <span style={{ color: e.color, minWidth: 120 }}>{e.name}</span>
-                        <span class="subtle">
-                          <RichText text={e.desc} />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {tab === 'relics' && <RelicsTab seen={p.relicsSeen} />}
+          {tab === 'enchants' && <EnchantsTab />}
           {tab === 'families' && (
             <div class="codex-fams">
               {FAMILY_LIST.map((f) => (
@@ -201,53 +209,128 @@ export function Codex() {
   );
 }
 
+type MobFilter = 'all' | 'classic' | 'expedition' | 'boss';
+const MOB_FILTERS: [MobFilter, string][] = [
+  ['all', '全部'],
+  ['classic', '经典篇章 (第1~4幕)'],
+  ['expedition', '遗迹远征'],
+  ['boss', '首领挑战'],
+];
+
 function MobsTab({ discovered }: { discovered: string[] }) {
+  const [filter, setFilter] = useState<MobFilter>('all');
   const [sel, setSel] = useState<string>(PLAYABLE_MOBS[0].id);
+
   const m = mobDef(sel);
   const known = discovered.includes(sel) || m.hidden;
-  const bosses = MOBS.filter((x) => x.boss);
-  const found = PLAYABLE_MOBS.filter((x) => discovered.includes(x.id)).length;
+  const isExpeditionMob = EXPEDITION_MOB_IDS.has(sel);
+
+  // 根据分类筛选展示的生物卡牌
+  const filteredPlayable = PLAYABLE_MOBS.filter((x) => {
+    if (filter === 'boss') return false;
+    if (filter === 'classic') return !EXPEDITION_MOB_IDS.has(x.id);
+    if (filter === 'expedition') return EXPEDITION_MOB_IDS.has(x.id);
+    return true;
+  });
+
+  const allBosses = MOBS.filter((x) => x.boss);
+  const filteredBosses = allBosses.filter((x) => {
+    if (filter === 'classic') return !EXPEDITION_MOB_IDS.has(x.id);
+    if (filter === 'expedition') return EXPEDITION_MOB_IDS.has(x.id);
+    return true;
+  });
+
+  const totalDiscovered = PLAYABLE_MOBS.filter((x) => discovered.includes(x.id)).length;
+
   return (
     <div class="mobs-tab">
       <div class="mobs-list">
-        <div class="faint" style={{ marginBottom: 6 }}>
-          已发现 {found}/{PLAYABLE_MOBS.length}
-        </div>
-        {RARITIES.map((r) => (
-          <div key={r} class="mob-group">
-            <div class="mg-title" style={{ color: RARITY_INFO[r].color }}>
-              {RARITY_INFO[r].name}
-            </div>
-            <div class="mg-items">
-              {PLAYABLE_MOBS.filter((x) => x.rarity === r).map((x) => {
-                const k = discovered.includes(x.id);
-                return (
-                  <button key={x.id} class={`mg-item r-${r} ${sel === x.id ? 'on' : ''}`} onClick={() => (sfx('click', { vol: 0.4 }), setSel(x.id))}>
-                    <img src={url.mob(x.id)} class={k ? '' : 'silhouette'} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <div class="mob-group">
-          <div class="mg-title gold-t">首领</div>
-          <div class="mg-items">
-            {bosses.map((x) => (
-              <button key={x.id} class={`mg-item r-gold ${sel === x.id ? 'on' : ''}`} onClick={() => setSel(x.id)}>
-                <img src={url.mob(x.id)} />
+        <div class="row between center wrap" style={{ marginBottom: 10, gap: 6 }}>
+          <div class="row gap6 wrap">
+            {MOB_FILTERS.map(([k, label]) => (
+              <button
+                key={k}
+                class={`mc-btn ${filter === k ? 'gold' : ''}`}
+                style={{ padding: '3px 10px', fontSize: 13 }}
+                onClick={() => (sfx('click', { vol: 0.4 }), setFilter(k))}
+              >
+                {label}
               </button>
             ))}
           </div>
+          <div class="faint" style={{ fontSize: 13 }}>
+            已发现 {totalDiscovered}/{PLAYABLE_MOBS.length}
+          </div>
         </div>
+
+        {filter !== 'boss' &&
+          RARITIES.map((r) => {
+            const list = filteredPlayable.filter((x) => x.rarity === r);
+            if (list.length === 0) return null;
+            return (
+              <div key={r} class="mob-group">
+                <div class="mg-title" style={{ color: RARITY_INFO[r].color }}>
+                  {RARITY_INFO[r].name} <span class="faint" style={{ fontSize: 12 }}>({list.length})</span>
+                </div>
+                <div class="mg-items">
+                  {list.map((x) => {
+                    const k = discovered.includes(x.id);
+                    return (
+                      <button
+                        key={x.id}
+                        class={`mg-item r-${r} ${sel === x.id ? 'on' : ''}`}
+                        title={k ? x.name : '？？？'}
+                        onClick={() => (sfx('click', { vol: 0.4 }), setSel(x.id))}
+                      >
+                        <img src={url.mob(x.id)} class={k ? '' : 'silhouette'} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+        {filteredBosses.length > 0 && (
+          <div class="mob-group">
+            <div class="mg-title gold-t">
+              首领挑战 <span class="faint" style={{ fontSize: 12 }}>({filteredBosses.length})</span>
+            </div>
+            <div class="mg-items">
+              {filteredBosses.map((x) => (
+                <button
+                  key={x.id}
+                  class={`mg-item r-gold ${sel === x.id ? 'on' : ''}`}
+                  title={x.name}
+                  onClick={() => (sfx('click', { vol: 0.4 }), setSel(x.id))}
+                >
+                  <img src={url.mob(x.id)} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
       <div class={`mob-detail r-${m.rarity}`}>
         <div class="md-art">
           <img src={url.mob(sel)} class={known ? '' : 'silhouette'} />
         </div>
         <div class="md-name rc">{known ? m.name : '？？？'}</div>
-        <div class="faint">
-          {RARITY_INFO[m.rarity].name} · {ROLE_INFO[m.role].icon} {ROLE_INFO[m.role].name}
+        <div class="row gap8 center center wrap" style={{ margin: '2px 0' }}>
+          <span class="faint">
+            {RARITY_INFO[m.rarity].name} · {ROLE_INFO[m.role].icon} {ROLE_INFO[m.role].name}
+          </span>
+          {isExpeditionMob && (
+            <span class="tag" style={{ color: '#00e5ff', borderColor: 'rgba(0,229,255,0.5)', background: 'rgba(0,229,255,0.1)' }}>
+              遗迹远征
+            </span>
+          )}
+          {m.boss && (
+            <span class="tag" style={{ color: '#ffd166', borderColor: 'rgba(255,209,102,0.5)', background: 'rgba(255,209,102,0.1)' }}>
+              首领{m.skill.desc.includes('破势') ? ' · 支持破势' : ''}
+            </span>
+          )}
         </div>
         {known ? (
           <>
@@ -269,15 +352,21 @@ function MobsTab({ discovered }: { discovered: string[] }) {
                 <tbody>
                   <tr>
                     <td>数量</td>
-                    {[1, 2, 3].map((s) => <td key={s}>×{unitCount(m, s)}</td>)}
+                    {[1, 2, 3].map((s) => (
+                      <td key={s}>×{unitCount(m, s)}</td>
+                    ))}
                   </tr>
                   <tr>
                     <td>生命</td>
-                    {[1, 2, 3].map((s) => <td key={s}>{Math.round(m.hp * starStatMul(m, s))}</td>)}
+                    {[1, 2, 3].map((s) => (
+                      <td key={s}>{Math.round(m.hp * starStatMul(m, s))}</td>
+                    ))}
                   </tr>
                   <tr>
                     <td>攻击</td>
-                    {[1, 2, 3].map((s) => <td key={s}>{Math.round(m.atk * starStatMul(m, s))}</td>)}
+                    {[1, 2, 3].map((s) => (
+                      <td key={s}>{Math.round(m.atk * starStatMul(m, s))}</td>
+                    ))}
                   </tr>
                 </tbody>
               </table>
@@ -288,29 +377,210 @@ function MobsTab({ discovered }: { discovered: string[] }) {
             </div>
             <div class="md-skill">
               <span class="gold-t">【{m.skill.name}】</span>
-              {m.skill.desc}
+              <RichText text={m.skill.desc} />
             </div>
-            {m.star3 && <div class="md-star3">★3：{m.star3}</div>}
+            {m.star3 && (
+              <div class="md-star3">
+                ★3：<RichText text={m.star3} />
+              </div>
+            )}
             <div class="md-flavor faint">「{m.flavor}」</div>
             {!m.hidden && (
               <div class="faint" style={{ fontSize: 13 }}>
-                出现于：{CRATES.filter((c) => RARITIES.some((r) => c.pool[r].includes(m.id))).map((c) => c.name).join('、')}
+                出现于：
+                {CRATES.filter((c) => RARITIES.some((r) => c.pool[r].includes(m.id)))
+                  .map((c) => c.name)
+                  .join('、') || '遗迹远征补给箱'}
               </div>
             )}
           </>
         ) : (
-          <div class="faint" style={{ marginTop: 20 }}>开出这只生物后解锁详细信息。</div>
+          <div class="faint" style={{ marginTop: 20 }}>
+            开出这只生物后解锁详细信息。
+          </div>
         )}
       </div>
     </div>
   );
 }
 
+type RelicFilter = 'all' | 'regular' | 'synergy' | 'expedition' | 'boss';
+const RELIC_FILTERS: [RelicFilter, string][] = [
+  ['all', '全部'],
+  ['regular', '基础常规'],
+  ['synergy', '流派与统领'],
+  ['expedition', '遗迹远征'],
+  ['boss', '首领战利品'],
+];
+
+function RelicsTab({ seen }: { seen: string[] }) {
+  const [filter, setFilter] = useState<RelicFilter>('all');
+
+  const filtered = RELICS.filter((r) => {
+    const isExpedition = EXPEDITION_RELIC_IDS.has(r.id);
+    if (filter === 'boss') return r.tier === 'boss';
+    if (filter === 'expedition') return isExpedition;
+    if (filter === 'synergy') return !isExpedition && (!!r.tag || !!r.commander) && r.tier !== 'boss';
+    if (filter === 'regular') return !isExpedition && !r.tag && !r.commander && r.tier !== 'boss';
+    return true;
+  });
+
+  const discoveredCount = filtered.filter((r) => seen.includes(r.id)).length;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10 }}>
+      <div class="row between center wrap" style={{ flexShrink: 0, gap: 8 }}>
+        <div class="row gap8 wrap">
+          {RELIC_FILTERS.map(([k, label]) => (
+            <button
+              key={k}
+              class={`mc-btn ${filter === k ? 'gold' : ''}`}
+              style={{ padding: '3px 12px', fontSize: 14 }}
+              onClick={() => (sfx('click', { vol: 0.4 }), setFilter(k))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div class="faint" style={{ fontSize: 14 }}>
+          已解锁 {discoveredCount}/{filtered.length}
+        </div>
+      </div>
+      <div class="codex-grid relics" style={{ flex: 1, overflowY: 'auto' }}>
+        {filtered.map((r) => {
+          const isSeen = seen.includes(r.id);
+          const isExpedition = EXPEDITION_RELIC_IDS.has(r.id);
+          return (
+            <Tip
+              key={r.id}
+              content={() =>
+                isSeen ? (
+                  <RelicTipContent id={r.id} />
+                ) : (
+                  <div class="tt-gray">
+                    尚未获得{r.commander ? ` · ${COMMANDER_MAP[r.commander].name}专属` : isExpedition ? ' · 遗迹远征' : ''}
+                  </div>
+                )
+              }
+              class={`codex-relic ${isSeen ? '' : 'unseen'}`}
+            >
+              <img src={url.icon(r.icon ?? r.id)} class="pixelated" />
+              <div style={{ color: isSeen ? RELIC_TIER_INFO[r.tier].color : '#555' }}>
+                {isSeen ? r.name : '？？？'}
+              </div>
+              {(r.tag || r.commander || isExpedition || r.tier === 'boss') && (
+                <div class="faint" style={{ fontSize: 11, color: isExpedition ? '#00e5ff' : r.tier === 'boss' ? '#ff6060' : undefined }}>
+                  {r.commander ? `${COMMANDER_MAP[r.commander].name}专属` : isExpedition ? (r.tag ? `${r.tag} · 远征` : '遗迹远征') : r.tier === 'boss' ? '首领' : r.tag}
+                </div>
+              )}
+            </Tip>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EnchantsTab() {
+  const [filter, setFilter] = useState<'all' | 'classic' | 'expedition'>('all');
+
+  return (
+    <div class="codex-cols">
+      <div>
+        <div class="tp-sec">附魔书（每张卡牌 1 个，同名合成升级 I → III）</div>
+        {ENCHANTS.map((e) => (
+          <div key={e.id} class="codex-line">
+            <img src={url.icon('enchanted_book')} class="pixelated" />
+            <span style={{ color: e.color, minWidth: 120 }}>{e.name}</span>
+            <span class="subtle">
+              {e.text.replace(/\{(\d)\}/g, (_, k) => e.vals[Number(k)].join('/'))}
+              {e.only && <span class="faint">（仅{e.only === 'melee' ? '近战' : '远程'}）</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div class="row between center wrap" style={{ marginBottom: 4, gap: 6 }}>
+          <div class="tp-sec" style={{ margin: 0 }}>战斗物品（战斗中从物品栏使用，一次性）</div>
+          <div class="row gap4">
+            {(
+              [
+                ['all', '全部'],
+                ['classic', '经典'],
+                ['expedition', '远征 (V3.3–3.4)'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                class={`mc-btn ${filter === k ? 'gold' : ''}`}
+                style={{ padding: '1px 8px', fontSize: 12 }}
+                onClick={() => setFilter(k)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(['drink', 'splash', 'lingering', 'tool', 'egg'] as const).map((k) => {
+          const list = POTIONS.filter((e) => {
+            if (e.kind !== k) return false;
+            const isExp = EXPEDITION_ITEM_IDS.has(e.id);
+            if (filter === 'classic') return !isExp;
+            if (filter === 'expedition') return isExp;
+            return true;
+          });
+          if (list.length === 0) return null;
+          return (
+            <div key={k}>
+              <div class="faint" style={{ fontSize: 13, margin: '6px 0 2px' }}>
+                {ITEM_KIND_NAME[k]} <span style={{ fontSize: 11 }}>({list.length})</span>
+              </div>
+              {list.map((e) => {
+                const isExp = EXPEDITION_ITEM_IDS.has(e.id);
+                const hasPosture = e.desc.includes('破势');
+                return (
+                  <div key={e.id} class="codex-line">
+                    <img src={itemIcon(e.id)} class="pixelated" />
+                    <span style={{ color: e.color, minWidth: 120, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {e.name}
+                      {isExp && (
+                        <span class="tag" style={{ color: '#00e5ff', fontSize: 10, padding: '0 4px', borderColor: 'rgba(0,229,255,0.4)', background: 'rgba(0,229,255,0.1)' }}>
+                          远征
+                        </span>
+                      )}
+                      {hasPosture && (
+                        <span class="tag" style={{ color: '#ffd166', fontSize: 10, padding: '0 4px', borderColor: 'rgba(255,209,102,0.4)', background: 'rgba(255,209,102,0.1)' }}>
+                          破势
+                        </span>
+                      )}
+                    </span>
+                    <span class="subtle">
+                      <RichText text={e.desc} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const RULES: [string, string[]][] = [
-  ['核心循环', [
+  ['核心循环与七幕远征', [
     '开箱获得生物卡牌 → 战前在地形上布阵 → 双方全自动混战 → 胜利后挑选补给箱 → 沿地图向上攀爬。',
-    '三幕：主世界 → 下界 → 末地，每幕顶端有首领。击败首领出战栏位 +1，并获得一件首领宝物。',
-    '击败末影龙后可以选择踏入裂隙，进入可选的第四幕「筛界」（更难，敌人全是筛界生物）；在筛界倒下也算通关，击败幽匿巨像有额外分数与成就。',
+    '经典前四幕：主世界 → 下界 → 末地 → 筛界。击败各幕顶端首领出战栏位逐步扩充（第 1 幕击败后为 4 卡，第 2 幕 5 卡，第 3 幕 6 卡），并奖励一件强力首领宝物。',
+    '击败末影龙后可进入第四幕「筛界」（敌人全是筛界生物）；击败幽匿巨像有额外专属积分与成就。',
+    '遗迹远征（第 5~7 幕）：突破第四幕筛界后，队伍将挺进更深邃的失落遗迹（第 5 幕 遗迹深潜、第 6 幕 堡垒/神殿、第 7 幕 破碎城堡）。出战栏位最大可扩充至 7 张生物卡，全屏军团与远古灾厄正面对决！',
+  ]],
+  ['远征机制与首领破势', [
+    '队伍扩容至 7 卡：在远征军备支持下，队伍规模突破至 6~7 张生物卡，可组合更宏大的阵型与多重羁绊。',
+    '首领蓄势与破势打断：远征首领（无名者、红石巨兽、腐化坩埚、远古石卫、复仇之心等）施放毁灭绝招前会有 2.4 秒公开【蓄势】吟唱条。在此期间遭受攻击、重击或控制道具可累积【破势】槽，满 100 破势打断绝招并使首领瘫痪 2.5 秒！',
+    '首领专属战利品：包含 18 件远征首领专属宝物（如寒霜镰刀、暗影行者护甲、覆壳锚、珊瑚剑、机械锯刃、疾风战备等），提供极端强大的流派构筑机制。',
+    '灵魂收集与战术军备：新一代远征法杖与遗物（灵魂容器、腐化信标、收割者、虚空箭袋等）支持收集阵亡单位灵魂，并在充盈时释放强力全屏法术轰炸。',
   ]],
   ['不祥之兆（难度）', [
     '普通难度通关后解锁「不祥之兆」挑战等级 I~V，参考杀戮尖塔的进阶：每一级保留之前的全部规则，再加上新的规则。',

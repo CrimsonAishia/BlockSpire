@@ -168,6 +168,8 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a3e_void_watch', '回响凝视', 3, 'elite', undefined, [['drowned_necromancer', 2, 'back'], ['wraith', 1, 'mid'], ['shulker', 2, 'back']]),
   E('a1b_nameless', '首领 · 无名者', 1, 'boss', undefined, [['nameless_one', 1, 'back'], ['skeleton_vanguard', 1, 'front']]),
   E('a2b_redstone_monstrosity', '首领 · 红石巨兽', 2, 'boss', undefined, [['redstone_monstrosity', 1, 'front'], ['blaze', 1, 'back']]),
+  E('a2e_cauldron_trial', '腐化药剂试炼', 2, 'elite', undefined, [['corrupted_cauldron', 1, 'back'], ['slime', 2, 'front']], '坩埚翻滚着腐化药剂，泥泞酸蚀不断蔓延。'),
+  E('a3e_ancient_warden', '远古契约守卫', 3, 'elite', undefined, [['ancient_warden', 1, 'front'], ['royal_guard', 2, 'front'], ['geomancer', 1, 'back']], '远古契约沉睡的重装石卫，挥舞巨斧守护遗迹。'),
 
   // ───── 第五幕 · 遗迹远征 (孤独堡垒 / 蔓生神殿 / 深渊纪念碑) ─────
   E('a5_frost_zombies', '霜封走卒', 5, 'battle', 0, [['baby_zombie', 2, 'front'], ['stray', 2, 'back'], ['skeleton', 2, 'back']]),

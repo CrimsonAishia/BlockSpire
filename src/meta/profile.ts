@@ -234,6 +234,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     ['capture_rare', '驯兽大师', '用亚历克斯收服一只隐秘级或罕见特殊生物。'],
     ['witch_potions', '药罐子', '用女巫在单局中喝掉、扔出 15 瓶药水。'],
     ['star3_5', '全员三星', '5 张出战卡牌全部升至 ★3。'],
+    ['team_seven', '千军万马', '部署 7 张卡牌全满编队出战。'],
+    ['break_posture', '破势一击', '在一场首领战中成功触发【破势】打断首领技能。'],
     ['gold_star3', '传说降临', '将一张罕见特殊（金色）卡牌升至 ★3。'],
     ['no_loss', '完美爬塔', '一场战斗都不输，击败末影龙。'],
     ['no_items', '赤手空拳', '整局不使用任何战斗物品，击败末影龙。'],
@@ -273,6 +275,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     ['night_owl', '夜猫子', '在凌晨 0 点到 5 点之间结束一局爬塔。', '屠龙不分昼夜。'],
     ['reach_sift', '裂隙另一边', '踏入第四幕：筛界。', '末影龙倒下之后，故事还没有结束。'],
     ['beat_sift', '筛界征服者', '在第四幕击败幽匿巨像。', '去裂隙的尽头看看。'],
+    ['reach_expedition', '踏入远征', '踏入第五幕：遗迹远征。', '去探访深邃的古老地下城遗迹。'],
+    ['beat_warden', '远古誓约', '击败远古契约守卫。', '沉睡的重装石卫重新倒下。'],
+    ['beat_heart', '终焉救赎', '在第七幕击败首领 · 复仇之心。', '彻底粉碎虚空废墟的核心意志。'],
     ['classic_reverse', '让二追三', '竞技场五局三胜中，一方在 0 : 2 落后时连赢三局。', '0 : 2 落后，也别急着离场。'],
     ['classic_gods', '神仙打架', '竞技场随机抽取时，红蓝双方都开出了罕见特殊（金色）生物。', '一方开出金色已经很难得了，如果两边都……'],
   ]),
@@ -316,6 +321,11 @@ export function checkProgress(p: Profile, s: RunState | null): { achievements: s
     give('witch_potions', s.commander === 'witch' && (s.stats.potionsUsed ?? 0) >= 15);
     give('unlucky', (s.stats.blueBest ?? 0) >= 10);
     give('reach_sift', s.act >= 4);
+    give('reach_expedition', s.act >= 5);
+    give('team_seven', s.team.length >= 7);
+    give('beat_heart', s.won && s.act >= 7);
+    give('beat_warden', !!(s.stats as any).beat_warden);
+    give('break_posture', !!(s.stats as any).break_posture);
     // Bosses: the first one depends on the run; the 2nd is the Wither and the 3rd the dragon.
     const bosses = s.stats.bossesWon;
     if (bosses >= 1) give(s.bosses[0] === 'a1b_raid' ? 'beat_raid' : 'beat_monument', true);

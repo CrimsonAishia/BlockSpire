@@ -188,6 +188,7 @@ export class Battle {
   maxSouls: [number, number] = [30, 30];
   soulLock: [number, number] = [0, 0];
   soulEnemyKills: [number, number] = [0, 0];
+  soulGained: [number, number] = [0, 0];
   hasSoulMechanic: [boolean, boolean] = [false, false];
 
   constructor(cfg: BattleConfig) {
@@ -211,7 +212,10 @@ export class Battle {
     })) as unknown as [SideState, SideState];
 
     for (const team of [0, 1] as const) {
-      if (this.has(team, 'soul_vessel')) this.maxSouls[team] = 36;
+      if (this.has(team, 'soul_vessel')) {
+        this.maxSouls[team] = 36;
+        this.souls[team] = Math.min(6, this.souls[team] + 4);
+      }
       if (this.has(team, 'corrupted_beacon_core') || this.has(team, 'soul_vessel')) {
         this.hasSoulMechanic[team] = true;
       }
@@ -496,12 +500,12 @@ export class Battle {
 
   addSouls(team: 0 | 1, amount: number) {
     if (amount <= 0) return;
-    const before = this.souls[team];
     this.souls[team] = Math.min(this.maxSouls[team], this.souls[team] + amount);
-    if (this.has(team, 'soul_vessel') && before < 24 && this.souls[team] >= 24 && !this.sides[team].timers['soul_vessel_proc']) {
+    this.soulGained[team] = (this.soulGained[team] ?? 0) + amount;
+    if (this.has(team, 'soul_vessel') && !this.sides[team].timers['soul_vessel_proc'] && this.soulGained[team] >= 12) {
       this.sides[team].timers['soul_vessel_proc'] = 1;
-      this.souls[team] = Math.min(this.maxSouls[team], this.souls[team] + 6);
-      this.emit({ k: 'text', x: team === 0 ? 50 : ARENA_W - 50, y: ARENA_D / 2, z: 30, s: '灵魂容器 +6!', color: '#00d2d3' });
+      this.souls[team] = Math.min(this.maxSouls[team], this.souls[team] + 4);
+      this.emit({ k: 'text', x: team === 0 ? 50 : ARENA_W - 50, y: ARENA_D / 2, z: 30, s: '灵魂容器 +4!', color: '#00d2d3' });
     }
   }
 
@@ -513,17 +517,27 @@ export class Battle {
     foes.sort((a, b) => Math.hypot(a.x - rearX, a.y - rearY) - Math.hypot(b.x - rearX, b.y - rearY));
     const target = foes[0];
     const allies = this.live[team].filter((a) => a.alive && !a.structure && !a.isSummon);
-    const avgAtk = allies.length > 0 ? allies.reduce((sum, a) => sum + this.atkOf(a), 0) / allies.length : 20;
+    if (allies.length === 0) return;
+
+    // 两张最高基础攻击预算的原生输出卡合计（四跳分摊总计 160%）
+    const cardAtkMap = new Map<number, number>();
+    for (const a of allies) {
+      cardAtkMap.set(a.card, (cardAtkMap.get(a.card) ?? 0) + a.atk);
+    }
+    const sortedAtks = Array.from(cardAtkMap.values()).sort((a, b) => b - a);
+    const top2A = (sortedAtks[0] ?? 20) + (sortedAtks[1] ?? 0);
+    const tickDmg = top2A * 0.40;
+
     this.emit({ k: 'beam', a: { x: rearX, y: rearY, gz: 0, z: 20 } as any, b: target, color: '#bd00ff', t: 2.0 });
     this.emit({ k: 'sfx', id: 'laser' });
     for (let step = 0; step < 4; step++) {
       this.addTimedAction(step * 0.5, () => {
-        if (!this.over) {
+        if (!this.over && target.alive) {
           let count = 0;
           this.aoe(target.x, target.y, 75, team, (e) => {
             if (count >= 4) return;
             count++;
-            this.damage(null, e, avgAtk * 0.4, 'magic', { noCrit: true });
+            this.damage(null, e, tickDmg, 'magic', { noCrit: true });
           });
         }
       });
@@ -1617,6 +1631,9 @@ export class Battle {
             this.aoe(d.x, d.y, d.r, d.team, (e) => {
               this.damage(d.src, e, d.dmg, 'magic', { noCrit: true });
               this.knock(e, d.x, d.y, 25);
+              if (e.boss && e.channeling) {
+                this.addPosture(e, 20);
+              }
               if (d.src && d.src.star >= 3) {
                 this.slow(e, 0.2, 0, 2);
               }
@@ -1626,6 +1643,9 @@ export class Battle {
             this.emit({ k: 'sfx', id: 'potion_break', v: 0.6 });
             this.aoe(d.x, d.y, d.r, d.team, (e) => {
               this.damage(d.src, e, d.dmg, 'magic', { noCrit: true });
+              if (e.boss && e.channeling) {
+                this.addPosture(e, 25);
+              }
               this.slow(e, 0.20, (d.src && d.src.star >= 3) ? 0.10 : 0, 2);
             });
           } else if (d.kind === 'tnt') {
@@ -1920,7 +1940,7 @@ export class Battle {
         once(`mycelium_${at}`, at, () => {
           this.emit({ k: 'text', x: this.rowX(team, 'front'), y: ARENA_D / 2, z: 90, s: '迅捷菌丝!', color: '#2ed573' });
           for (const u of live) {
-            if (!u.structure && !u.isSummon && u.row === 'front') {
+            if (!u.structure && !u.isSummon && !u.isRanged) {
               u.atkSpd *= 1.25;
               this.addTimedAction(7, () => { if (u.alive) u.atkSpd /= 1.25; });
             }
@@ -1930,14 +1950,26 @@ export class Battle {
     }
 
     if (this.has(team, 'totem_grove')) {
-      every('totem_grove', 8, 8, () => {
-        const friendlies = live.filter((u) => !u.structure && !u.isSummon);
-        if (!friendlies.length) return;
-        friendlies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
-        for (let i = 0; i < Math.min(2, friendlies.length); i++) {
-          const a = friendlies[i];
-          this.heal(a, a.maxHp * 0.05, null);
-          this.emit({ k: 'heal', x: a.x, y: a.y, z: a.gz + a.z + a.size });
+      every('totem_grove', 8, 4, () => {
+        const cardDeficitMap = new Map<number, { units: Unit[]; deficit: number }>();
+        for (const u of live) {
+          if (!u.structure && !u.isSummon) {
+            const entry = cardDeficitMap.get(u.card) ?? { units: [], deficit: 0 };
+            entry.units.push(u);
+            entry.deficit += Math.max(0, u.maxHp - u.hp);
+            cardDeficitMap.set(u.card, entry);
+          }
+        }
+        const hurtCards = Array.from(cardDeficitMap.values()).filter((e) => e.deficit > 1);
+        if (!hurtCards.length) return;
+        hurtCards.sort((a, b) => b.deficit - a.deficit);
+        for (const cardEntry of hurtCards.slice(0, 2)) {
+          for (const a of cardEntry.units) {
+            if (a.alive) {
+              this.heal(a, a.maxHp * 0.08, null);
+              this.emit({ k: 'heal', x: a.x, y: a.y, z: a.gz + a.z + a.size });
+            }
+          }
         }
       });
     }
@@ -1970,11 +2002,11 @@ export class Battle {
       });
     }
 
-    if (this.has(team, 'corrupted_beacon_core') && this.souls[team] >= 12 && this.t >= this.soulLock[team]) {
+    if (this.has(team, 'corrupted_beacon_core') && this.souls[team] >= 8 && this.t >= this.soulLock[team]) {
       const used = s.timers['beacon_core_count'] ?? 0;
       const cd = s.timers['beacon_core_cd'] ?? 0;
       if (used < 3 && this.t >= cd) {
-        this.souls[team] -= 12;
+        this.souls[team] -= 8;
         this.soulLock[team] = this.t + 1.0;
         s.timers['beacon_core_count'] = used + 1;
         s.timers['beacon_core_cd'] = this.t + 12.0;
@@ -2139,13 +2171,17 @@ export class Battle {
     }
     if (this.has(t.team, 'iron_hide_amulet') && !t.structure && !t.isSummon && t.row === 'front') {
       const cardKey = `iron_hide_c${t.card}`;
-      if (!this.sides[t.team].timers[cardKey] && (t.hp - d) / t.maxHp < 0.40) {
-        this.sides[t.team].timers[cardKey] = 1;
+      const lastProc = this.sides[t.team].timers[cardKey] ?? 0;
+      const count = this.sides[t.team].timers[cardKey + '_count'] ?? 0;
+      if (count < 2 && (lastProc === 0 || this.t - lastProc >= 10) && (t.hp - d) / t.maxHp < 0.50) {
+        this.sides[t.team].timers[cardKey] = this.t;
+        this.sides[t.team].timers[cardKey + '_count'] = count + 1;
+        d *= 0.80;
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '铁皮护符!', color: '#95a5a6' });
         for (const a of this.live[t.team]) {
           if (a.card === t.card && a.alive && !a.structure) {
-            a.takenMul *= 0.85;
-            this.addTimedAction(4, () => { if (a.alive) a.takenMul /= 0.85; });
+            a.takenMul *= 0.80;
+            this.addTimedAction(4, () => { if (a.alive) a.takenMul /= 0.80; });
           }
         }
       }
@@ -2158,8 +2194,8 @@ export class Battle {
         for (const a of this.live[t.team]) {
           if (a.card === t.card && a.alive && !a.structure) {
             a.moveSpd *= 1.25;
-            a.shield = Math.min(a.maxHp * 0.3, a.shield + a.maxHp * 0.08);
-            this.addTimedAction(4, () => { if (a.alive) a.moveSpd /= 1.25; });
+            a.addSynergyShield('feather_knot', a.maxHp * 0.12, 3.0);
+            this.addTimedAction(3, () => { if (a.alive) a.moveSpd /= 1.25; });
           }
         }
       }
