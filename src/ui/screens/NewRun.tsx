@@ -214,7 +214,7 @@ function CommanderDetail({ id }: { id: string }) {
           {own.map((r) => (
             <Tip key={r.id} content={() => <RelicTipContent id={r.id} />}>
               <div class="cd-relic">
-                <img class="pixelated" src={url.icon(r.id)} />
+                <img class="pixelated" src={url.icon(r.icon ?? r.id)} />
                 <span>{r.name}</span>
               </div>
             </Tip>

@@ -13,7 +13,7 @@ function RelicTile({ id, onPick }: { id: string; onPick: () => void }) {
   return (
     <div class={`relic-tile tier-${r.tier}`} style={{ '--tc': t.color } as never} onClick={() => (sfx('relic'), onPick())}>
       <div class="rt-glow" />
-      <img src={url.icon(id)} class="pixelated float" />
+      <img src={url.icon(r.icon ?? id)} class="pixelated float" />
       <div class="rt-name" style={{ color: t.color }}>
         {r.name}
       </div>

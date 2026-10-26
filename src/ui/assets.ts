@@ -2,6 +2,7 @@
 import spriteMeta from '../generated/sprites.json';
 import sheetMeta from '../generated/sheets.json';
 import { MOB_MAP, spriteOf } from '../data/mobs.ts';
+import { RELIC_MAP, POTION_MAP } from '../data/items.ts';
 
 const BASE = import.meta.env.BASE_URL;
 const META = spriteMeta as Record<string, { w: number; h: number; ar: number }>;
@@ -43,7 +44,8 @@ export function sheetFor(id: string, tier: FrameTier): { url: string; meta: Shee
 
 export const url = {
   mob: (id: string) => `${BASE}assets/mobs/${MOB_MAP[id] ? spriteOf(MOB_MAP[id]) : id}.webp`,
-  icon: (id: string) => `${BASE}assets/icons/${id}.webp`,
+  icon: (id: string) => `${BASE}assets/icons/${RELIC_MAP[id]?.icon ?? POTION_MAP[id]?.icon ?? id}.webp`,
+  relic: (id: string) => `${BASE}assets/icons/${RELIC_MAP[id]?.icon ?? id}.webp`,
   crate: (id: string) => `${BASE}assets/crates/${id}.webp`,
   cmd: (id: string) => `${BASE}assets/commanders/${id}.webp`,
   bg: (id: string) => `${BASE}assets/bg/${id}.jpg`,

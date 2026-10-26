@@ -91,9 +91,9 @@ function Boot() {
       const rest = [
         ...MOBS.map((m) => url.mob(m.id)).filter((v, i, a) => a.indexOf(v) === i),
         ...CRATES.map((c) => url.crate(c.id)),
-        ...RELICS.map((r) => url.icon(r.id)),
-        ...POTIONS.map((p) => url.icon(`potion_${p.id}`)),
-        ...['enchanted_book', 'node_battle', 'node_elite', 'node_shop', 'node_event', 'node_rest', 'node_treasure', 'node_boss', 'smithing', 'bed', 'golden_apple'].map(url.icon),
+        ...RELICS.map((r) => url.icon(r.icon ?? r.id)),
+        ...POTIONS.map((p) => url.icon(p.icon)),
+        ...['enchanted_book', 'node_battle', 'node_elite', 'node_shop', 'node_event', 'node_rest', 'node_treasure', 'node_boss', 'node_rift', 'smithing', 'bed', 'golden_apple'].map(url.icon),
         ...['netherrack', 'endstone'].map(url.tex),
         url.bg('arena_overworld'),
         url.bg('arena_nether'),

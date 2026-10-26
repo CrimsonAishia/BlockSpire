@@ -50,7 +50,7 @@ function itemView(s: RunState, it: ShopItem) {
         ),
       };
     case 'relic':
-      return { icon: url.icon(it.ref), name: RELIC_MAP[it.ref].name, sub: RELIC_MAP[it.ref].desc, color: RELIC_TIER_INFO[RELIC_MAP[it.ref].tier].color, tip: () => <RelicTipContent id={it.ref} /> };
+      return { icon: url.icon(RELIC_MAP[it.ref]?.icon ?? it.ref), name: RELIC_MAP[it.ref].name, sub: RELIC_MAP[it.ref].desc, color: RELIC_TIER_INFO[RELIC_MAP[it.ref].tier].color, tip: () => <RelicTipContent id={it.ref} /> };
     case 'heal':
       return { icon: url.icon('golden_apple'), name: '金胡萝卜', sub: '回复 1 颗心', color: '#ffcc33', tip: () => <div class="tt-line">回复 1 颗心。</div> };
     case 'upgrade':

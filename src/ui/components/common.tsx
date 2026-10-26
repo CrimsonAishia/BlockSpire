@@ -439,6 +439,11 @@ export function itemIcon(id: string) {
   return url.icon(POTION_MAP[id]?.icon ?? `potion_${id}`);
 }
 
+/** Icon URL for a relic. */
+export function relicIcon(id: string) {
+  return url.relic(id);
+}
+
 export function PotionTipContent({ id }: { id: string }) {
   const p = POTION_MAP[id];
   if (!p) return null;
