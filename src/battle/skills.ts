@@ -9,8 +9,8 @@ import { ARENA_W, baseFx, type Unit } from './unit.ts';
 export type SkillKind = BuildKind | 'tame' | 'golem';
 
 /** Flat effects grow with the act like enemy stats do. */
-export const ACT_K = [1, 1, 1.6, 2.4, 3];
-const SUMMON_K = [1, 1, 1.5, 2.1, 2.6];
+export const ACT_K = [1, 1, 1.6, 2.4, 3, 3.6, 4.2, 4.8];
+const SUMMON_K = [1, 1, 1.5, 2.1, 2.6, 3.2, 3.8, 4.4];
 
 /** A built wall segment (for cactus spikes, dispensers and noticing when it gets blown up). */
 export interface Wall {
@@ -92,7 +92,7 @@ export function build(b: Battle, team: 0 | 1, kind: BuildKind, x: number, y: num
 /** A dispenser on top of a wall: a small turret only ranged attackers can reach. */
 export function placeDispenser(b: Battle, w: Wall, preBattle: boolean) {
   const side = b.sides[w.team];
-  const k = ACT_K[side.plan.act] ?? 1;
+  const k = ACT_K[side.plan.act] ?? ACT_K[ACT_K.length - 1];
   const ci = b.addCard(w.team, {
     mob: 'dispenser', star: 1, row: 'back', count: 1, hpMul: k, atkMul: k, atkSpd: 1, moveSpd: 1, rangeMul: 1, armorAdd: 0, fx: baseFx(), immune: 0,
   });
@@ -110,7 +110,7 @@ export function tickWalls(b: Battle, team: 0 | 1, dt: number) {
   tm.cactus = (tm.cactus ?? 1) - dt;
   const prick = cactus && tm.cactus <= 0;
   if (prick) tm.cactus += 1;
-  const dmg = 12 * (ACT_K[b.sides[team].plan.act] ?? 1);
+  const dmg = 12 * (ACT_K[b.sides[team].plan.act] ?? ACT_K[ACT_K.length - 1]);
   for (const w of b.walls) {
     if (w.team !== team) continue;
     const standing = w.cells.filter((i) => t.f[i] === F.WALL || t.f[i] === F.OWALL || t.f[i] === F.CWALL);

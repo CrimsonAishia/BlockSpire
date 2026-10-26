@@ -166,6 +166,67 @@ export const CRATES: CrateDef[] = [
       gold: ['warden'],
     },
   },
+  // ───────────── V3.4 地下城远征 · 主题补给箱 ─────────────
+  {
+    id: 'lonely_fortress', name: '「霜封补给」补给箱', desc: '孤独堡垒的冰霜宝箱。偏向冰雪与反制读条。', theme: ['undead', 'beast'], act: 5, color: '#9acfe8', expedition: true,
+    pool: {
+      blue: ['baby_zombie', 'bat', 'zombie', 'skeleton'],
+      purple: ['snow_fox', 'pumpkin_turret', 'raven', 'stray', 'frostbite', 'polar_bear'],
+      pink: ['iceologer'],
+      red: ['iron_golem'],
+      gold: ['giant'],
+    },
+  },
+  {
+    id: 'overgrown_temple', name: '「藤木秘藏」补给箱', desc: '蔓生神殿的密林宝箱。偏向持续剧毒与近战接力。', theme: ['undead', 'beast'], act: 5, color: '#7cb67d', expedition: true,
+    pool: {
+      blue: ['jungle_zombie', 'spider', 'slime'],
+      purple: ['chicken_jockey', 'mooshroom', 'quick_vine', 'whisperer', 'ocelot'],
+      pink: ['parrot', 'panda', 'leaper'],
+      red: ['ravager', 'creaking'],
+      gold: ['giant'],
+    },
+  },
+  {
+    id: 'abyssal_monument', name: '「海晶军需」补给箱', desc: '深渊纪念碑的水底军需箱。偏向抗压续航与减速控制。', theme: ['aquatic', 'beast'], act: 5, color: '#65bfbb', expedition: true,
+    pool: {
+      blue: ['tropical_slime', 'pufferfish'],
+      purple: ['sunken_skeleton', 'glow_squid', 'dolphin', 'drowned'],
+      pink: ['gold_axolotl', 'turtle', 'guardian'],
+      red: ['elder_guardian', 'drowned_necromancer'],
+      gold: ['giant'],
+    },
+  },
+  {
+    id: 'nether_fortress', name: '「堡垒熔铸」补给箱', desc: '下界堡垒的重铸宝箱。偏向贯穿射击与单核护航。', theme: ['nether'], act: 6, color: '#db8c63', expedition: true,
+    pool: {
+      blue: ['piglin_swordsman', 'skeleton'],
+      purple: ['piglin_hunter', 'fungus_thrower', 'armored_piglin'],
+      pink: ['baby_ghast', 'blaze', 'ghast', 'wither_skeleton', 'magma_cube', 'piglin_brute'],
+      red: ['breeze', 'ravager'],
+      gold: ['wither'],
+    },
+  },
+  {
+    id: 'gale_sanctum', name: '「风印圣殿」补给箱', desc: '疾风圣殿的试炼宝箱。偏向重斧破势与位移牵制。', theme: ['illager', 'construct'], act: 6, color: '#c1b487', expedition: true,
+    pool: {
+      blue: ['goat', 'snow_golem', 'redstone_cube'],
+      purple: ['llama', 'skeleton_horseman', 'armored_mountaineer', 'mountaineer'],
+      pink: ['rampart_captain', 'squall_golem'],
+      red: ['windcaller', 'ravager'],
+      gold: ['giant'],
+    },
+  },
+  {
+    id: 'broken_citadel', name: '「紫晶堡垒」补给箱', desc: '破碎堡垒的虚空秘藏。偏向传送突击与灵魂续航。', theme: ['ender', 'undead'], act: 7, color: '#c89cdb', expedition: true,
+    pool: {
+      blue: ['endermite', 'silverfish'],
+      purple: ['blastling', 'snareling', 'enderling'],
+      pink: ['soul_wizard', 'tower_wraith', 'shulker', 'enderman'],
+      red: ['endersent'],
+      gold: ['giant'],
+    },
+  },
 ];
 export const CRATE_MAP: Record<string, CrateDef> = Object.fromEntries(CRATES.map((c) => [c.id, c]));
 

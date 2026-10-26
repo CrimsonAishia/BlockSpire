@@ -700,12 +700,18 @@ export const BOSS_BIOME: Record<string, string> = {
   a4b_monstrosity: 'sift_heart',
   a1b_nameless: 'desert_tomb',
   a2b_redstone_monstrosity: 'ember_forge',
+  a5b_wraith: 'ice_river',
+  a5b_abomination: 'jungle',
+  a5b_guardian: 'monument',
+  a6b_wildfire: 'fortress',
+  a6b_tempest: 'wind_canyon',
+  a7b_heart: 'void_ruins',
 };
 
 /** Picks a biome for a normal/elite fight: early floors favour simple terrain. */
 export function pickBiome(r: Rng, act: number, row: number): string {
   const pool = BIOMES.filter((b) => b.act === act && !b.boss && b.minRow <= row);
-  return r.pick(pool).id;
+  return pool.length ? r.pick(pool).id : r.pick(BIOMES.filter((b) => !b.boss)).id;
 }
 
 // ───────────────────────── Generation ─────────────────────────

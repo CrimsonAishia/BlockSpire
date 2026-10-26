@@ -202,6 +202,8 @@ export interface RunState {
   unlocked?: string[];
   /** Act theme variant (e.g. 'creeper_crossing', 'ember_forge', etc.) */
   actTheme?: string;
+  /** Visited act themes across the run for relic eligibility */
+  visitedThemes?: string[];
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -560,7 +562,20 @@ export function dynamicFormation(
 
   // Target cards based on Tier and Difficulty (Section 6.1)
   let targetCards = baseCards.length;
-  if (kind === 'elite') {
+  if (act >= 5) {
+    // Act 5-7: Expedition & Endgame (Player has 6 slots in Act 5, 7 slots in Act 6-7)
+    const isAct6Plus = act >= 6;
+    if (kind === 'elite') {
+      targetCards = isAct6Plus ? (pol.omen >= 3 ? 7 : 6) : (pol.omen >= 3 ? 6 : 5);
+    } else if (tier === 0) {
+      targetCards = isAct6Plus ? 5 : 4;
+    } else if (tier === 1) {
+      targetCards = isAct6Plus ? (pol.omen >= 2 ? 6 : 5) : (pol.omen >= 2 ? 5 : 4);
+    } else {
+      // tier === 2
+      targetCards = isAct6Plus ? (pol.omen >= 2 ? (pol.omen >= 4 ? 7 : 6) : 6) : (pol.omen >= 3 ? 6 : 5);
+    }
+  } else if (kind === 'elite') {
     if (pol.omen === 0) {
       targetCards = Math.max(3, Math.min(4, baseCards.length));
     } else if (pol.omen <= 2) {
@@ -1110,7 +1125,11 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       s.stats.elitesWon++;
       follow.push({ type: 'crates', title: '精英战利品：选择一个精良补给箱', offers: crateOffers(s, nOffers, 'elite'), skip: 15 });
       if (hasRelic(s, 'trial_key')) follow.push({ type: 'crates', title: '试炼钥匙：额外开箱', offers: crateOffers(s, 2, 'elite'), skip: 15 });
-      follow.push({ type: 'relic_choice', title: '选择一件宝物', choices: relicChoices(s, 3, ['common', 'rare', 'legendary']), skippable: true });
+      if (s.act >= 5) {
+        follow.push({ type: 'relic_choice', title: '首领战备：选择一件首领专属宝物', choices: relicChoices(s, 3, ['boss']), skippable: true });
+      } else {
+        follow.push({ type: 'relic_choice', title: '选择一件宝物', choices: relicChoices(s, 3, ['common', 'rare', 'legendary']), skippable: true });
+      }
     } else if (p.kind === 'boss') {
       // 不祥之兆 V 终局连续阶段 (Section 10.2)
       if (s.omen >= 5 && s.act === 3 && !p.endgamePhase2) {
@@ -1144,13 +1163,16 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       } else {
         s.stats.bossesWon++;
         follow.push({ type: 'crates', title: '首领战利品：传奇补给箱', offers: crateOffers(s, nOffers, 'boss'), skip: 20 });
-        const slotGained = s.act < 3;
-        if (slotGained) s.slots = Math.min(5, s.slots + 1);
+        const slotGained = s.act < 3 || s.act === 4 || s.act === 5;
+        if (slotGained) s.slots = Math.min(7, s.slots + 1);
         const healed = Math.min(2, s.maxHearts - s.hearts);
         s.hearts += healed;
-        follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
-        // After the dragon the rift to the Sift opens: an optional fourth act.
-        if (s.act < 4) follow.push({ type: 'act_intro', act: s.act + 1 });
+        if (s.act <= 4) {
+          follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
+        } else {
+          follow.push({ type: 'boss_reward', relics: [], slotGained: false, healed });
+        }
+        if (s.act < 7) follow.push({ type: 'act_intro', act: s.act + 1 });
         else follow.push({ type: 'victory' });
       }
     } else if (p.kind === 'event' && p.onWin) {
@@ -1257,10 +1279,22 @@ export function crateOffers(s: RunState, n: number, grade: CrateGrade): CrateOff
   });
 }
 
-/** Commander-exclusive relics only show up in that commander's runs. */
+const THEME_RELIC_MAP: Record<string, string> = {
+  frost_scythe: 'lonely_fortress',
+  vine_whip: 'overgrown_temple',
+  encrusted_anchor: 'abyssal_monument',
+  mechanical_saw: 'nether_fortress',
+  chill_gale_dagger: 'gale_sanctum',
+  unstable_robes: 'broken_citadel',
+};
+
+/** Commander-exclusive relics only show up in that commander's runs. Theme-exclusive boss relics only in matching acts. */
 export function relicFor(s: RunState, id: string) {
   const c = RELIC_MAP[id]?.commander;
-  return !c || c === s.commander;
+  if (c && c !== s.commander) return false;
+  const theme = THEME_RELIC_MAP[id];
+  if (theme && s.actTheme !== theme && !s.visitedThemes?.includes(theme)) return false;
+  return true;
 }
 
 export function relicChoices(s: RunState, n: number, tiers: RelicTier[]): string[] {
@@ -1824,8 +1858,37 @@ export function startAct(s: RunState, act: number) {
     s.actTheme = withRng(s, (r) => (r.chance(0.5) ? 'ember_forge' : undefined));
   } else if (act === 3) {
     s.actTheme = withRng(s, (r) => (r.chance(0.3) ? 'high_halls' : undefined));
+  } else if (act === 5) {
+    s.slots = Math.min(7, Math.max(s.slots, 6));
+    s.actTheme = withRng(s, (r) => r.pick(['lonely_fortress', 'overgrown_temple', 'abyssal_monument']));
+    if (!s.bosses[4]) {
+      const bossMap: Record<string, string> = {
+        lonely_fortress: 'a5b_wraith',
+        overgrown_temple: 'a5b_abomination',
+        abyssal_monument: 'a5b_guardian',
+      };
+      s.bosses[4] = bossMap[s.actTheme] ?? 'a5b_wraith';
+    }
+  } else if (act === 6) {
+    s.slots = Math.min(7, Math.max(s.slots, 7));
+    s.actTheme = withRng(s, (r) => r.pick(['nether_fortress', 'gale_sanctum']));
+    if (!s.bosses[5]) {
+      const bossMap: Record<string, string> = {
+        nether_fortress: 'a6b_wildfire',
+        gale_sanctum: 'a6b_tempest',
+      };
+      s.bosses[5] = bossMap[s.actTheme] ?? 'a6b_wildfire';
+    }
+  } else if (act === 7) {
+    s.slots = 7;
+    s.actTheme = 'broken_citadel';
+    if (!s.bosses[6]) s.bosses[6] = 'a7b_heart';
   } else {
     s.actTheme = undefined;
+  }
+  if (s.actTheme) {
+    s.visitedThemes = s.visitedThemes ?? [];
+    if (!s.visitedThemes.includes(s.actTheme)) s.visitedThemes.push(s.actTheme);
   }
   if (!s.bosses[act - 1]) s.bosses[act - 1] = 'a4b_monstrosity';
   // 歌者 showed the way: an extra relic on arrival in the Sift.

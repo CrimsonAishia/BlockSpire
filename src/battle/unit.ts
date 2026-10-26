@@ -214,6 +214,10 @@ export class Unit {
   lifespan = 0;
   structure = false;
   boss = false;
+  posture = 0;
+  postureMax = 100;
+  channeling = false;
+  channelT = 0;
   gen = 0;
   alpha = 1;
   fx: UnitFx;

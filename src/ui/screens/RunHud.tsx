@@ -7,7 +7,16 @@ import { sfx } from '../../audio/audio.ts';
 import { quitToTitle } from './RunView.tsx';
 import { useEffect } from 'preact/hooks';
 
-const ACT_NAMES = ['', '主世界', '下界', '末地', '筛界'];
+const ACT_NUMS = ['', '一', '二', '三', '四', '五', '六', '七'];
+const THEME_NAMES: Record<string, string> = {
+  lonely_fortress: '孤独堡垒',
+  overgrown_temple: '蔓生神殿',
+  abyssal_monument: '深渊纪念碑',
+  nether_fortress: '下界堡垒',
+  gale_sanctum: '疾风圣殿',
+  broken_citadel: '破碎堡垒',
+};
+const ACT_DEFAULT_NAMES = ['', '主世界', '下界', '末地', '筛界', '遗迹远征', '圣殿远征', '破碎堡垒'];
 
 export function RunHud({ s }: { s: RunState }) {
   const cmd = COMMANDER_MAP[s.commander];
@@ -75,7 +84,7 @@ export function RunHud({ s }: { s: RunState }) {
         {!s.relics.length && <span class="faint" style={{ fontSize: 14 }}>暂无宝物</span>}
       </div>
       <div class="hud-act">
-        <div class="act-name">第{['', '一', '二', '三', '四'][s.act]}幕 · {ACT_NAMES[s.act]}</div>
+        <div class="act-name">第{ACT_NUMS[s.act] ?? s.act}幕 · {(s.actTheme ? THEME_NAMES[s.actTheme] : null) ?? ACT_DEFAULT_NAMES[s.act] ?? `第${s.act}幕`}</div>
         <div class="faint" style={{ fontSize: 13 }}>
           {s.daily && <span class="gold-t">每日挑战 · </span>}第 {floor} 层 / 14
         </div>

@@ -1,4 +1,5 @@
 import type { S, F, Sky } from '../battle/terrain.ts';
+import { POST_SIFT_MAPS } from './postSiftMaps.ts';
 
 export interface DungeonsRegion {
   /** Inclusive left-half cell rectangle; mirrored onto the enemy half. */
@@ -82,5 +83,6 @@ export const DUNGEONS_MAPS: DungeonsMapDef[] = [
       point(7, 2, 'CHORUS', 3), point(12, 2, 'BOULDER', 2), point(8, 13, 'CHORUS', 2),
     ],
   },
+  ...POST_SIFT_MAPS,
 ];
 export const DUNGEONS_MAP_BY_ID = Object.fromEntries(DUNGEONS_MAPS.map(map => [map.id, map])) as Record<string, DungeonsMapDef>;

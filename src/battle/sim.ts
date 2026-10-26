@@ -2014,7 +2014,7 @@ export class Battle {
     t: Unit,
     amount: number,
     kind: DmgKind,
-    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj } = {},
+    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean } = {},
   ): number {
     if (!t.alive || amount <= 0 || t.ghost) return 0;
     if (!o.noDodge && kind !== 'dot') {
@@ -2078,6 +2078,29 @@ export class Battle {
       if (dh > 0) d *= 1 + Math.min(2, dh) * (src.isRanged ? 0.12 : 0.08);
     }
     if (t.glowT > 0) d *= 1.2;
+    // 集火标记 (parrot): 受到直伤 +18%
+    if (t.ab.focused > 0 && kind !== 'dot') d *= 1.18;
+    // 城垛队长 (rampart_captain): 投射物减伤 35%
+    if (o.proj && t.mob.id === 'rampart_captain') d *= t.star >= 3 ? 0.50 : 0.65;
+    // 披甲猪灵 (armored_piglin): 普通攻防减伤 10%
+    if (t.mob.id === 'armored_piglin' && (o.melee || o.proj)) d *= 0.90;
+    // 哞菇 (mooshroom): 蓄力期间减伤 20%
+    if (t.ab.charging > 0) d *= t.star >= 3 ? 0.65 : 0.80;
+    // 海龟 (turtle): 周围友军直接减伤 (范围直伤 -30%, 其他直伤 -12%)
+    if (kind !== 'dot') {
+      const turtle = this.live[t.team].find((a) => a.alive && a.mob.id === 'turtle' && Math.hypot(a.x - t.x, a.y - t.y) <= 60);
+      if (turtle) d *= (o.aoe || o.proj || o.fire) ? (turtle.star >= 3 ? 0.58 : 0.70) : (turtle.star >= 3 ? 0.82 : 0.88);
+    }
+    // 小恶魂 (baby_ghast): 为非召唤非建筑队友分担 20% 直伤
+    if (kind !== 'dot' && !t.structure && !t.isSummon && t.mob.id !== 'baby_ghast') {
+      const ghast = this.live[t.team].find((a) => a.alive && a.mob.id === 'baby_ghast');
+      if (ghast && ghast.hp > 1) {
+        const shareFrac = ghast.star >= 3 ? 0.28 : 0.20;
+        const shared = d * shareFrac;
+        d -= shared;
+        ghast.hp = Math.max(1, ghast.hp - shared);
+      }
+    }
     if ((t.poisonT > 0 || t.weakT > 0) && this.has((1 - t.team) as 0 | 1, 'fermented_eye')) d *= 1.2;
     if (t.freezeT > 0 && this.has((1 - t.team) as 0 | 1, 'blue_ice')) d *= 1.25;
     if (t.hpFrac > 0.5 && this.has(t.team, 'netherite_plate')) d *= 0.85;
@@ -2151,6 +2174,9 @@ export class Battle {
     }
     t.hp -= d;
     if (src) t.ref.lastHitBy = src;
+    if (t.boss && t.channeling && d > 0 && t.maxHp > 0) {
+      this.addPosture(t, (d / t.maxHp) * 2500);
+    }
     // Hurt flash with a short cooldown so constantly-hit units don't stay tinted.
     if (t.animHit <= -0.3) t.animHit = 0.12;
     const card = this.cards[t.card];
@@ -2355,6 +2381,13 @@ export class Battle {
   }
 
   private tickStatus(u: Unit, dt: number) {
+    if (u.channeling) {
+      u.channelT -= dt;
+      if (u.channelT <= 0) {
+        u.channeling = false;
+      }
+    }
+    if (u.ab.focused > 0) u.ab.focused = Math.max(0, u.ab.focused - dt);
     if (u.stunT > 0) u.stunT -= dt;
     if (u.levT > 0) u.levT -= dt;
     if (u.slowT > 0) u.slowT -= dt;
@@ -2496,6 +2529,19 @@ export class Battle {
       return;
     }
     t.stunT = Math.max(t.stunT, dur);
+  }
+
+  addPosture(t: Unit, amt: number) {
+    if (!t.boss || !t.channeling) return;
+    t.posture = Math.min(100, t.posture + amt);
+    if (t.posture >= 100) {
+      t.channeling = false;
+      t.channelT = 0;
+      t.stunT = Math.max(t.stunT, 2.5);
+      t.posture = 0;
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '破势达成！', color: '#ffc93c' });
+      this.emit({ k: 'sfx', id: 'anvil_land' });
+    }
   }
 
   knockup(t: Unit, dur: number) {

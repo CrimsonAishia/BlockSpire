@@ -168,15 +168,58 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a3e_void_watch', '回响凝视', 3, 'elite', undefined, [['drowned_necromancer', 2, 'back'], ['wraith', 1, 'mid'], ['shulker', 2, 'back']]),
   E('a1b_nameless', '首领 · 无名者', 1, 'boss', undefined, [['nameless_one', 1, 'back'], ['skeleton_vanguard', 1, 'front']]),
   E('a2b_redstone_monstrosity', '首领 · 红石巨兽', 2, 'boss', undefined, [['redstone_monstrosity', 1, 'front'], ['blaze', 1, 'back']]),
+
+  // ───── 第五幕 · 遗迹远征 (孤独堡垒 / 蔓生神殿 / 深渊纪念碑) ─────
+  E('a5_frost_zombies', '霜封走卒', 5, 'battle', 0, [['baby_zombie', 2, 'front'], ['stray', 2, 'back'], ['skeleton', 2, 'back']]),
+  E('a5_ice_beasts', '极地兽群', 5, 'battle', 1, [['snow_fox', 2, 'mid'], ['polar_bear', 2, 'front'], ['bat', 2, 'front']]),
+  E('a5_pumpkin_fort', '南瓜要塞', 5, 'battle', 2, [['pumpkin_turret', 2, 'back'], ['frostbite', 2, 'mid'], ['stray', 2, 'back']]),
+  E('a5e_iceologer', '霜冻主教', 5, 'elite', undefined, [['iceologer', 2, 'back'], ['polar_bear', 2, 'front'], ['baby_zombie', 2, 'mid']]),
+
+  E('a5_jungle_horde', '蔓生群落', 5, 'battle', 0, [['jungle_zombie', 2, 'front'], ['chicken_jockey', 2, 'front'], ['spider', 2, 'mid']]),
+  E('a5_beast_pack', '密林兽径', 5, 'battle', 1, [['mooshroom', 2, 'front'], ['ocelot', 2, 'mid'], ['parrot', 2, 'back']]),
+  E('a5_creeper_nest', '毒刺藤谷', 5, 'battle', 2, [['panda', 2, 'front'], ['quick_vine', 2, 'mid'], ['poison_quill_vine', 2, 'back']]),
+  E('a5e_abomination_vines', '巨兽盘踞', 5, 'elite', undefined, [['abomination_vine', 2, 'front'], ['whisperer', 2, 'mid'], ['leaper', 2, 'mid']]),
+
+  E('a5_abyssal_tide', '深渊涌浪', 5, 'battle', 0, [['tropical_slime', 2, 'front'], ['sunken_skeleton', 2, 'back'], ['drowned', 2, 'front']]),
+  E('a5_coral_patrol', '珊瑚暗哨', 5, 'battle', 1, [['pufferfish', 2, 'front'], ['dolphin', 2, 'front'], ['glow_squid', 2, 'back']]),
+  E('a5_guardian_shrine', '守卫祭坛', 5, 'battle', 2, [['guardian', 2, 'back'], ['gold_axolotl', 2, 'mid'], ['turtle', 2, 'front']]),
+  E('a5e_elder_depth', '海晶深潜卫', 5, 'elite', undefined, [['elder_guardian', 1, 'back'], ['drowned_necromancer', 2, 'back'], ['turtle', 2, 'front']]),
+
+  E('a5b_wraith', '首领 · 卑劣幽魂', 5, 'boss', undefined, [['wretched_wraith', 1, 'back'], ['polar_bear', 2, 'front'], ['iceologer', 1, 'back']], '霜冻峡湾深处的远古亡魂，列阵冰霜与刺骨严冬。'),
+  E('a5b_abomination', '首领 · 丛林巨兽', 5, 'boss', undefined, [['jungle_abomination', 1, 'front'], ['whisperer', 2, 'mid'], ['quick_vine', 2, 'mid']], '蔓生神殿由腐木与藤蔓纠缠而成的庞然巨物。'),
+  E('a5b_guardian', '首领 · 远古守护者', 5, 'boss', undefined, [['ancient_guardian', 1, 'mid'], ['guardian', 2, 'back'], ['turtle', 2, 'front']], '沉睡于深渊核心的远古海灵，射出毁灭黄光。'),
+
+  // ───── 第六幕 · 遗迹远征 (下界堡垒 / 疾风圣殿) ─────
+  E('a6_nether_patrol', '熔炉战队', 6, 'battle', 0, [['piglin_swordsman', 2, 'front'], ['piglin_hunter', 2, 'back'], ['magma_cube', 2, 'mid']]),
+  E('a6_fungus_blast', '真菌火线', 6, 'battle', 1, [['fungus_thrower', 2, 'back'], ['armored_piglin', 2, 'front'], ['blaze', 2, 'back']]),
+  E('a6_ghast_fleet', '恶魂浮空阵', 6, 'battle', 2, [['baby_ghast', 2, 'back'], ['ghast', 2, 'back'], ['wither_skeleton', 2, 'front']]),
+  E('a6e_piglin_stronghold', '堡垒督军', 6, 'elite', undefined, [['piglin_brute', 2, 'front'], ['armored_piglin', 2, 'front'], ['fungus_thrower', 2, 'back']]),
+
+  E('a6_gale_vanguard', '疾风重骑', 6, 'battle', 0, [['rampart_captain', 2, 'front'], ['skeleton_horseman', 2, 'back'], ['llama', 2, 'mid']]),
+  E('a6_storm_peak', '绝壁斧兵', 6, 'battle', 1, [['armored_mountaineer', 2, 'front'], ['mountaineer', 2, 'front'], ['goat', 2, 'mid']]),
+  E('a6_wind_barrage', '狂岚祭司', 6, 'battle', 2, [['squall_golem', 2, 'front'], ['windcaller', 2, 'back'], ['breeze', 1, 'mid']]),
+  E('a6e_storm_sanctum', '圣殿战团', 6, 'elite', undefined, [['tempest_golem', 1, 'mid'], ['rampart_captain', 2, 'front'], ['windcaller', 2, 'back']]),
+
+  E('a6b_wildfire', '首领 · 悬浮烈焰', 6, 'boss', undefined, [['wildfire', 1, 'mid'], ['piglin_brute', 2, 'front'], ['blaze', 2, 'back']], '四面烈焰护盾旋转的烈焰领主。'),
+  E('a6b_tempest', '首领 · 风暴傀儡', 6, 'boss', undefined, [['tempest_golem', 1, 'mid'], ['squall_golem', 2, 'front'], ['windcaller', 2, 'back']], '耸立在疾风峡谷之巅的风暴守卫。'),
+
+  // ───── 第七幕 · 破碎堡垒 ─────
+  E('a7_void_scouts', '虚空游骑', 7, 'battle', 0, [['blastling', 2, 'back'], ['snareling', 2, 'mid'], ['enderman', 2, 'front']]),
+  E('a7_shadow_circle', '暗影集会', 7, 'battle', 1, [['enderling', 2, 'mid'], ['soul_wizard', 2, 'back'], ['shulker', 2, 'back']]),
+  E('a7_spawner_horde', '黑石囚牢', 7, 'battle', 2, [['mob_spawner', 2, 'back'], ['tower_wraith', 2, 'back'], ['endersent', 2, 'front']]),
+  E('a7e_endersent_gate', '紫晶哨卫长', 7, 'elite', undefined, [['endersent', 2, 'front'], ['tower_wraith', 2, 'back'], ['shulker', 2, 'back']]),
+  E('a7b_heart', '首领 · 复仇之心', 7, 'boss', undefined, [['vengeful_heart', 1, 'back'], ['endersent', 2, 'front'], ['shulker', 2, 'back']], '支配虚空废墟的终焉意志。'),
 ];
 
 export const ENC_MAP: Record<string, EncounterDef> = Object.fromEntries(ENCOUNTERS.map((e) => [e.id, e]));
 
 /** Enemy stat multipliers by act and floor (0-based row). */
 export function enemyScales(act: number, row: number, kind: EncounterDef['kind']): { hp: number; atk: number } {
-  const base = [1, 0.82, 1.32, 1.9, 3.2][act];
+  const baseTable = [1, 0.82, 1.32, 1.9, 3.2, 3.8, 4.4, 5.0];
+  const base = baseTable[Math.min(baseTable.length - 1, act)] ?? 3.2;
   if (kind === 'boss') {
-    const boss = [1, 0.75, 0.88, 0.74, 1.3][act];
+    const bossTable = [1, 0.75, 0.88, 0.74, 1.3, 1.45, 1.6, 1.8];
+    const boss = bossTable[Math.min(bossTable.length - 1, act)] ?? 1.3;
     return { hp: boss, atk: boss };
   }
   // Four floors form a readable chapter: steady growth, then a visible step when the encounter tier changes.

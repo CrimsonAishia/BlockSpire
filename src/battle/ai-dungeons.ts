@@ -704,21 +704,20 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
     tick(u, b, dt) {
       const pillars = alliesOf(u, b).filter((a) => a.alive && a.mob.id === 'tempest_pillar');
       u.takenMul = Math.max(0.7, 1 - pillars.length * 0.1);
-      if (cool(u, 'tempest_lightning', dt, 7)) {
+      if (u.channeling) return;
+      if (cool(u, 'tempest_lightning', dt, 8)) {
         const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
         if (foes.length > 0) {
-          u.ab.tempest_lightning = 7;
+          u.ab.tempest_lightning = 8;
+          u.channeling = true;
+          u.channelT = 2.4;
+          u.posture = 0;
           const t = foes[0];
-          b.emit({ k: 'text', x: t.x, y: t.y, z: 30, s: '风暴神雷!', color: '#70a1ff' });
-          b.addDelayed({
-            t: 1.2,
-            x: t.x,
-            y: t.y,
-            r: 50,
-            dmg: b.atkOf(u) * 1.2,
-            team: u.team,
-            src: u,
-            kind: 'bolt',
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '风暴天雷蓄势中...', color: '#70a1ff' });
+          b.addTimedAction(2.4, () => {
+            if (!u.alive || u.stunT > 0 || !u.channeling || !t.alive) return;
+            b.emit({ k: 'text', x: t.x, y: t.y, z: 30, s: '风暴神雷爆发!', color: '#70a1ff' });
+            b.lightning(u, t.x, t.y, b.atkOf(u) * 1.6, 50);
           });
         } else {
           u.ab.tempest_lightning = 1.0;
@@ -733,29 +732,56 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
       b.shoot(u, t, 'chin_spike', b.atkOf(u), { special: 'magic' });
     },
     tick(u, b, dt) {
-      const cd = u.hp / u.maxHp < 0.5 ? 7 : 8;
-      if (cool(u, 'void_strike', dt, cd)) {
+      if (u.channeling) return;
+      const cd = u.hp / u.maxHp < 0.5 ? 7 : 9;
+      if (cool(u, 'void_strike', dt, cd) && !u.ref.charge) {
         const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-        if (foes.length === 0) {
-          u.ab.void_strike = 1.0;
-          return;
-        }
-        u.ab.void_strike = cd;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '虚空泯灭!', color: '#9b59b6' });
-        for (let i = 0; i < Math.min(2, foes.length); i++) {
-          const f = foes[i];
-          b.addDelayed({
-            t: 1.5,
-            x: f.x,
-            y: f.y,
-            r: 45,
-            dmg: b.atkOf(u) * 1.0,
-            team: u.team,
-            src: u,
-            kind: 'bolt',
+        if (foes.length > 0) {
+          u.ab.void_strike = cd;
+          u.channeling = true;
+          u.channelT = 2.4;
+          u.posture = 0;
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空泯灭蓄势中...', color: '#9b59b6' });
+          b.addTimedAction(2.4, () => {
+            if (!u.alive || u.stunT > 0 || !u.channeling) return;
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空泯灭爆发!', color: '#9b59b6' });
+            for (let i = 0; i < Math.min(2, foes.length); i++) {
+              const f = foes[i];
+              if (f.alive) {
+                b.addZone({ x: f.x, y: f.y, r: 45, dur: 4, dps: b.atkOf(u) * 0.3, kind: 'goo', team: u.team, src: u });
+              }
+            }
           });
+        } else {
+          u.ab.void_strike = 1.0;
         }
       }
+      // 阶段转换与冲撞：生命低于 65% 或 30% 时各冲撞突进一次
+      const hpFrac = u.hp / u.maxHp;
+      if (hpFrac <= 0.65 && !u.ref.charge65) {
+        u.ref.charge65 = true;
+        const target = foesOf(u, b).find((f) => f.alive && !f.structure);
+        if (target) {
+          startCharge(u, target, 40);
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空冲撞!', color: '#9b59b6' });
+          b.emit({ k: 'sfx', id: 'ram' });
+        }
+      }
+      if (hpFrac <= 0.30 && !u.ref.charge30) {
+        u.ref.charge30 = true;
+        const target = foesOf(u, b).find((f) => f.alive && !f.structure);
+        if (target) {
+          startCharge(u, target, 40);
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '终焉冲撞!', color: '#ff4757' });
+          b.emit({ k: 'sfx', id: 'ram' });
+        }
+      }
+    },
+    move(u, b, dt) {
+      if (u.ref.charge) {
+        return chargeMove(u, b, dt, { mul: 1.5, knock: 45, stun: 0.3, all: true, speed: 220 });
+      }
+      return false;
     },
   },
 

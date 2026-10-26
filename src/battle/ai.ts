@@ -7,11 +7,13 @@ import { S, cellX, cellY, hatesWater, idx, isBlocked } from './terrain.ts';
 import { TAC, bestLine, callout, countFoes, isBackliner, pushValue, safeDir } from './tactics.ts';
 import { MODERN } from './ai-modern.ts';
 import { DUNGEONS_BEHAVIORS } from './ai-dungeons.ts';
+import { POST_SIFT_BEHAVIORS } from './ai-post-sift.ts';
 
 export interface DamageOpts {
   proj?: boolean;
   melee?: boolean;
   fire?: boolean;
+  aoe?: boolean;
   projRef?: Proj;
 }
 
@@ -289,6 +291,7 @@ function sonic(u: Unit, t: Unit, b: Battle, len: number, width: number, dmg: num
 export const BEHAVIORS: Record<string, Behavior> = {
   ...MODERN,
   ...DUNGEONS_BEHAVIORS,
+  ...POST_SIFT_BEHAVIORS,
   default: {},
   vex: {},
 

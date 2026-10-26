@@ -7,7 +7,7 @@ import { BLOCK, F, GD, GW, S, SURFACE_INFO, cellX, cellY, hatesWater, idx, isBlo
 import { ARENA_D, ARENA_W, baseFx, type Unit } from './unit.ts';
 
 /** Flat item damage grows with the act like the enemies do. */
-const ACT_K = [1, 1, 1.6, 2.4, 3];
+const ACT_K = [1, 1, 1.6, 2.4, 3, 3.6, 4.2, 4.8];
 
 const undead = (u: Unit) => u.mob.families.includes('undead');
 
@@ -53,7 +53,7 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
   if (!def) return;
   const side = b.sides[team];
   const P = def.potion ? potionPower(b, team) : 1;
-  const K = ACT_K[side.plan.act] ?? 1;
+  const K = ACT_K[side.plan.act] ?? ACT_K[ACT_K.length - 1];
   const allies = b.live[team];
   const r = itemRadius(b, team, id) * BLOCK;
   const boom = (color: string, big = false) => b.emit({ k: 'boom', x, y, r, color, big });
