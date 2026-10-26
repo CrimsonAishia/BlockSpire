@@ -494,11 +494,31 @@ function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): Enco
   });
 }
 
+/**
+ * Linear difficulty ramp across acts and floors.
+ * Even on Omen 5, Act 1 serves as the developmental stage:
+ * - Act 1: Omen bonus scales linearly from 50% at row 0 to 70% at row 12 (boss).
+ * - Act 2: Omen bonus scales linearly from 75% at row 0 to 90% at row 12.
+ * - Act >= 3: 100% full release of Omen multipliers.
+ */
+export function actDifficultyRamp(act: number, row: number): number {
+  if (act >= 3) return 1.0;
+  const progress = Math.max(0, Math.min(1, row / 12));
+  if (act === 1) {
+    return 0.50 + 0.20 * progress;
+  }
+  // act === 2
+  return 0.75 + 0.15 * progress;
+}
+
 export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'event', row: number) {
   const sc = enemyScales(s.act, row, kind);
   const pol = difficultyPolicy(s.omen);
-  let hp = sc.hp * pol.hpMul;
-  let atk = sc.atk * pol.atkMul;
+  const ramp = s.omen > 0 ? actDifficultyRamp(s.act, row) : 1.0;
+  const hpMul = 1 + (pol.hpMul - 1) * ramp;
+  const atkMul = 1 + (pol.atkMul - 1) * ramp;
+  let hp = sc.hp * hpMul;
+  let atk = sc.atk * atkMul;
   if (hasRelic(s, 'ominous_bottle')) {
     hp *= 1.12;
     atk *= 1.12;
@@ -605,13 +625,13 @@ export function dynamicFormation(
     } else if (pol.omen === 2) {
       targetCards = rng.chance(0.4) ? 4 : 3;
     } else if (pol.omen === 3) {
-      targetCards = 4;
+      targetCards = act === 1 ? 3 : 4;
     } else if (pol.omen === 4) {
-      targetCards = act === 1 ? 4 : (rng.chance(0.20) ? 5 : 4);
+      targetCards = act === 1 ? 3 : (rng.chance(0.20) ? 5 : 4);
     } else {
-      // omen 5: In Act 1, cap at 4 cards (player has 3 slots).
+      // omen 5: In Act 1, keep 3 cards for fair 3v3 opening development (player has 3 slots).
       // In Act 2+, player has 4+ slots, allow 45%-50% 5 cards.
-      targetCards = act === 1 ? 4 : (rng.chance(act === 2 ? 0.45 : 0.50) ? 5 : 4);
+      targetCards = act === 1 ? 3 : (rng.chance(act === 2 ? 0.45 : 0.50) ? 5 : 4);
     }
   } else {
     // tier === 2
@@ -664,20 +684,11 @@ export function dynamicFormation(
 
   // Act-aware star-3 scaling:
   // Act 1 is the developmental incubator:
-  // - Tier 0 & Tier 1: no star-3 promotions (0%), ensuring early floors are pure development
-  // - Tier 2: gentle preview with low chance (capped at 1)
-  // - Elite: Gate 1 (row 5) has lower chance (25%/40%), Gate 2 (row 8-10) higher (50%/75%), capped at 1
+  // - Strictly 0% star-3 promotions across ALL encounters (Tier 0-2 and Elites),
+  //   capping all Act 1 enemies at star 2 so players can develop their core fairly.
   if (act === 1) {
-    if (tier === 0 || tier === 1) {
-      star3Chance = 0;
-      star3Cap = 0;
-    } else if (tier === 2) {
-      star3Chance = pol.omen >= 5 ? 0.35 : pol.omen === 4 ? 0.25 : 0.15;
-      star3Cap = Math.min(1, star3Cap);
-    } else if (kind === 'elite') {
-      star3Cap = 1;
-      star3Chance = row <= 6 ? (pol.omen >= 5 ? 0.40 : 0.25) : (pol.omen >= 5 ? 0.75 : 0.50);
-    }
+    star3Chance = 0;
+    star3Cap = 0;
   } else if (act === 2) {
     // Act 2: smooth difficulty recovery
     if (tier === 0) {

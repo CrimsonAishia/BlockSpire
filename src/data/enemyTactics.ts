@@ -63,7 +63,7 @@ export const ENEMY_TACTIC_MAP: Record<EnemyTacticId, EnemyTacticDef> = Object.fr
  *   - Tier 2 regular battles get 1 tactic preview (Omen 4: 35%, Omen 5: 50%).
  * - Act 2 (Smooth Transition & Difficulty Recovery):
  *   - Tier 0 regular battles get 1 tactic (Omen 4: 35%, Omen 5: 50%) to adapt to 4th slot.
- *   - Tier 1+ regular battles get 1 tactic (Omen 4: 65%, Omen 5: 100%).
+ *   - Tier 1+ regular battles get 1 tactic (Omen 3: 30%, Omen 4: 60%, Omen 5: 100%).
  *   - Elites restore dual tactics (Omen 4-5 get 2 tactics).
  * - Act >= 3 (Endgame Peak):
  *   - Full original intensity rules.
@@ -100,8 +100,8 @@ export function rollEnemyTactics(
         else if (omen >= 5) count = rng.chance(0.50) ? 1 : 0;
       } else {
         if (omen <= 2) count = 0;
-        else if (omen === 3) count = rng.chance(0.35) ? 1 : 0;
-        else if (omen === 4) count = rng.chance(0.65) ? 1 : 0;
+        else if (omen === 3) count = rng.chance(0.30) ? 1 : 0;
+        else if (omen === 4) count = rng.chance(0.60) ? 1 : 0;
         else if (omen >= 5) count = 1;
       }
     }
@@ -113,8 +113,8 @@ export function rollEnemyTactics(
       else count = 2; // omen 4, 5
     } else if (kind === 'battle' && tier >= 1) {
       if (omen <= 2) count = 0;
-      else if (omen === 3) count = rng.chance(0.35) ? 1 : 0;
-      else if (omen === 4) count = rng.chance(0.65) ? 1 : 0;
+      else if (omen === 3) count = rng.chance(0.30) ? 1 : 0;
+      else if (omen === 4) count = rng.chance(0.60) ? 1 : 0;
       else if (omen >= 5) count = 1;
     }
   }
