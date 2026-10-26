@@ -36,6 +36,8 @@ export interface UnitFx {
   firstHitMul: number;
   killAtk: number;
   vsHighHp: number;
+  executeLowHp: number;
+  executeLowHpTier2: number;
   vsBurning: number;
   revive: number;
   regen: number;
@@ -61,7 +63,7 @@ export function baseFx(): UnitFx {
   return {
     lifesteal: 0, thorns: 0, dodge: 0, projDodge: 0, burnHit: 0, burnDur: 0, poisonHit: 0, poisonDur: 0, poisonStacks: 1,
     knock: 0, stunChance: 0, sweep: 0, pierce: 0, multishot: 0, channel: 0, loot: 0, crit: 0, critMul: 1.75,
-    firstHitMul: 1, killAtk: 0, vsHighHp: 0, vsBurning: 0, revive: 0, regen: 0, dmgTaken: 1, projTaken: 1, fireTaken: 1,
+    firstHitMul: 1, killAtk: 0, vsHighHp: 0, executeLowHp: 0, executeLowHpTier2: 0, vsBurning: 0, revive: 0, regen: 0, dmgTaken: 1, projTaken: 1, fireTaken: 1,
     farBonus: 0, pearl: false, burnMul: 1, poisonMul: 1,
     vsUndead: 0, vsArthropod: 0, baneSlow: 0, breach: 0, density: 0, windBurst: 0, freezeHit: 0,
     enderNonDot: 0,

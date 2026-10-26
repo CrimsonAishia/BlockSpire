@@ -237,35 +237,50 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     const tier = (f: Family) => (has(f) && !m.boss && !m.structure ? (syn[f] ?? -1) : -1);
     const baseAtk = () => m.atk * starStatMul(m, c.star) * atkMul;
     if (tier('undead') >= 0) {
-      fx.lifesteal += tier('undead') >= 2 ? 0.22 : 0.16;
+      fx.lifesteal += tier('undead') >= 1 ? 0.20 : 0.15;
       hpMul *= 1.10;
     }
     if (tier('undead') >= 1) fx.revive = 1.0;
-    if (tier('arthropod') >= 0) atkSpd *= 1.25;
-    if (tier('arthropod') >= 1) {
+    if (tier('arthropod') >= 0) {
+      atkSpd *= 1.25;
       fx.poisonHit = Math.max(fx.poisonHit, Math.max(3, baseAtk() * 0.25));
       fx.poisonDur = 3;
-      fx.poisonStacks = Math.max(fx.poisonStacks, 3);
+      fx.poisonStacks = Math.max(fx.poisonStacks, tier('arthropod') >= 1 ? 5 : 3);
     }
-    if (tier('illager') >= 0) fx.vsHighHp = tier('illager') >= 2 ? 0.35 : 0.30;
-    if (tier('illager') >= 1) atkMul *= 1.10;
-    if (tier('illager') >= 2) atkSpd *= 1.15;
+    if (tier('illager') >= 0) {
+      fx.executeLowHp = 0.20;
+      fx.executeLowHpTier2 = 0.35;
+    }
+    if (tier('illager') >= 2) {
+      if (m.role === 'caster') atkSpd *= 1.20;
+      if (!ranged) fx.lifesteal += 0.15;
+    }
     if (tier('nether') >= 0) {
       immune |= IMM_BURN;
       fx.burnHit = Math.max(fx.burnHit, Math.max(4, baseAtk() * 0.25));
       fx.burnDur = Math.max(fx.burnDur, 2);
     }
-    if (tier('nether') >= 1) fx.vsBurning = 0.30;
+    if (tier('nether') >= 1) {
+      fx.vsBurning = 0.30;
+      fx.burnMul *= 1.5;
+      fx.lifesteal += 0.10;
+    }
     if (tier('ender') >= 0) {
-      fx.projDodge = 0.3;
-      fx.enderNonDot = 0.10;
+      fx.projDodge = 0.30;
+      fx.enderNonDot = 0.12;
+    }
+    if (tier('ender') >= 1) {
+      fx.projDodge = 0.40;
     }
     if (tier('construct') >= 0) armorAdd += 0.20;
     if (tier('beast') >= 0) {
-      moveSpd *= 1.15;
-      atkSpd *= 1.20;
+      moveSpd *= 1.20;
+      atkSpd *= 1.15;
     }
+    if (tier('beast') >= 1) fx.crit += 0.12;
+    if (tier('beast') >= 2) moveSpd *= 1.15;
     if (tier('aquatic') >= 0) fx.regen = 0.02;
+    if (tier('slime') >= 1) hpMul *= 1.20;
 
     // ── Commander ──
     if (ctx.commander === 'alex' && has('beast')) {

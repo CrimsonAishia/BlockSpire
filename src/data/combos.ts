@@ -21,7 +21,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'raid', name: '袭击队伍', color: '#c9c9c9',
     needs: [['ravager'], ILLAGERS],
-    desc: '开战 0.5 秒灾厄村民攻速 +15%（持续 4 秒）；劫掠兽每次咆哮，周围友方灾厄村民攻速 +30%（持续 4 秒）。',
+    desc: '开战 4 秒灾厄村民攻速 +15%（持续 4 秒）；劫掠兽每次咆哮，周围友方灾厄村民攻速 +30%（持续 4 秒）。',
   },
   {
     id: 'village_guard', name: '村庄卫队', color: '#e8e4dc',
