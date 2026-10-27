@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { MOBS, PLAYABLE_MOBS, RARITY_INFO, ROLE_INFO, mobDef, starStatMul, unitCount } from '../../data/mobs.ts';
+import { DEVELOPMENT_RULES, DIFFICULTY_POLICIES } from '../../data/difficulty.ts';
 import { CRATES } from '../../data/crates.ts';
 import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_TIER_INFO, COMMANDER_MAP, COMMANDERS } from '../../data/items.ts';
 import { FAMILY_LIST } from '../../data/families.ts';
@@ -594,8 +595,9 @@ const RULES: [string, string[]][] = [
   ]],
   ['不祥之兆（难度）', [
     '普通难度通关后解锁「不祥之兆」挑战等级 I~V，参考杀戮尖塔的进阶：每一级保留之前的全部规则，再加上新的规则。',
-    'I 精英出没：精英战更多、更早出现。II 精英词缀：精英战的敌人带再生、荆棘、迅捷、坚韧或嗜血之一。III 物资紧缺：少 1 颗心、物品栏 -1、商店涨价，普通战斗里有一张敌方卡牌带附魔。IV 精锐护卫：休息只回 1 颗心，精英战和首领战里也有附魔敌人。V 末日：首领半血时狂暴并召唤护卫。',
-    '每升一级敌人生命 +3%、攻击 +2%，但开箱也更幸运（+2%），得分 +20%。每位统领分别记录最高通关难度，并获得铜（I–II）、银（III–IV）、金（V）统领边框。',
+    'I 增加精英与编队协同；II 精英获得词缀与战术；III 开局少 1 颗心、商店涨价 10%，第二幕起出现必经精英；IV 物价上涨至 15%，后续精英固定双战术；V 首领半血狂暴，第三幕起双精英闸门与终局连战。',
+    DEVELOPMENT_RULES,
+    `不祥 III／IV／V 在统领原有资金之外，分别提供一次性起始补助 ${DIFFICULTY_POLICIES.slice(3).map((p) => p.startingEmeraldBonus).join('／')} 绿宝石。难度不会提高开箱幸运；各级敌方强化与通关积分倍率见出发界面。每位统领分别记录最高通关难度，并获得铜（I–II）、银（III–IV）、金（V）统领边框。`,
   ]],
   ['筛界（第四维度）', [
     '2026 年 Minecraft Live 公布的新维度：青色天空、粉色草甸、白骨树林和甲壳荒原。第二、三幕的地图上偶尔会出现「筛界裂隙」节点，胜利后可以开启只含筛界生物的「裂隙」补给箱。',

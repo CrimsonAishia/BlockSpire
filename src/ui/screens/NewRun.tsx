@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { COMMANDERS, COMMANDER_MAP, OMENS, RELICS, difficultyPolicy } from '../../data/items.ts';
+import { DEVELOPMENT_RULES } from '../../data/difficulty.ts';
 import { SKILL_INFO } from '../../data/commanders.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, HeartIcon, RelicTipContent, Tip } from '../components/common.tsx';
@@ -64,7 +65,7 @@ export function NewRun() {
                         <HeartIcon size={16} /> {hearts}
                       </span>
                       <span>
-                        <Emerald n={c.emeralds} size={16} />
+                        <Emerald n={c.emeralds + difficultyPolicy(omen).startingEmeraldBonus} size={16} />
                       </span>
                     </div>
                     <div class="cc-style">{c.style}</div>
@@ -148,8 +149,10 @@ export function NewRun() {
                       <span class="omen-stat-chip">💖 敌方生命 <b>+{Math.round((policy.hpMul - 1) * 100)}% + {Math.round(policy.dynamicStepRate * 100)}%/幕</b></span>
                       <span class="omen-stat-chip">⚔️ 敌方攻击 <b>+{Math.round((policy.atkMul - 1) * 100)}% + {Math.round(policy.dynamicStepRate * 100)}%/幕</b></span>
                       <span class="omen-stat-chip gold">🏆 通关积分 <b>+{Math.round((policy.scoreMul - 1) * 100)}%</b></span>
+                      {policy.startingEmeraldBonus > 0 && <span class="omen-stat-chip gold">💎 起始补助 <b>+{policy.startingEmeraldBonus}</b></span>}
                       <span class="omen-stat-sub">通关后解锁下一级并点亮该统领勋标</span>
                     </div>
+                    <div class="omen-stat-sub">{DEVELOPMENT_RULES}</div>
                   </>
                 )}
               </div>
@@ -202,7 +205,7 @@ function CommanderDetail({ id }: { id: string }) {
           </>
         )}
         <div class="cd-head" style={{ marginTop: c.mechanic ? 6 : 0 }}>
-          <span class="cd-tag">被动</span>
+          <span class="cd-tag">基础被动</span>
         </div>
         <div class="cd-text">{c.desc.join(' ')}</div>
       </div>

@@ -1,4 +1,4 @@
-export const DIFFICULTY_RULES_VERSION = 5;
+export const DIFFICULTY_RULES_VERSION = 6;
 
 export interface DifficultyPolicy {
   omen: 0 | 1 | 2 | 3 | 4 | 5;
@@ -16,6 +16,8 @@ export interface DifficultyPolicy {
   requiredEliteGates: number;
   star3Chance: { tier0: number; tier1: number; tier2: number; elite: number };
   star3Cap: { tier0: number; tier1: number; tier2: number; elite: number };
+  /** One-time starting grant, added to the commander's own emeralds. */
+  startingEmeraldBonus: number;
   shopPriceMul: number;
   restHeal: number;
   heartsPenalty: number;
@@ -54,6 +56,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 0,
     star3Chance: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
     star3Cap: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
+    startingEmeraldBonus: 0,
     shopPriceMul: 1.0,
     restHeal: 2,
     heartsPenalty: 0,
@@ -86,6 +89,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 0,
     star3Chance: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
     star3Cap: { tier0: 0, tier1: 0, tier2: 0, elite: 0 },
+    startingEmeraldBonus: 0,
     shopPriceMul: 1.0,
     restHeal: 2,
     heartsPenalty: 0,
@@ -124,6 +128,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 0,
     star3Chance: { tier0: 0, tier1: 0, tier2: 0.05, elite: 0.1 },
     star3Cap: { tier0: 0, tier1: 0, tier2: 1, elite: 1 },
+    startingEmeraldBonus: 0,
     shopPriceMul: 1.05,
     restHeal: 2,
     heartsPenalty: 0,
@@ -151,7 +156,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
   {
     omen: 3,
     name: '武装',
-    summary: '开局生命 -1，物价上涨 10%，每幕强制遭遇精英。',
+    summary: '开局生命 -1，物价上涨 10%，第二幕起存在必经精英。',
     dynamicStepRate: 0.03,
     hpMul: 1.275,
     atkMul: 1.15,
@@ -164,6 +169,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 1,
     star3Chance: { tier0: 0, tier1: 0.1, tier2: 0.3, elite: 0.5 },
     star3Cap: { tier0: 0, tier1: 1, tier2: 1, elite: 1 },
+    startingEmeraldBonus: 40,
     shopPriceMul: 1.10,
     restHeal: 2,
     heartsPenalty: 1,
@@ -197,7 +203,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
   {
     omen: 4,
     name: '围猎',
-    summary: '扎营恢复减半，普通战带战术，精英常驻双战术。',
+    summary: '物价上涨 15%，第二幕起精英双战术，首领与精英配备附魔。',
     dynamicStepRate: 0.04,
     hpMul: 1.375,
     atkMul: 1.2,
@@ -210,6 +216,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 1,
     star3Chance: { tier0: 0.05, tier1: 0.25, tier2: 0.55, elite: 0.75 },
     star3Cap: { tier0: 1, tier1: 1, tier2: 1, elite: 2 },
+    startingEmeraldBonus: 70,
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -260,6 +267,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 2,
     star3Chance: { tier0: 0.1, tier1: 0.45, tier2: 0.8, elite: 1.0 },
     star3Cap: { tier0: 1, tier1: 1, tier2: 2, elite: 2 },
+    startingEmeraldBonus: 100,
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -328,3 +336,25 @@ export function difficultyDynamicBonus(omen = 0, act = 1): number {
 export function omenDynamicRate(omen = 0): number {
   return difficultyPolicy(omen).dynamicStepRate;
 }
+
+/** Only the extra Omen strength ramps; baseline encounter stats stay unchanged. */
+export function actDifficultyRamp(act: number, row: number): number {
+  if (act >= 3) return 1;
+  const progress = Math.max(0, Math.min(1, row / 12));
+  return act === 1 ? 0.50 + 0.20 * progress : 0.75 + 0.15 * progress;
+}
+
+export function act1FormationPolicy(row: number, kind: 'battle' | 'elite' | 'boss' | 'event', omen: number) {
+  const elite = kind === 'elite' || kind === 'boss';
+  const late = row >= 9;
+  const pol = difficultyPolicy(omen);
+  const budgetMul = 1 + (pol.formationBudgetMul - 1) * actDifficultyRamp(1, row);
+  return {
+    maxCards: elite || late ? 4 : 3,
+    maxStar2: elite ? (late ? 2 : 1) : row < 4 ? 0 : late ? 2 : 1,
+    maxRarity: elite ? 3 : row < 4 ? 1 : 2,
+    threatBudget: (6 + 0.35 * Math.max(0, Math.min(12, row))) * budgetMul * (elite ? 1.2 : 1),
+  };
+}
+
+export const DEVELOPMENT_RULES = '第一幕发展期：普通战前四层全一星；中段至多一张二星，后段三卡至多两张二星、四卡至多一张二星；普通战无红金卡。前四层无附魔，此后至多一张一级附魔。难度额外属性在第一幕释放 50%–70%，第二幕释放 75%–90%，第三幕起完整生效。不祥 III–V 至少有一条无精英路线能在第 3–5 层购物。';

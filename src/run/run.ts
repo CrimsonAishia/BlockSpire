@@ -5,7 +5,8 @@ import { RARITIES } from '../core/types.ts';
 import { CRATE_MAP, cratesForAct, baseCratesForAct, expeditionCratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
 import { ENC_MAP, ENCOUNTERS, enemyScales, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
 import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
-import { difficultyPolicy, difficultyDynamicBonus } from '../data/difficulty.ts';
+import { difficultyPolicy, difficultyDynamicBonus, actDifficultyRamp, act1FormationPolicy } from '../data/difficulty.ts';
+import { act1SupportPool, formationThreat, normalizeAct1Formation } from './development.ts';
 import { computeSynergies } from '../data/families.ts';
 import type { Family } from '../core/types.ts';
 import { MOB_MAP, RARITY_INFO, PLAYABLE_BLUE_MOBS, mobDef, unitCount } from '../data/mobs.ts';
@@ -19,6 +20,8 @@ import { DUNGEONS_MAP_BY_ID } from '../data/dungeonsMaps.ts';
 import { createDungeonsTerrain } from '../battle/dungeonsTerrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 import { rollEnemyTactics } from '../data/enemyTactics.ts';
+
+export { actDifficultyRamp } from '../data/difficulty.ts';
 
 export const RUN_VERSION = 4;
 
@@ -315,7 +318,7 @@ export function createRun(commander: string, omen: number, seed = randomSeed(), 
     done: [],
     hearts,
     maxHearts: hearts,
-    emeralds: cmd.emeralds,
+    emeralds: cmd.emeralds + pol.startingEmeraldBonus,
     team: [],
     bench: [],
     slots: 3,
@@ -557,12 +560,7 @@ export function enterNode(s: RunState, id: string) {
 
 /** Arena-simulated encounter cost; used to make each tier climb from lighter to heavier formations. */
 export function encounterThreat(enc: Pick<EncounterDef, 'cards'>): number {
-  return enc.cards.reduce((sum, [mob, star, , count]) => {
-    const measured = MOB_COST[mob]?.[Math.max(0, Math.min(2, star - 1))];
-    const fallback = [2, 4, 7, 11, 16][RARITIES.indexOf(mobDef(mob).rarity)] ?? 4;
-    const normalCount = unitCount(mobDef(mob), star);
-    return sum + (measured ?? fallback) * ((count ?? normalCount) / normalCount);
-  }, 0);
+  return formationThreat(enc.cards);
 }
 
 function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): EncounterDef {
@@ -605,29 +603,13 @@ function pickEncounter(s: RunState, kind: 'battle' | 'elite', row: number): Enco
   });
 }
 
-/**
- * Linear difficulty ramp across acts and floors.
- * Even on Omen 5, Act 1 serves as the developmental stage:
- * - Act 1: Omen bonus scales linearly from 50% at row 0 to 70% at row 12 (boss).
- * - Act 2: Omen bonus scales linearly from 75% at row 0 to 90% at row 12.
- * - Act >= 3: 100% full release of Omen multipliers.
- */
-export function actDifficultyRamp(act: number, row: number): number {
-  if (act >= 3) return 1.0;
-  const progress = Math.max(0, Math.min(1, row / 12));
-  if (act === 1) {
-    return 0.50 + 0.20 * progress;
-  }
-  // act === 2
-  return 0.75 + 0.15 * progress;
-}
-
 export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'event', row: number) {
   const sc = enemyScales(s.act, row, kind);
   const pol = difficultyPolicy(s.omen);
   const dynBonus = difficultyDynamicBonus(s.omen, s.act);
-  const hpMul = pol.hpMul + dynBonus;
-  const atkMul = pol.atkMul + dynBonus;
+  const ramp = actDifficultyRamp(s.act, row);
+  const hpMul = 1 + (pol.hpMul - 1 + dynBonus) * ramp;
+  const atkMul = 1 + (pol.atkMul - 1 + dynBonus) * ramp;
   let hp = sc.hp * hpMul;
   let atk = sc.atk * atkMul;
   if (hasRelic(s, 'ominous_bottle')) {
@@ -667,7 +649,9 @@ export function dynamicFormation(
   omen: number,
   baseCards: EncCard[],
 ): EncCard[] {
-  const cards = baseCards.map((c) => c.slice() as EncCard);
+  const cards = act === 1
+    ? normalizeAct1Formation(baseCards, row, kind, omen)
+    : baseCards.map((c) => c.slice() as EncCard);
   const pol = difficultyPolicy(omen);
 
   // Boss formation
@@ -680,7 +664,7 @@ export function dynamicFormation(
         }
       }
     }
-    return cards;
+    return act === 1 ? normalizeAct1Formation(cards, row, kind, omen) : cards;
   }
 
   // Opening protection: Act 1 rows 0-1 do not add support cards
@@ -822,8 +806,10 @@ export function dynamicFormation(
   const avgBaseCardThreat = baseThreat / Math.max(1, baseCards.length);
   const budgetScale = act >= 5 ? 1.15 : 0.85;
   const normalizedThreat = Math.max(baseThreat, avgBaseCardThreat * targetCards * budgetScale);
-  const targetBudget = normalizedThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
-  const maxBudget = targetBudget * (kind === 'elite' ? 1.15 : 1.1);
+  const targetBudget = act === 1
+    ? act1FormationPolicy(row, kind, omen).threatBudget
+    : normalizedThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
+  const maxBudget = act === 1 ? targetBudget : targetBudget * (kind === 'elite' ? 1.15 : 1.1);
 
   // Star 3 promotion decision and budget reservation (Section 5)
   const key = kind === 'elite' ? 'elite' : tier === 0 ? 'tier0' : tier === 1 ? 'tier1' : 'tier2';
@@ -880,7 +866,7 @@ export function dynamicFormation(
     ? Math.min(maxBudget, targetBudget * 1.08) - reservedStar3Budget
     : maxBudget;
 
-  const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act || (act === 7 && e.act === 3)).flatMap((e) => e.cards.map((c) => c[0])))]
+  const actMobs = (act === 1 ? act1SupportPool(row, kind) : [...new Set(ENCOUNTERS.filter((e) => e.act === act || (act === 7 && e.act === 3)).flatMap((e) => e.cards.map((c) => c[0])))])
     .filter((id) => {
       const m = mobDef(id);
       return !m.boss && !m.structure && !m.hidden;
@@ -911,7 +897,12 @@ export function dynamicFormation(
 
       for (const mob of actMobs) {
         const m = mobDef(mob);
-        const star = tier === 2 && (row >= 8 || pol.omen >= 4) && cards.length >= 3 && rng.chance(pol.omen >= 4 ? 0.35 : 0.2) ? 2 : 1;
+        if (act === 1) {
+          const limits = act1FormationPolicy(row, kind, omen);
+          const rarity = RARITIES.indexOf(m.rarity);
+          if (rarity > limits.maxRarity || (rarity >= 2 && cards.some((c) => RARITIES.indexOf(mobDef(c[0]).rarity) >= 2))) continue;
+        }
+        const star = act !== 1 && tier === 2 && (row >= 8 || pol.omen >= 4) && cards.length >= 3 && rng.chance(pol.omen >= 4 ? 0.35 : 0.2) ? 2 : 1;
         const normalCount = unitCount(m, star);
         const fullCost = MOB_COST[mob]?.[star - 1] ?? 4;
 
@@ -1060,8 +1051,9 @@ export function dynamicFormation(
     }
   }
 
-  fixRows(cards);
-  return cards;
+  const formation = act === 1 ? normalizeAct1Formation(cards, row, kind, omen) : cards;
+  fixRows(formation);
+  return formation;
 }
 
 export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Extract<Pending, { type: 'battle' }> {
@@ -1079,7 +1071,7 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   }
   const enc = kind === 'boss' ? ENC_MAP[s.bosses[s.act - 1]] : pickEncounter(s, kind, node.row);
   const baseCards = enc.cards.map((c) => c.slice() as EncCard);
-  const cards = withRng(s, (r) => dynamicFormation(r.fork(node.row * 10007 + s.act * 31), s.act, node.row, kind, s.omen, baseCards));
+  let cards = withRng(s, (r) => dynamicFormation(r.fork(node.row * 10007 + s.act * 31), s.act, node.row, kind, s.omen, baseCards));
   const pol = difficultyPolicy(s.omen);
   const affix = kind === 'elite' && pol.eliteAffix && !(s.act === 1 && node.row === 0) ? withRng(s, (r) => r.pick(AFFIXES).id) : undefined;
   const tier = tierForRow(node.row);
@@ -1088,6 +1080,7 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
   else if (kind === 'battle' && tier === 2) enchantEnemies(s, cards, 1, 1);
   else if (kind === 'battle' && tier === 1 && node.row >= 7 && withRng(s, (r) => r.chance(0.35))) enchantEnemies(s, cards, 1, 1);
   else if ((kind === 'elite' || kind === 'boss') && pol.eliteBossEnchant) enchantEnemies(s, cards, 1, 2);
+  if (s.act === 1) cards = normalizeAct1Formation(cards, node.row, kind, s.omen);
   const m = enemyMuls(s, kind, node.row);
   const modifier = rollBattleModifier(s, kind, node.row);
   const biome = kind === 'boss' ? (BOSS_BIOME[enc.id] ?? 'plains') : (s.actTheme ?? withRng(s, (r) => pickBiome(r, s.act, node.row)));
@@ -1100,7 +1093,8 @@ export function makeBattle(s: RunState, node: Pick<MapNode, 'type' | 'row'>): Ex
 /** Gives n random enemy cards (never the boss or a structure) a fitting enchantment. */
 function enchantEnemies(s: RunState, cards: EncCard[], n: number, lv: number) {
   withRng(s, (r) => {
-    const idx = r.shuffle(cards.map((_, i) => i).filter((i) => !mobDef(cards[i][0]).boss && !mobDef(cards[i][0]).structure && !cards[i][4]));
+    const idx = r.shuffle(cards.map((_, i) => i).filter((i) => !mobDef(cards[i][0]).boss && !mobDef(cards[i][0]).structure && !cards[i][4]
+      && (s.act !== 1 || (cards[i][1] === 1 && RARITIES.indexOf(mobDef(cards[i][0]).rarity) < 3))));
     for (const i of idx.slice(0, n)) {
       const mob = cards[i][0];
       const c = cards[i];
@@ -1123,7 +1117,7 @@ export function makeEventBattle(s: RunState, encId: string, onWin: string, biome
   // Sift creatures fight on Sift ground, wherever the rift opened.
   const sift = !biome && enc.cards.some(([id]) => mobDef(id).families.includes('sift'));
   return {
-    type: 'battle', kind: 'event', enc: enc.id, name: enc.name, cards: enc.cards.slice(), hpMul: m.hp, atkMul: m.atk,
+    type: 'battle', kind: 'event', enc: enc.id, name: enc.name, cards: s.act === 1 ? normalizeAct1Formation(enc.cards, row, 'event', s.omen) : enc.cards.map((c) => c.slice() as EncCard), hpMul: m.hp, atkMul: m.atk,
     seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: 1, onWin,
     biome: biome ?? withRng(s, (r) => (sift ? r.pick(SIFT_BIOMES) : pickBiome(r, s.act, row))), tseed: withRng(s, (r) => r.int(1, 2 ** 31)), brew: brewFor(s),
   };

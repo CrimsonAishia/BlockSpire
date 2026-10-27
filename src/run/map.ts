@@ -111,7 +111,7 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
 
   // 第一幕发展期不变量保证：确保一定存在至少一条完全没有精英（minElites === 0）的可行路线
   if (act === 1) {
-    ensureAct1Bypassable(nodes);
+    ensureAct1Bypassable(nodes, omen >= 3);
   }
   // A rift into the Sift opens somewhere in the middle of the Nether and the End.
   if (act === 2 || act === 3) {
@@ -129,7 +129,7 @@ export function startNodes(map: ActMap): MapNode[] {
 }
 
 /** 保证第 1 幕始终至少存在一条完全绕开精英（minElites === 0）的路线 */
-function ensureAct1Bypassable(nodes: Record<string, MapNode>) {
+function ensureAct1Bypassable(nodes: Record<string, MapNode>, earlyShop = false) {
   const memo: Record<string, { cost: number; path: string[] }> = {};
   function dp(id: string): { cost: number; path: string[] } {
     if (memo[id]) return memo[id];
@@ -165,5 +165,11 @@ function ensureAct1Bypassable(nodes: Record<string, MapNode>) {
         n.type = 'battle';
       }
     }
+  }
+  // High-Omen grants need an optional early outlet on a route that stays free of elites.
+  const path = bestOverall.path.map((id) => nodes[id]);
+  if (earlyShop && !path.some((n) => n.type === 'shop' && n.row >= 2 && n.row <= 4)) {
+    const shop = path.find((n) => n.row === 3);
+    if (shop) shop.type = 'shop';
   }
 }
