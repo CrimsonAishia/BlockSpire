@@ -187,9 +187,9 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a5_guardian_shrine', '守卫祭坛', 5, 'battle', 2, [['guardian', 2, 'back'], ['gold_axolotl', 2, 'mid'], ['turtle', 2, 'front']]),
   E('a5e_elder_depth', '海晶深潜卫', 5, 'elite', undefined, [['elder_guardian', 1, 'back'], ['drowned_necromancer', 2, 'back'], ['turtle', 2, 'front']]),
 
-  E('a5b_wraith', '首领 · 卑劣幽魂', 5, 'boss', undefined, [['wretched_wraith', 1, 'back'], ['polar_bear', 2, 'front'], ['iceologer', 1, 'back']], '霜冻峡湾深处的远古亡魂，列阵冰霜与刺骨严冬。'),
-  E('a5b_abomination', '首领 · 丛林巨兽', 5, 'boss', undefined, [['jungle_abomination', 1, 'front'], ['whisperer', 2, 'mid'], ['quick_vine', 2, 'mid']], '蔓生神殿由腐木与藤蔓纠缠而成的庞然巨物。'),
-  E('a5b_guardian', '首领 · 远古守护者', 5, 'boss', undefined, [['ancient_guardian', 1, 'mid'], ['guardian', 2, 'back'], ['turtle', 2, 'front']], '沉睡于深渊核心的远古海灵，射出毁灭黄光。'),
+  E('a5b_wraith', '首领 · 卑劣幽魂', 5, 'boss', undefined, [['wretched_wraith', 1, 'back'], ['polar_bear', 1, 'front'], ['iceologer', 1, 'back'], ['icy_creeper', 1, 'mid']], '霜冻峡湾深处的远古亡魂，极地近卫与严冬法阵层层护驾。'),
+  E('a5b_abomination', '首领 · 丛林巨兽', 5, 'boss', undefined, [['jungle_abomination', 1, 'front'], ['panda', 1, 'front'], ['whisperer', 1, 'mid'], ['quick_vine', 1, 'mid']], '蔓生神殿由腐木与藤蔓纠缠而成的庞然巨物，密林兽群拱卫身旁。'),
+  E('a5b_guardian', '首领 · 远古守护者', 5, 'boss', undefined, [['ancient_guardian', 1, 'mid'], ['turtle', 1, 'front'], ['guardian', 1, 'back'], ['wave_whisperer', 1, 'mid']], '沉睡于深渊核心的远古海灵，深海卫队严密死守。'),
 
   // ───── 第六幕 · 遗迹远征 (下界堡垒 / 疾风圣殿) ─────
   E('a6_nether_patrol', '熔炉战队', 6, 'battle', 0, [['piglin_swordsman', 2, 'front'], ['piglin_hunter', 2, 'back'], ['magma_cube', 2, 'mid']]),
@@ -202,15 +202,15 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a6_wind_barrage', '狂岚祭司', 6, 'battle', 2, [['squall_golem', 2, 'front'], ['windcaller', 2, 'back'], ['breeze', 1, 'mid']]),
   E('a6e_storm_sanctum', '圣殿战团', 6, 'elite', undefined, [['squall_golem', 2, 'front'], ['rampart_captain', 2, 'front'], ['windcaller', 2, 'back']]),
 
-  E('a6b_wildfire', '首领 · 悬浮烈焰', 6, 'boss', undefined, [['wildfire', 1, 'mid'], ['piglin_brute', 2, 'front'], ['blaze', 2, 'back']], '四面烈焰护盾旋转的烈焰领主。'),
-  E('a6b_tempest', '首领 · 风暴傀儡', 6, 'boss', undefined, [['tempest_golem', 1, 'mid'], ['squall_golem', 2, 'front'], ['windcaller', 2, 'back']], '耸立在疾风峡谷之巅的风暴守卫。'),
+  E('a6b_wildfire', '首领 · 悬浮烈焰', 6, 'boss', undefined, [['wildfire', 1, 'mid'], ['piglin_brute', 1, 'front'], ['armored_piglin', 1, 'front'], ['blaze', 1, 'back']], '四面烈焰护盾旋转的烈焰领主，重装堡垒战阵结界。'),
+  E('a6b_tempest', '首领 · 风暴傀儡', 6, 'boss', undefined, [['tempest_golem', 1, 'mid'], ['squall_golem', 1, 'front'], ['armored_mountaineer', 1, 'front'], ['windcaller', 1, 'back'], ['llama', 1, 'mid']], '耸立在疾风峡谷之巅的风暴守卫，圣殿近卫军列阵护阵。'),
 
   // ───── 第七幕 · 破碎堡垒 ─────
   E('a7_void_scouts', '虚空游骑', 7, 'battle', 0, [['blastling', 2, 'back'], ['snareling', 2, 'mid'], ['enderman', 2, 'front']]),
   E('a7_shadow_circle', '暗影集会', 7, 'battle', 1, [['enderling', 2, 'mid'], ['soul_wizard', 2, 'back'], ['shulker', 2, 'back']]),
   E('a7_spawner_horde', '黑石囚牢', 7, 'battle', 2, [['mob_spawner', 2, 'back'], ['tower_wraith', 2, 'back'], ['endersent', 2, 'front']]),
   E('a7e_endersent_gate', '紫晶哨卫长', 7, 'elite', undefined, [['endersent', 2, 'front'], ['tower_wraith', 2, 'back'], ['shulker', 2, 'back']]),
-  E('a7b_heart', '首领 · 复仇之心', 7, 'boss', undefined, [['vengeful_heart', 1, 'back'], ['endersent', 2, 'front'], ['shulker', 2, 'back']], '支配虚空废墟的终焉意志。'),
+  E('a7b_heart', '首领 · 复仇之心', 7, 'boss', undefined, [['vengeful_heart', 1, 'back'], ['endersent', 1, 'front'], ['shulker', 1, 'back'], ['tower_wraith', 1, 'back'], ['enderling', 1, 'mid']], '支配虚空废墟的终焉意志，虚空近卫全员护主。'),
 ];
 
 export const ENC_MAP: Record<string, EncounterDef> = Object.fromEntries(ENCOUNTERS.map((e) => [e.id, e]));

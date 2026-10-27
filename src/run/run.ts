@@ -689,22 +689,58 @@ export function dynamicFormation(
   }
 
   const tier = tierForRow(row);
-  const shouldAddSupport = kind === 'elite' || pol.omen > 0 || (pol.supportChance > 0 && rng.chance(pol.supportChance));
+  const shouldAddSupport = act >= 5 || kind === 'elite' || pol.omen > 0 || (pol.supportChance > 0 && rng.chance(pol.supportChance));
 
   // Target cards based on Tier and Difficulty (Section 6.1)
   let targetCards = baseCards.length;
   if (act >= 5) {
     // Act 5-7: Expedition & Endgame (Player has 6 slots in Act 5, 7 slots in Act 6-7)
-    const isAct6Plus = act >= 6;
+    // Base is strictly equal cards across all difficulties (6 in Act 5, 7 in Act 6-7).
+    // Omen +1 card pressure follows the original probability algorithm.
+    const baseEqual = act >= 6 ? 7 : 6;
     if (kind === 'elite') {
-      targetCards = isAct6Plus ? (pol.omen >= 3 ? 7 : 6) : (pol.omen >= 3 ? 6 : 5);
+      if (pol.omen <= 2) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 3) {
+        targetCards = rng.chance(0.5) ? baseEqual + 1 : baseEqual;
+      } else {
+        targetCards = baseEqual + 1;
+      }
     } else if (tier === 0) {
-      targetCards = isAct6Plus ? 5 : 4;
+      if (pol.omen <= 2) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 3) {
+        targetCards = rng.chance(0.4) ? baseEqual + 1 : baseEqual;
+      } else {
+        targetCards = baseEqual;
+      }
     } else if (tier === 1) {
-      targetCards = isAct6Plus ? (pol.omen >= 2 ? 6 : 5) : (pol.omen >= 2 ? 5 : 4);
+      if (pol.omen <= 1) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 2) {
+        targetCards = rng.chance(0.4) ? baseEqual + 1 : baseEqual;
+      } else if (pol.omen === 3) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 4) {
+        targetCards = rng.chance(0.20) ? baseEqual + 1 : baseEqual;
+      } else {
+        targetCards = rng.chance(0.50) ? baseEqual + 1 : baseEqual;
+      }
     } else {
       // tier === 2
-      targetCards = isAct6Plus ? (pol.omen >= 2 ? (pol.omen >= 4 ? 7 : 6) : 6) : (pol.omen >= 3 ? 6 : 5);
+      if (pol.omen === 0) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 1) {
+        targetCards = rng.chance(0.5) ? baseEqual + 1 : baseEqual;
+      } else if (pol.omen === 2) {
+        targetCards = baseEqual;
+      } else if (pol.omen === 3) {
+        targetCards = rng.chance(0.20) ? baseEqual + 1 : baseEqual;
+      } else if (pol.omen === 4) {
+        targetCards = rng.chance(0.50) ? baseEqual + 1 : baseEqual;
+      } else {
+        targetCards = rng.chance(0.92) ? baseEqual + 1 : baseEqual;
+      }
     }
   } else if (kind === 'elite') {
     if (pol.omen === 0) {
@@ -784,7 +820,8 @@ export function dynamicFormation(
   const progressMul = 0.95 + progress * 0.1;
   const kindBudgetMul = kind === 'elite' ? 1.15 : 1.0;
   const avgBaseCardThreat = baseThreat / Math.max(1, baseCards.length);
-  const normalizedThreat = Math.max(baseThreat, avgBaseCardThreat * targetCards * 0.85);
+  const budgetScale = act >= 5 ? 1.15 : 0.85;
+  const normalizedThreat = Math.max(baseThreat, avgBaseCardThreat * targetCards * budgetScale);
   const targetBudget = normalizedThreat * progressMul * pol.formationBudgetMul * kindBudgetMul;
   const maxBudget = targetBudget * (kind === 'elite' ? 1.15 : 1.1);
 
@@ -843,7 +880,7 @@ export function dynamicFormation(
     ? Math.min(maxBudget, targetBudget * 1.08) - reservedStar3Budget
     : maxBudget;
 
-  const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act).flatMap((e) => e.cards.map((c) => c[0])))]
+  const actMobs = [...new Set(ENCOUNTERS.filter((e) => e.act === act || (act === 7 && e.act === 3)).flatMap((e) => e.cards.map((c) => c[0])))]
     .filter((id) => {
       const m = mobDef(id);
       return !m.boss && !m.structure && !m.hidden;
@@ -854,7 +891,7 @@ export function dynamicFormation(
     while (cards.length < targetCards) {
       const curThreat = encounterThreat({ cards });
       const remainingBudget = effectiveMaxBudget - curThreat;
-      if (remainingBudget <= 0.4 && cards.length >= Math.min(baseCards.length + 1, targetCards)) break;
+      if (remainingBudget <= 0.4 && (act >= 5 ? cards.length >= targetCards : cards.length >= Math.min(baseCards.length + 1, targetCards))) break;
 
       const trySynergy = rng.chance(pol.synergyChance);
       const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
@@ -888,8 +925,8 @@ export function dynamicFormation(
           actualCost = fullCost * (scaledCount / normalCount);
           if (curThreat + actualCost <= effectiveMaxBudget * 1.05) {
             chosenCount = scaledCount;
-          } else if (cards.length < targetCards && remainingBudget > 0.5) {
-            const minCount = Math.max(1, Math.round(normalCount * 0.5));
+          } else if (cards.length < targetCards && remainingBudget > 0.3) {
+            const minCount = Math.max(1, Math.round(normalCount * 0.45));
             actualCost = fullCost * (minCount / normalCount);
             chosenCount = minCount;
           } else {

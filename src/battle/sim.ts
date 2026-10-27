@@ -3044,6 +3044,11 @@ export class Battle {
       }
     }
     if (o.proj && t.ref.witherArmor) d *= 0.5;
+    // 首领铁卫拱卫机制 (Boss Guard): 同队有存活非召唤近卫随从时，首领受到直接伤害降低 20%
+    if (t.boss && !t.structure && kind !== 'dot') {
+      const hasGuards = this.live[t.team].some((a) => a !== t && a.alive && !a.boss && !a.structure && !a.isSummon);
+      if (hasGuards) d *= 0.80;
+    }
     if (o.proj && src) {
       const dx = src.x - t.x;
       const dy = src.y - t.y;
