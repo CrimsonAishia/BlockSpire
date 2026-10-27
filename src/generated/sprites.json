@@ -4023,5 +4023,20 @@
     "w": 512,
     "h": 512,
     "ar": 1
+  },
+  "mobs/ice_pile": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/ice_pile": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/ice_pile_lite": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
   }
 }
