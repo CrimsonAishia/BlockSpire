@@ -64,7 +64,7 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'bee', name: '蜜蜂', rarity: 'blue', families: ['arthropod'], role: 'assassin',
-    hp: 72, atk: 10, cd: 0.9, range: 8, speed: 72, armor: 0, radius: 11, size: 34, flying: true, alt: 26,
+    hp: 72, atk: 10, cd: 0.9, range: 8, speed: 90, armor: 0, radius: 11, size: 34, flying: true, alt: 26,
     count: [5, 6, 8], ai: 'bee', defaultRow: 'mid',
     skill: { name: '毒刺', desc: '首次攻击造成 3 倍伤害并使目标中毒（5/秒，5 秒），之后失去毒刺攻击力减半。' },
     star3: '毒刺每 8 秒重新长出。',
@@ -203,7 +203,7 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'phantom', name: '幻翼', rarity: 'purple', families: ['undead'], role: 'assassin',
-    hp: 110, atk: 36, cd: 1.8, range: 10, speed: 88, armor: 0, radius: 16, size: 46, flying: true, alt: 70,
+    hp: 110, atk: 36, cd: 1.8, range: 10, speed: 96, armor: 0, radius: 16, size: 46, flying: true, alt: 70,
     count: [3, 3, 4], ai: 'phantom', defaultRow: 'mid',
     skill: { name: '俯冲', desc: '优先攻击敌方后排。俯冲攻击后拉升盘旋，高空时近战无法触及。' },
     star3: '俯冲伤害 ×1.5，并使目标流血（凋零 3 秒）。',
@@ -246,7 +246,7 @@ export const MOBS: MobDef[] = [
   // ───────────── 粉 · 保密级 ─────────────
   {
     id: 'blaze', name: '烈焰人', rarity: 'pink', families: ['nether'], role: 'ranged',
-    hp: 200, atk: 16, cd: 2.6, range: 260, speed: 32, armor: 0, radius: 16, size: 66, flying: true, alt: 30,
+    hp: 200, atk: 16, cd: 2.6, range: 260, speed: 38, armor: 0, radius: 16, size: 66, flying: true, alt: 30,
     count: [2, 3, 3], ai: 'blaze', projectile: 'fireball', immune: ['burn'], defaultRow: 'back',
     skill: { name: '烈焰弹幕', desc: '连续发射 3 枚小火球，每枚造成伤害并点燃目标（5/秒，3 秒）。免疫燃烧。' },
     star3: '每轮发射 4 枚火球，火球命中时溅射。',
@@ -698,10 +698,10 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'bat', name: '洞穴蝙蝠', rarity: 'blue', families: ['beast'], role: 'melee', flying: true, alt: 22,
-    hp: 95, atk: 9, cd: 0.7, range: 10, speed: 72, armor: 0, radius: 11, size: 36,
-    count: [4, 5, 6], ai: 'bat', defaultRow: 'front',
-    skill: { name: '骚扰撕咬', desc: '高机动飞行；优先攻击正在蓄势施法的敌人，每累计咬击 3 次造成 0.35 秒打断（冷却 6 秒；若目标为首领，直接削减其 25 点蓄势进度）。' },
-    star3: '撕咬打断间隔缩短至 4 秒，对首领破势提升至 35。',
+    hp: 95, atk: 9, cd: 0.7, range: 16, speed: 108, armor: 0, radius: 11, size: 36,
+    count: [4, 5, 6], ai: 'bat', defaultRow: 'mid',
+    skill: { name: '骚扰撕咬', desc: '极高机动飞行；优先攻击正在蓄势施法的敌人，每累计咬击 2 次造成 0.35 秒打断（冷却 5 秒；若目标为首领，直接削减其 25 点蓄势进度）。' },
+    star3: '撕咬打断间隔缩短至 3.5 秒，对首领破势提升至 35。',
     flavor: '幽暗洞窟中穿梭的飞翼，专挑法师吟唱的关键时刻下口。',
   },
   {

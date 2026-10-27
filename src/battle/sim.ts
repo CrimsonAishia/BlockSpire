@@ -1079,7 +1079,8 @@ export class Battle {
     if (smart && TAC.dodge && (dodgeStep(this, u, dt) || retreatStep(this, u, dt) || kiteStep(this, u, dt))) return;
     u.retarget -= dt;
     if (!u.target || !u.target.alive || u.retarget <= 0 || u.target.invisT > 0 || !this.canReach(u, u.target)) {
-      u.target = b.target ? b.target(u, this) : this.findTarget(u);
+      const specialized = b.target ? b.target(u, this) : null;
+      u.target = (u.speed <= 0 ? specialized : (specialized ?? this.findTarget(u)));
       u.retarget = 0.35 + this.rng.next() * 0.2;
     }
     // Ranged units on their side's built platform hold it: they shoot whatever is in range

@@ -28,7 +28,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
       if (backliners.length > 0) {
         return backliners.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), backliners[0]);
       }
-      return null;
+      return b.findTarget(u);
     },
     tick(u, b, dt) {
       if (u.ab.killRefund) u.ab.killRefund = Math.max(0, u.ab.killRefund - dt);
@@ -65,17 +65,18 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   bat: {
     target(u, b) {
       const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-      const casters = foes.filter((f) => f.mob.role === 'caster' || f.animAtk > 0);
+      const casters = foes.filter((f) => f.mob.role === 'caster' || f.channeling || f.animAtk > 0);
       if (casters.length > 0) {
         return casters.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), casters[0]);
       }
-      return null;
+      return b.findTarget(u);
     },
     onHit(u, t, _d, b) {
+      t.ref.batMarked = b.t + 5.0;
       u.ab.bites = (u.ab.bites ?? 0) + 1;
-      if (u.ab.bites >= 3 && cool(u, 'interruptCd', 0, 0)) {
+      if (u.ab.bites >= 2 && cool(u, 'interruptCd', 0, 0)) {
         u.ab.bites = 0;
-        u.ab.interruptCd = u.star >= 3 ? 4 : 6;
+        u.ab.interruptCd = u.star >= 3 ? 3.5 : 5;
         if (t.boss) {
           b.addPosture(t, u.star >= 3 ? 35 : 25);
           b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: `破势 +${u.star >= 3 ? 35 : 25}!`, color: '#ff4757' });
@@ -387,7 +388,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
       if (creepers.length > 0) {
         return creepers.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), creepers[0]);
       }
-      return null;
+      return b.findTarget(u);
     },
     tick(u, b, dt) {
       if (cool(u, 'pounceCd', dt, 2) && !u.ref.charge) {
