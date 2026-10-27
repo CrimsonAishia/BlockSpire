@@ -2133,13 +2133,25 @@ export class Battle {
             }
           }
         }
+        // 六秒援军直接加入当前战线，避免从部署区赶路耗尽寿命。
+        const visibleFoes = this.live[foe].filter((u) => u.alive && !u.ghost && u.invisT <= 0);
+        const fighters = visibleFoes.filter((u) => !u.structure);
+        const candidates = fighters.length ? fighters : visibleFoes;
+        const target = illagers.find((u) => u.target && candidates.includes(u.target))?.target
+          ?? candidates.reduce<Unit | null>((best, u) => !best || Math.hypot(u.x - owner.x, u.y - owner.y) < Math.hypot(best.x - owner.x, best.y - owner.y) ? u : best, null);
+        const anchor = target ?? owner;
+        const distance = anchor.radius + mobDef('vex').radius + 12;
+        const approach = target ? Math.atan2(owner.y - target.y, owner.x - target.x) : (team === 0 ? 0 : Math.PI);
         const newVexes: Unit[] = [];
         for (let i = 0; i < vexCount; i++) {
-          const vex = this.summon(owner, 'vex', this.rowX(team, 'mid') + this.rng.range(-20, 20), 40 + (i * (ARENA_D - 80)) / vexCount, 1, { lifespan: 6, fx: 'summon' });
+          const angle = approach + (i - (vexCount - 1) / 2) * 0.7 + this.rng.range(-0.08, 0.08);
+          const vex = this.summon(owner, 'vex', anchor.x + Math.cos(angle) * distance, anchor.y + Math.sin(angle) * distance, 1, { lifespan: 6, fx: 'summon' });
           if (vex) {
             vex.maxHp = vex.hp = vexHp;
             vex.atk = Math.max(4, targetDps * (vex.cd / Math.max(0.1, vex.atkSpd)));
             vex.fx = { ...vex.fx, dodge: 0.40, lifesteal: 0 };
+            vex.target = target;
+            vex.retarget = target ? 0.4 : 0;
             newVexes.push(vex);
           }
         }
