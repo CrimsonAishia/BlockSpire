@@ -262,6 +262,9 @@ export const MODERN: Record<string, Behavior> = {
   // 嗅探兽: every few seconds it stops to sniff, then digs up an ancient seed where its friends
   // are bunched up; the torchflower heals and hastes everyone around it.
   sniffer: {
+    init(u) {
+      u.ab.sniff = u.star >= 3 ? 2 : 3;
+    },
     tick(u, _b, dt) {
       if (u.ab.dig > 0 || !cool(u, 'sniff', dt, u.star >= 3 ? 6 : 8)) return;
       u.ab.sniff = u.star >= 3 ? 6 : 8;
@@ -295,11 +298,13 @@ export const MODERN: Record<string, Behavior> = {
     tick(u, b, dt) {
       if (!cool(u, 'glow', dt, 0.5)) return;
       u.ab.glow = 0.5;
-      const r = u.star >= 3 ? 96 : 64;
-      const rate = u.star >= 3 ? 0.026 : 0.018;
+      const r = u.star === 3 ? 96 : u.star === 2 ? 80 : 64;
+      const rate = u.star === 3 ? 0.030 : u.star === 2 ? 0.026 : 0.022;
       b.aoeAllies(u.x, u.y, r, u.team, (a) => {
-        if (a.ghost || a.structure || (a.ab.blubAt ?? -1) > b.t - 0.45) return;
+        if (a.ghost || a.structure) return;
+        if ((a.ab.blubAt ?? -1) > b.t - 0.45 && (a.ab.blubRate ?? 0) >= rate) return;
         a.ab.blubAt = b.t;
+        a.ab.blubRate = rate;
         b.heal(a, a.maxHp * rate * 0.5, u, true);
       });
     },
@@ -323,7 +328,7 @@ export const MODERN: Record<string, Behavior> = {
         u.ab.anc = 0.6;
         let best: Unit | null = null;
         let bs = 0;
-        const r = u.star >= 3 ? 96 : 64;
+        const r = u.star === 3 ? 96 : u.star === 2 ? 80 : 64;
         for (const a of b.live[u.team]) {
           if (a.mob.id === 'blub' || a.structure || a.ghost || a.flying) continue;
           let sc = 0;
@@ -601,10 +606,21 @@ export const MODERN: Record<string, Behavior> = {
       u.animAtk = 0.4;
       for (const e of list) {
         b.emit({ k: 'beam', a: u, b: e, color: '#9be36b', t: 0.8 });
-        b.stun(e, 2);
-        // Pull from the far side so the shove points at the sprout.
-        b.knock(e, e.x * 2 - u.x, e.y * 2 - u.y, 150);
-        b.emit({ k: 'text', x: e.x, y: e.y, z: e.gz + e.z + e.size + 6, s: '缠绕!', color: '#9be36b', tac: true });
+        if (e.boss) {
+          const cardKey = `sprout_boss_posture_${u.card}`;
+          const cd = b.sides[u.team].timers[cardKey] ?? 0;
+          if (b.t >= cd) {
+            b.sides[u.team].timers[cardKey] = b.t + 6.0;
+            const postureAmt = [20, 25, 30][Math.max(0, Math.min(2, u.star - 1))];
+            b.addPosture(e, postureAmt);
+            b.emit({ k: 'text', x: e.x, y: e.y, z: e.gz + e.size + 10, s: `破势 +${postureAmt}`, color: '#9be36b' });
+          }
+        } else {
+          b.stun(e, 2);
+          // Pull from the far side so the shove points at the sprout.
+          b.knock(e, e.x * 2 - u.x, e.y * 2 - u.y, 150);
+          b.emit({ k: 'text', x: e.x, y: e.y, z: e.gz + e.z + e.size + 6, s: '缠绕!', color: '#9be36b', tac: true });
+        }
       }
     },
     attack(u, t, b) {

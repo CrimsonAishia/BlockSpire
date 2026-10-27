@@ -1035,6 +1035,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
     onHit(u, t, _d, b) {
       const atk = b.atkOf(u);
       b.wither(t, atk * 0.23 * (u.star >= 3 ? 2 : 1), u.star >= 3 ? 6 : 4, u);
+      t.ref.healBlockT = Math.max(t.ref.healBlockT ?? 0, u.star >= 3 ? 6 : 4);
     },
   },
 
@@ -1171,26 +1172,28 @@ export const BEHAVIORS: Record<string, Behavior> = {
         p.knock = 160;
       });
     },
-    onProjHit(u, p, t, b) {
-      if (p.kind === 'wind_charge' && b.has(u.team, 'combo_fanned_flame') && t.burnT > 0) {
+    onProjExplode(u, p, x, y, b) {
+      if (p.kind === 'wind_charge' && b.has(u.team, 'combo_fanned_flame')) {
         const cd = b.sides[u.team].timers.fanned_flame_cd ?? 0;
         if (b.t >= cd) {
-          b.sides[u.team].timers.fanned_flame_cd = b.t + 2.0;
-          const foes = b.live[(1 - u.team) as 0 | 1].filter((e) => e !== t && e.alive && !e.structure && e.burnT <= 0 && Math.hypot(e.x - t.x, e.y - t.y) <= 90);
-          foes.sort((a, b2) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b2.x - t.x, b2.y - t.y));
-          const spreadTargets = foes.slice(0, 2);
-          const spreadDps = t.burnDps * 0.5;
-          for (const st of spreadTargets) {
-            b.burn(st, spreadDps, 2, u);
-            b.emit({ k: 'hit', x: st.x, y: st.y, z: st.gz + st.z + st.size * 0.5, big: false, color: '#ff7a3d' });
-          }
-          if (spreadTargets.length > 0) {
-            b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size + 8, s: '风助烈焰!', color: '#ff7a3d' });
+          const burningFoes = b.live[(1 - u.team) as 0 | 1].filter((e) => e.alive && !e.structure && e.burnT > 0 && Math.hypot(e.x - x, e.y - y) <= 90);
+          if (burningFoes.length > 0) {
+            const burned = burningFoes[0];
+            b.sides[u.team].timers.fanned_flame_cd = b.t + 2.0;
+            const foes = b.live[(1 - u.team) as 0 | 1].filter((e) => e !== burned && e.alive && !e.structure && e.burnT <= 0 && Math.hypot(e.x - x, e.y - y) <= 90);
+            foes.sort((a, b2) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b2.x - x, b2.y - y));
+            const spreadTargets = foes.slice(0, 2);
+            const spreadDps = burned.burnDps * 0.5;
+            for (const st of spreadTargets) {
+              b.burn(st, spreadDps, 2, u);
+              b.emit({ k: 'hit', x: st.x, y: st.y, z: st.gz + st.z + st.size * 0.5, big: false, color: '#ff7a3d' });
+            }
+            if (spreadTargets.length > 0) {
+              b.emit({ k: 'text', x, y, z: 20, s: '风助烈焰!', color: '#ff7a3d' });
+            }
           }
         }
       }
-    },
-    onProjExplode(u, p, x, y, b) {
       if (u.star >= 3 && p.kind === 'wind_charge') {
         for (let i = 0; i < 3; i++) {
           const a = (i / 3) * Math.PI * 2;

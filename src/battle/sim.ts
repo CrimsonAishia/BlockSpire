@@ -343,6 +343,19 @@ export class Battle {
         this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '微光护巢!', color: '#ff8fb1' });
       }
     }
+    if ((opts.gen ?? 0) > 0 && this.has(owner.team, 'combo_sunken_escort') && (owner.mob.id === 'tropical_slime' || owner.mob.families.includes('aquatic'))) {
+      const tm = this.sides[owner.team].timers;
+      if (!tm.sunken_escort_cd || this.t >= tm.sunken_escort_cd) {
+        tm.sunken_escort_cd = this.t + 8.0;
+        for (const a of this.live[owner.team]) {
+          if (a.alive && !a.structure && (a.mob.id === 'sunken_skeleton' || a.mob.id === 'drowned' || a.mob.id === 'bogged')) {
+            a.takenMul *= 0.85;
+            this.addTimedAction(6.0, () => { if (a.alive) a.takenMul /= 0.85; });
+          }
+        }
+        this.emit({ k: 'text', x: owner.x, y: owner.y, z: owner.gz + owner.z + owner.size, s: '沉海护送!', color: '#3fc6d6' });
+      }
+    }
     this.live[u.team].push(u);
     this.emit({ k: 'spawn', u, fx: opts.fx ?? 'poof' });
     return u;
@@ -387,7 +400,7 @@ export class Battle {
       this.sides[team].aquaticAvgAtk = aquaticUnits.length ? aquaticUnits.reduce((sum, u) => sum + u.atk, 0) / aquaticUnits.length : 20;
 
       if (this.syn(team, 'beast') >= 2) {
-        this.sides[team].beastKillStacks = 2;
+        this.sides[team].beastKillStacks = 3;
       }
 
       if (this.syn(team, 'construct') >= 0) {
@@ -864,6 +877,9 @@ export class Battle {
     const dh = ahead - u.gh;
     if (dh > 0 && !isClimber(u.mob)) k *= dh >= 2 ? 0.4 : 0.55;
     else if (dh < 0) k *= 1.05;
+    if (u.ref.terrainSlowResist && this.t < u.ref.terrainSlowResist && k < 1) {
+      k = 1 - (1 - k) * 0.5;
+    }
     return k;
   }
 
@@ -988,6 +1004,9 @@ export class Battle {
 
   moveSpeedOf(u: Unit): number {
     let s = u.speed * u.moveSpd * this.buff(u.team, 'move');
+    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
+      s *= 1.15;
+    }
     if (!(u.immune & IMM_SLOW)) {
       if (u.slowT > 0) s *= 1 - u.slowMove;
       if (u.chill > 0) s *= 1 - 0.12 * u.chill;
@@ -1207,6 +1226,10 @@ export class Battle {
       amt *= u.fx.firstHitMul;
       if (u.ref.invisBonus) amt *= 1.5;
     }
+    if (u.ref.forestWatchBonus) {
+      amt += u.atk * u.ref.forestWatchBonus;
+      delete u.ref.forestWatchBonus;
+    }
     const dealt = this.damage(u, t, amt, u.dk, { melee: true });
     this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.z + t.size * 0.5, big: amt > 60, color: '#fff' });
     this.onAttackHit(u, t, dealt, false);
@@ -1257,11 +1280,6 @@ export class Battle {
     }
     // 筛界: Sift attacks leave an echo that makes the next hit on the target land harder.
     if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, this.syn(u.team, 'sift') >= 2 ? 0.32 : 0.20);
-    // 节肢蚀甲
-    if (u.mob.families.includes('arthropod') && this.syn(u.team, 'arthropod') >= 1) {
-      t.erosionStacks = Math.min(6, (t.erosionStacks ?? 0) + 1);
-      t.erosionTimer = 4.0;
-    }
     // 亡灵凋零
     if (u.mob.families.includes('undead') && this.syn(u.team, 'undead') >= 2) {
       this.wither(t, this.atkOf(u) * 0.10, 3, u);
@@ -1269,6 +1287,25 @@ export class Battle {
     // 野兽满层撕裂
     if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
       this.dot(t, this.atkOf(u) * 0.15, u);
+    }
+    // 联动: 林梢追猎 (combo_canopy_hunt)
+    if (u.mob.id === 'ocelot' && this.has(u.team, 'combo_canopy_hunt') && t.poisonT > 0) {
+      const tm = this.sides[u.team].timers;
+      if (!tm.canopy_hunt_cd || this.t >= tm.canopy_hunt_cd) {
+        tm.canopy_hunt_cd = this.t + 6.0;
+        this.slow(t, 0.25, 0, 2.0);
+        if (t.boss && t.channeling) this.addPosture(t, 15);
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '林梢追猎!', color: '#2ed573' });
+      }
+    }
+    // 联动: 菌火协射 (combo_fungus_legion)
+    if (!ranged && u.mob.families.includes('nether') && !u.isSummon && this.has(u.team, 'combo_fungus_legion') && (t.ref.inSporeCloud || this.zones.some((z) => z.kind === 'goo' && Math.hypot(z.x - t.x, z.y - t.y) <= z.r))) {
+      const tm = this.sides[u.team].timers;
+      if (!tm.fungus_legion_cd || this.t >= tm.fungus_legion_cd) {
+        tm.fungus_legion_cd = this.t + 7.0;
+        u.atkTimer = Math.max(0, u.atkTimer - u.cd * 0.35);
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '菌火协射!', color: '#e74c3c' });
+      }
     }
 
     // firework_mechanism: 远程卡每第 6 次射击，首个命中目标周围产生范围爆炸 0.35A 魔伤
@@ -1534,6 +1571,18 @@ export class Battle {
       this.damage(src, e, dmg, p.dk, { proj: true, fire: p.fire });
       this.projStatus(p, e);
       if (p.knock > 0) this.knock(e, x, y, p.knock * (1 - 0.5 * f));
+      if (src && this.has(src.team, 'combo_dark_wings') && (p.dk === 'magic' || PROJ_SPEC[p.kind].magic) && (e.glowT > 0 || (e.ref.batMarked && this.t < e.ref.batMarked))) {
+        const tm = this.sides[src.team].timers;
+        if (!tm.dark_wings_cd || this.t >= tm.dark_wings_cd) {
+          tm.dark_wings_cd = this.t + 6.0;
+          for (const a of this.live[src.team]) {
+            if (a.alive && a.mob.id === 'bat') {
+              this.heal(a, a.maxHp * 0.08, null);
+            }
+          }
+          this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '暗翼余烬!', color: '#747d8c' });
+        }
+      }
     });
     this.beh(src).onProjExplode?.(src, p, x, y, this);
     if (EXPLOSIVE.has(p.kind)) this.blast(x, y, r);
@@ -1774,34 +1823,60 @@ export class Battle {
     const hasAliveFamily = (f: Family) => live.some((u) => u.alive && !u.isSummon && !u.structure && !u.boss && u.mob.families.includes(f));
     const ill = this.syn(team, 'illager');
     if (ill >= 1 && hasAliveFamily('illager')) {
-      const hornPeriod = ill >= 2 ? 6.0 : 8.0;
+      const hornPeriod = ill >= 2 ? 6.0 : 7.0;
       const blowHorn = () => {
         const illagers = live.filter((u) => u.alive && !u.structure && !u.isSummon && u.mob.families.includes('illager'));
         if (!illagers.length) return;
-        this.sides[team].timers['illager_horn_active'] = this.t + 4.0;
+        this.sides[team].timers['illager_horn_active'] = this.t + 5.0;
         delete this.sides[team].timers['illager_horn_extended'];
         this.emit({ k: 'sfx', id: 'horn' });
         this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '灾厄号角！', color: '#ff4757' });
         for (const u of illagers) {
-          u.hasteT = Math.max(u.hasteT, 4.0);
+          u.hasteT = Math.max(u.hasteT, 5.0);
           u.hasteMul = Math.max(u.hasteMul, 1.20);
+          u.atk *= 1.22;
+          this.addTimedAction(5.0, () => {
+            if (u.alive) u.atk /= 1.22;
+          });
         }
-        // 召唤自适应灵质恼鬼
-        const avgHp = illagers.reduce((sum, u) => sum + u.maxHp, 0) / illagers.length;
-        const avgAtk = illagers.reduce((sum, u) => sum + u.atk, 0) / illagers.length;
+        // 召唤自适应灵质恼鬼：存活原生灾厄总H的6%，4档12%面板DPS/2只，6档10%/3只，存活6秒，旧一轮被替换
+        const totalH = illagers.reduce((sum, u) => sum + u.maxHp, 0);
+        const vexHp = Math.max(20, totalH * 0.06);
+        const totalDps = illagers.reduce((sum, u) => sum + (u.atk * u.atkSpd) / Math.max(0.2, u.cd), 0);
         const vexCount = ill >= 2 ? 3 : 2;
+        const vexDpsMul = ill >= 2 ? 0.10 : 0.12;
+        const targetDps = totalDps * vexDpsMul;
         const owner = illagers[0];
-        for (let i = 0; i < vexCount; i++) {
-          const vex = this.summon(owner, 'vex', this.rowX(team, 'mid') + this.rng.range(-20, 20), 40 + (i * (ARENA_D - 80)) / vexCount, 1, { lifespan: 10, fx: 'summon' });
-          if (vex) {
-            vex.maxHp = vex.hp = Math.max(60, avgHp * 0.22);
-            vex.atk = Math.max(12, avgAtk * 0.35);
-            vex.fx = { ...vex.fx, dodge: 0.40 };
+        const sideObj = this.sides[team] as any;
+        if (sideObj.hornVexes) {
+          for (const oldVex of sideObj.hornVexes) {
+            if (oldVex.alive) {
+              oldVex.hp = 0;
+              this.kill(oldVex, null, true);
+            }
           }
         }
+        const newVexes: Unit[] = [];
+        for (let i = 0; i < vexCount; i++) {
+          const vex = this.summon(owner, 'vex', this.rowX(team, 'mid') + this.rng.range(-20, 20), 40 + (i * (ARENA_D - 80)) / vexCount, 1, { lifespan: 6, fx: 'summon' });
+          if (vex) {
+            vex.maxHp = vex.hp = vexHp;
+            vex.atk = Math.max(4, targetDps * (vex.cd / Math.max(0.1, vex.atkSpd)));
+            vex.fx = { ...vex.fx, dodge: 0.40 };
+            newVexes.push(vex);
+          }
+        }
+        sideObj.hornVexes = newVexes;
       };
-      once('illager_horn_start', 4.0, blowHorn);
-      every('illager_horn_cycle', hornPeriod, 4.0 + hornPeriod, blowHorn);
+      const engaged = tm.illager_horn_engaged || live.some((u) => u.alive && u.target && Math.hypot(u.x - u.target.x, u.y - u.target.y) <= Math.max(160, this.rangeOf(u) + 30));
+      if (!tm.illager_horn_start && (engaged || this.t >= 4.0)) {
+        tm.illager_horn_start = 1;
+        tm.illager_horn_engaged = 1;
+        blowHorn();
+      }
+      if (tm.illager_horn_start) {
+        every('illager_horn_cycle', hornPeriod, hornPeriod, blowHorn);
+      }
     }
     if (this.syn(team, 'nether') >= 2 && hasAliveFamily('nether')) {
       every('nether_pillar', 7.0, 4.0, () => {
@@ -1908,15 +1983,16 @@ export class Battle {
         const avgAtk = this.sides[team].aquaticAvgAtk || 20;
         const dmg = 45 + Math.min(e.maxHp * 0.06, 3 * avgAtk);
         this.lightning(src, e.x, e.y, dmg, 34);
+        const healCount = this.syn(team, 'aquatic') >= 2 ? 2 : 1;
+        const aquaticAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('aquatic'));
+        aquaticAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.id - b.id);
+        for (const a of aquaticAllies.slice(0, healCount)) {
+          this.heal(a, a.maxHp * 0.08, null);
+        }
         if (this.syn(team, 'aquatic') >= 2) {
           this.aoe(e.x, e.y, 35, team, (sub) => {
             if (sub !== e) this.damage(src, sub, dmg * 0.5, 'magic', { noCrit: true });
           });
-          const aquaticAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('aquatic'));
-          aquaticAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.id - b.id);
-          for (const a of aquaticAllies.slice(0, 2)) {
-            this.heal(a, a.maxHp * 0.08, null);
-          }
         }
       });
     }
@@ -1951,11 +2027,30 @@ export class Battle {
     if (this.syn(team, 'sift') >= 1 && hasAliveFamily('sift')) {
       every('sift_heal', 6, 4.0, () => {
         const siftAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('sift'));
-        siftAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.hp - b.hp || a.id - b.id);
-        const count = 2;
-        const pct = 0.08;
-        for (const target of siftAllies.slice(0, count)) {
-          this.heal(target, target.maxHp * pct, null);
+        if (!siftAllies.length) return;
+        const cardMap = new Map<number, Unit[]>();
+        for (const u of siftAllies) {
+          const list = cardMap.get(u.card) ?? [];
+          list.push(u);
+          cardMap.set(u.card, list);
+        }
+        const totalSiftH = live.filter((u) => !u.structure && !u.isSummon && u.mob.families.includes('sift')).reduce((s, u) => s + u.maxHp, 0);
+        const maxCycleHeal = totalSiftH * 0.10;
+        let totalHealed = 0;
+        const sortedCards = Array.from(cardMap.entries()).sort((a, b) => {
+          const avgA = a[1].reduce((s, u) => s + u.hpFrac, 0) / a[1].length;
+          const avgB = b[1].reduce((s, u) => s + u.hpFrac, 0) / b[1].length;
+          return avgA - avgB;
+        });
+        for (const [, units] of sortedCards.slice(0, 2)) {
+          const cardH = units.reduce((s, u) => s + u.maxHp, 0);
+          const healBudget = Math.min(cardH * 0.04, Math.max(0, maxCycleHeal - totalHealed));
+          if (healBudget <= 0) break;
+          const perUnit = healBudget / units.length;
+          for (const u of units) {
+            this.heal(u, perUnit, null);
+          }
+          totalHealed += healBudget;
         }
       });
     }
@@ -1977,7 +2072,17 @@ export class Battle {
     }
 
     if (this.syn(team, 'beast') >= 1 && hasAliveFamily('beast')) {
-      every('beast_time', 8, 4.0, () => {
+      const beastEngaged = tm.beast_first_engaged || live.some((u) => u.alive && u.target && Math.hypot(u.x - u.target.x, u.y - u.target.y) <= Math.max(160, this.rangeOf(u) + 30));
+      if (!tm.beast_first_engaged && (beastEngaged || this.t >= 2.0)) {
+        tm.beast_first_engaged = 1;
+        const cur = this.sides[team].beastKillStacks || 0;
+        const maxSt = this.syn(team, 'beast') >= 2 ? 6 : 5;
+        if (cur < maxSt) {
+          this.sides[team].beastKillStacks = cur + 1;
+          this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 80, s: `野性接敌 +${this.sides[team].beastKillStacks}`, color: '#e0b25b' });
+        }
+      }
+      every('beast_time', 6, 4.0, () => {
         const maxSt = this.syn(team, 'beast') >= 2 ? 6 : 5;
         const cur = this.sides[team].beastKillStacks || 0;
         if (cur < maxSt) {
@@ -2012,6 +2117,62 @@ export class Battle {
       };
       once('storm_fuse_start', 1.0, chargeOne);
       every('storm_fuse_every', 6.0, 7.0, chargeOne);
+    }
+
+    if (this.has(team, 'combo_rampart_banner')) {
+      const bannerEngaged = tm.rampart_banner_engaged || live.some((u) => u.alive && u.target);
+      if (bannerEngaged) {
+        tm.rampart_banner_engaged = 1;
+        every('rampart_banner', 8.0, 0.5, () => {
+          const conditionIds = new Set(['rampart_captain', 'royal_guard', 'pillager', 'vindicator']);
+          for (const u of live) {
+            if (u.alive && !u.structure && conditionIds.has(u.mob.id)) {
+              u.moveSpd *= 1.20;
+              u.atkSpd *= 1.10;
+              this.addTimedAction(5.0, () => {
+                if (u.alive) {
+                  u.moveSpd /= 1.20;
+                  u.atkSpd /= 1.10;
+                }
+              });
+            }
+          }
+          this.emit({ k: 'text', x: this.rowX(team, 'front'), y: ARENA_D / 2, z: 90, s: '城垛战旗!', color: '#e67e22' });
+        });
+      }
+    }
+
+    if (this.has(team, 'combo_snow_guides')) {
+      const hasSnowFox = live.some((u) => u.alive && u.mob.id === 'snow_fox');
+      if (hasSnowFox) {
+        every('snow_guides', 8.0, 0.5, () => {
+          let count = 0;
+          for (const u of live) {
+            if (u.alive && !u.structure && !u.isSummon && (u.mob.role === 'melee' || u.mob.role === 'tank') && count < 2) {
+              count++;
+              u.addSynergyShield('snow_guides', u.maxHp * 0.10, 4.0);
+              u.ref.terrainSlowResist = this.t + 4.0;
+            }
+          }
+          this.emit({ k: 'text', x: this.rowX(team, 'front'), y: ARENA_D / 2, z: 90, s: '雪原引路!', color: '#70a1ff' });
+        });
+      }
+    }
+
+    if (this.has(team, 'combo_bone_cavalry')) {
+      const hasCavalry = live.some((u) => u.alive && (u.mob.id === 'skeleton_horseman' || u.mob.id === 'chicken_jockey'));
+      if (hasCavalry) {
+        every('bone_cavalry', 7.0, 3.0, () => {
+          for (const a of live) {
+            if (a.alive && !a.structure && a.row === 'front' && a.mob.families.includes('undead')) {
+              a.slowT = 0;
+              a.chill = 0;
+              a.addSynergyShield('bone_cavalry', a.maxHp * 0.12, 4.0);
+            }
+          }
+          this.emit({ k: 'text', x: this.rowX(team, 'front'), y: ARENA_D / 2, z: 90, s: '亡骑践阵!', color: '#dfe4ea' });
+        });
+      }
     }
 
     // ── V3.3 遗迹远征宝物效果 ──
@@ -2126,7 +2287,7 @@ export class Battle {
     t: Unit,
     amount: number,
     kind: DmgKind,
-    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean } = {},
+    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean; isPandaIntercept?: boolean } = {},
   ): number {
     if (!t.alive || amount <= 0 || t.ghost) return 0;
     if (!o.noDodge && kind !== 'dot') {
@@ -2202,24 +2363,141 @@ export class Battle {
         src.ref.salvoShot = 0;
         d *= 1.4;
       }
+      if (src.ref.ghostFlameBonus && kind !== 'dot') {
+        d *= src.ref.ghostFlameBonus;
+        delete src.ref.ghostFlameBonus;
+      }
+      if (src.ref.voidHuntBonus && kind !== 'dot') {
+        d *= src.ref.voidHuntBonus;
+        delete src.ref.voidHuntBonus;
+      }
+      if (src.ref.ignoreArmor35) {
+        src.ref.activeIgnoreArmor35 = true;
+        delete src.ref.ignoreArmor35;
+      }
+      if (this.has(src.team, 'combo_nether_crossfire') && !t.structure && kind !== 'dot') {
+        const tm = this.sides[src.team].timers;
+        if (!tm.nether_crossfire_cd || this.t >= tm.nether_crossfire_cd) {
+          t.ref.netherCrossHits = t.ref.netherCrossHits || {};
+          t.ref.netherCrossHits[src.card] = this.t;
+          const hitCards = Object.entries(t.ref.netherCrossHits).filter(([_, hitT]) => this.t - (hitT as number) <= 5.0);
+          if (hitCards.length >= 2) {
+            tm.nether_crossfire_cd = this.t + 5.0;
+            t.ref.netherCrossHits = {};
+            d += src.atk * 0.40;
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '交叉火力!', color: '#ff4757' });
+          }
+        }
+      }
+      if (t.poisonT > 0 && this.has(src.team, 'combo_jungle_venom') && kind !== 'dot' && (src.mob.id === 'ocelot' || src.mob.families.includes('arthropod'))) {
+        d *= 1.15;
+      }
+      if (this.has(src.team, 'combo_young_raid') && t.row === 'back' && (src.mob.id === 'baby_zombie' || src.mob.id === 'chicken_jockey')) {
+        const tm = this.sides[src.team].timers;
+        if (!tm.young_raid_cd || this.t >= tm.young_raid_cd) {
+          tm.young_raid_cd = this.t + 6.0;
+          for (const a of this.live[src.team]) {
+            if (a.alive && !a.structure && (a.mob.id === 'baby_zombie' || a.mob.id === 'chicken_jockey') && a.card !== src.card) {
+              a.atkSpd *= 1.15;
+              this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.15; });
+            }
+          }
+          this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '幼尸奇袭!', color: '#2ed573' });
+        }
+      }
+      if (this.has(src.team, 'combo_caravan') && t.boss && t.channeling && (src.mob.id === 'trader_llama' || src.mob.id === 'vindicator')) {
+        const tm = this.sides[src.team].timers;
+        if (!tm.caravan_cd || this.t >= tm.caravan_cd) {
+          t.ref.caravanHits = t.ref.caravanHits || {};
+          t.ref.caravanHits[src.mob.id] = this.t;
+          if (t.ref.caravanHits['trader_llama'] && t.ref.caravanHits['vindicator'] && Math.abs(t.ref.caravanHits['trader_llama'] - t.ref.caravanHits['vindicator']) <= 3.0) {
+            tm.caravan_cd = this.t + 7.0;
+            t.ref.caravanHits = {};
+            this.addPosture(t, 30);
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '驮队护航 +30破势!', color: '#f39c12' });
+          }
+        }
+      }
+      if (this.has(src.team, 'combo_bastion_lines') && src.isRanged && (src.mob.id === 'piglin' || src.mob.id === 'pillager')) {
+        const tm = this.sides[src.team].timers;
+        if (!tm.bastion_lines_cd || this.t >= tm.bastion_lines_cd) {
+          tm.bastion_lines_cd = this.t + 6.0;
+          for (const a of this.live[src.team]) {
+            if (a.alive && !a.structure && !a.isRanged && (a.mob.id === 'piglin_brute' || a.mob.id === 'piglin_swordsman' || a.mob.id === 'royal_guard' || a.mob.id === 'vindicator')) {
+              a.ref.ignoreArmor35 = true;
+            }
+          }
+          this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '堡垒破甲!', color: '#e67e22' });
+        }
+      }
+      if (this.has(src.team, 'combo_bird_scouts') && src.isRanged && t.boss && t.channeling && (t.glowT > 0 || t.ab.focused > 0 || (t.ref.scouted && this.t < t.ref.scouted))) {
+        const tm = this.sides[src.team].timers;
+        if (!tm.bird_scouts_cd || this.t >= tm.bird_scouts_cd) {
+          tm.bird_scouts_cd = this.t + 8.0;
+          this.addPosture(t, 30);
+          this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '双翼侦察 +30破势!', color: '#fffa65' });
+        }
+      }
     }
     if (src && kind !== 'dot' && !src.flying) {
       const dh = src.gh - t.gh;
       if (dh > 0) d *= 1 + Math.min(2, dh) * (src.isRanged ? 0.12 : 0.08);
     }
     if (t.glowT > 0) d *= 1.2;
-    // 集火标记 (parrot): 受到直伤 +18%
-    if (t.ab.focused > 0 && kind !== 'dot') d *= 1.18;
+    // 集火/协同标记 (parrot): 绑定队友受到直伤提升 +25/30/35%
+    if (t.ref.parrotMarked && t.ref.parrotMarked.timer > 0 && kind !== 'dot') {
+      if (src && t.ref.parrotMarked.boundCards && t.ref.parrotMarked.boundCards.includes(src.card)) {
+        d *= (1 + t.ref.parrotMarked.factor);
+      }
+    } else if (t.ab.focused > 0 && kind !== 'dot') {
+      d *= 1.18;
+    }
+    // 渡鸦侦察 (raven): 侦察双卡受到直伤 +10/12/15%
+    if (t.ref.ravenMarked && t.ref.ravenMarked.timer > 0 && kind !== 'dot') {
+      if (src && t.ref.ravenMarked.boundCards && t.ref.ravenMarked.boundCards.includes(src.card)) {
+        d *= (1 + t.ref.ravenMarked.factor);
+      }
+    }
+    // 熊猫拦截 (panda): 拦下一段直伤（拦截额≤来源H的30%，减伤40/45/55%），随后12%H盾
+    if (kind !== 'dot' && !o.isPandaIntercept && !t.structure && t.ref.pandaGuardian) {
+      const panda = t.ref.pandaGuardian;
+      if (panda && panda.alive && (!panda.ab.rollCd || panda.ab.rollCd <= 0)) {
+        panda.ab.rollCd = panda.star >= 3 ? 7 : 8;
+        panda.x = Math.max(panda.radius, Math.min(ARENA_W - panda.radius, t.x + (panda.team === 0 ? 15 : -15)));
+        panda.y = Math.max(10, Math.min(ARENA_D - 10, t.y));
+        this.emit({ k: 'tele', x: panda.x, y: panda.y, x2: panda.x, y2: panda.y, z: panda.gz });
+        const maxIntercept = panda.maxHp * 0.30;
+        const interceptDmg = Math.min(d, maxIntercept);
+        const dmgReduction = panda.star >= 3 ? 0.55 : (panda.star === 2 ? 0.45 : 0.40);
+        const actualIntercept = interceptDmg * (1 - dmgReduction);
+        d -= interceptDmg;
+        this.damage(src, panda, actualIntercept, kind, { ...o, isPandaIntercept: true });
+        const shieldAmt = Math.min(panda.maxHp * 0.30, t.maxHp * 0.12);
+        t.addSynergyShield('panda_shield', shieldAmt, 3.0);
+        this.emit({ k: 'text', x: panda.x, y: panda.y, z: panda.gz + panda.size + 10, s: '舍身拦截!', color: '#eccc68' });
+      }
+    }
     // 城垛队长 (rampart_captain): 投射物减伤 35%
     if (o.proj && t.mob.id === 'rampart_captain') d *= t.star >= 3 ? 0.50 : 0.65;
     // 披甲猪灵 (armored_piglin): 普通攻防减伤 10%
     if (t.mob.id === 'armored_piglin' && (o.melee || o.proj)) d *= 0.90;
     // 哞菇 (mooshroom): 蓄力期间减伤 20%
     if (t.ab.charging > 0) d *= t.star >= 3 ? 0.65 : 0.80;
-    // 海龟 (turtle): 周围友军直接减伤 (范围直伤 -30%, 其他直伤 -12%)
-    if (kind !== 'dot') {
-      const turtle = this.live[t.team].find((a) => a.alive && a.mob.id === 'turtle' && Math.hypot(a.x - t.x, a.y - t.y) <= 60);
-      if (turtle) d *= (o.aoe || o.proj || o.fire) ? (turtle.star >= 3 ? 0.58 : 0.70) : (turtle.star >= 3 ? 0.82 : 0.88);
+    // 海龟 (turtle): 绑定两卡、2格；其他直伤-12%；8秒开壳4秒，范围直伤减伤35/40/45%；单体投射物不冒充范围；替换额外小盾，不与多龟叠加。
+    if (kind !== 'dot' && !t.structure) {
+      const turtle = this.live[t.team].find((a) => a.alive && !a.structure && a.mob.id === 'turtle' && Math.hypot(a.x - t.x, a.y - t.y) <= 64);
+      if (turtle) {
+        if (turtle.ab.shellOpenT && (turtle.ab.shellOpenT as number) > 0) {
+          if (o.aoe) {
+            const aoeRed = turtle.star >= 3 ? 0.45 : (turtle.star === 2 ? 0.40 : 0.35);
+            d *= (1 - aoeRed);
+          } else {
+            d *= 0.88;
+          }
+        } else {
+          d *= 0.88;
+        }
+      }
     }
     // 小恶魂 (baby_ghast): 为非召唤非建筑队友分担 20% 直伤（★3 为 28%）
     if (kind !== 'dot' && !t.structure && !t.isSummon && t.mob.id !== 'baby_ghast') {
@@ -2241,11 +2519,15 @@ export class Battle {
           if (this.has(t.team, 'combo_ghost_flame')) {
             const sideTimers = this.sides[t.team].timers;
             sideTimers.ghostFlameDmg = (sideTimers.ghostFlameDmg || 0) + shared;
-            const teamMaxHp = this.live[t.team].reduce((sum, u) => sum + (u.structure ? 0 : u.maxHp), 0);
-            if (sideTimers.ghostFlameDmg >= teamMaxHp * 0.08 && (!sideTimers.ghostFlameCd || this.t >= sideTimers.ghostFlameCd)) {
+            const ghastTotalH = this.live[t.team].filter(a => a.mob.id === 'baby_ghast' && !a.isSummon).reduce((sum, u) => sum + u.maxHp, 0) || ghast.maxHp;
+            if (sideTimers.ghostFlameDmg >= ghastTotalH * 0.20 && (!sideTimers.ghostFlameCd || this.t >= sideTimers.ghostFlameCd)) {
               sideTimers.ghostFlameDmg = 0;
               sideTimers.ghostFlameCd = this.t + 8.0;
-              this.addBuff(t.team, 'fire', 1.30, this.t + 4.0);
+              for (const a of this.live[t.team]) {
+                if (a.alive && !a.structure && (a.mob.families.includes('nether') || a.mob.id === 'blaze' || a.mob.id === 'magma_cube')) {
+                  a.ref.ghostFlameBonus = 1.30;
+                }
+              }
               this.emit({ k: 'text', x: ghast.x, y: ghast.y, z: ghast.gz + ghast.size + 15, s: '幽火引航 +30%火伤!', color: '#ff6b81' });
             }
           }
@@ -2265,11 +2547,15 @@ export class Battle {
       if (hasFront) d *= 0.65;
     }
     if (this.fortTeam !== null && !t.flying && this.fortTeam[tidx(cellX(t.x), cellY(t.y))] === t.team) d *= FORT_TAKEN;
-    const erodedArmor = Math.max(0, t.armor - t.erosionStacks * 0.06);
-    const armor = Math.min(0.75, src && src.fx.breach > 0 ? erodedArmor * (1 - src.fx.breach) : erodedArmor);
+    const erodedArmor = Math.max(0, t.armor - t.erosionStacks * 0.04);
+    const armor = Math.min(0.75, src && src.fx.breach > 0 ? erodedArmor * (1 - src.fx.breach) : (src && src.ref.activeIgnoreArmor35 ? erodedArmor * 0.65 : erodedArmor));
+    if (src) delete src.ref.activeIgnoreArmor35;
     if (kind === 'phys') d *= 1 - armor;
     else if (kind === 'magic') d *= 1 - armor * 0.5;
     if (t.ref.closed) d *= 0.6;
+    if (t.ref.undeadReviveDmgResist && this.t < t.ref.undeadReviveDmgResist) {
+      d *= 0.80;
+    }
     if (t.mob.families.includes('illager') && this.syn(t.team, 'illager') >= 0 && !t.ref.illagerRushed && kind !== 'dot') {
       t.ref.illagerRushed = true;
       t.hasteT = Math.max(t.hasteT, 5.0);
@@ -2278,6 +2564,20 @@ export class Battle {
     }
     if (this.t < (this.sides[t.team].timers['illager_horn_active'] ?? 0) && t.mob.families.includes('illager')) {
       d *= 0.85;
+    }
+    if (this.has(t.team, 'combo_armored_caravan') && !t.structure && !t.isSummon && (t.mob.id === 'armored_piglin' || t.mob.id === 'royal_guard') && (t.hp - d) / t.maxHp < 0.50) {
+      const tm = this.sides[t.team].timers;
+      if (!tm.armored_caravan_cd || this.t >= tm.armored_caravan_cd) {
+        tm.armored_caravan_cd = this.t + 10.0;
+        for (const a of this.live[t.team]) {
+          if (a.alive && !a.structure && a.isRanged) {
+            a.addSynergyShield('armored_caravan', a.maxHp * 0.12, 4.0);
+            a.atkSpd *= 1.20;
+            this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.20; });
+          }
+        }
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '重装护航!', color: '#e67e22' });
+      }
     }
     d *= t.takenMul;
     if (t.echoMul > 0 && kind !== 'dot') {
@@ -2338,6 +2638,68 @@ export class Battle {
     if (t.shield > 0) {
       const { absorbed } = t.consumeShield(d);
       d -= absorbed;
+      if (absorbed > 0) {
+        if (this.has(t.team, 'combo_forest_watch') && (t.row === 'front' || t.mob.role === 'tank' || t.mob.role === 'melee')) {
+          const tm = this.sides[t.team].timers;
+          if (!tm.forest_watch_cd || this.t >= tm.forest_watch_cd) {
+            tm.forest_watch_cd = this.t + 6.0;
+            for (const a of this.live[t.team]) {
+              if (a.alive && !a.structure && !a.isSummon && (a.mob.role === 'melee' || a.mob.role === 'tank')) {
+                a.ref.forestWatchBonus = 0.60;
+              }
+            }
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '林地守望!', color: '#2ed573' });
+          }
+        }
+        if (this.has(t.team, 'combo_construct_sentries') && t.mob.families.includes('construct')) {
+          const tm = this.sides[t.team].timers;
+          if (!tm.construct_sentries_cd || this.t >= tm.construct_sentries_cd) {
+            tm.construct_sentries_cd = this.t + 8.0;
+            for (const a of this.live[t.team]) {
+              if (a.alive && !a.structure && (a.mob.id === 'dispenser' || a.mob.id === 'copper_golem' || a.mob.id === 'snow_golem' || a.mob.id === 'iron_golem')) {
+                a.atkSpd *= 1.25;
+                this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.25; });
+              }
+            }
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '构装哨阵!', color: '#e67e22' });
+          }
+        }
+        if (this.has(t.team, 'combo_soul_lanterns')) {
+          const tm = this.sides[t.team].timers;
+          const count = tm.soul_lanterns_count || 0;
+          if (count < 8 && (!tm.soul_lanterns_cd || this.t >= tm.soul_lanterns_cd)) {
+            tm.soul_lanterns_cd = this.t + 6.0;
+            tm.soul_lanterns_count = count + 1;
+            this.addSouls(t.team, 2);
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '魂灯守望 +2魂!', color: '#00d2d3' });
+          }
+        }
+        if (this.has(t.team, 'combo_deep_glimmer') && (t.mob.id === 'turtle' || t.mob.id === 'glow_squid')) {
+          const tm = this.sides[t.team].timers;
+          if (!tm.deep_glimmer_cd || this.t >= tm.deep_glimmer_cd) {
+            tm.deep_glimmer_cd = this.t + 8.0;
+            for (const a of this.live[t.team]) {
+              if (a.alive && !a.structure && a.mob.id === 'pufferfish') {
+                this.heal(a, a.maxHp * 0.10, null);
+              }
+            }
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '暗潮映光!', color: '#00cec9' });
+          }
+        }
+        if (this.has(t.team, 'combo_thorn_wall') && t.mob.id === 'quick_vine') {
+          const tm = this.sides[t.team].timers;
+          if (!tm.thorn_wall_cd || this.t >= tm.thorn_wall_cd) {
+            tm.thorn_wall_cd = this.t + 8.0;
+            for (const a of this.live[t.team]) {
+              if (a.alive && !a.structure && a.isRanged) {
+                a.atkSpd *= 1.20;
+                this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.20; });
+              }
+            }
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '藤墙毒刺!', color: '#26de81' });
+          }
+        }
+      }
       if (hadShield && t.shield <= 0 && this.syn(t.team, 'construct') >= 2 && t.mob.families.includes('construct')) {
         this.emit({ k: 'boom', x: t.x, y: t.y, r: 50, color: '#c9c9c9', big: false });
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '脉冲!', color: '#cfe8ff' });
@@ -2352,6 +2714,7 @@ export class Battle {
         return 0;
       }
     }
+    const hpDamage = Math.max(0, Math.min(t.hp, d));
     t.hp -= d;
     if (src) t.ref.lastHitBy = src;
     if (t.boss && t.channeling && d > 0 && t.maxHp > 0) {
@@ -2368,10 +2731,26 @@ export class Battle {
         v: Math.round(d), c: crit ? NUM_CRIT : kind === 'true' ? NUM_TRUE : kind === 'magic' ? NUM_MAGIC : NUM_PHYS,
       });
     if (src && src.alive && kind !== 'dot' && src.fx.lifesteal > 0) this.heal(src, d * src.fx.lifesteal, null, true);
-    if (src && src.alive && kind !== 'dot' && this.syn(src.team, 'nether') >= 1 && src.mob.families.includes('nether') && t.burnT > 0) {
-      this.heal(src, d * 0.10, null, true);
+    // 亡灵伤害转恢复池：实际生命伤害的 20% (4档及以上 25%) 为同族最缺血原生单位恢复
+    if (hpDamage > 0 && src && src.alive && kind !== 'dot' && !src.isSummon && src.mob.families.includes('undead') && this.syn(src.team, 'undead') >= 0) {
+      const poolPct = this.syn(src.team, 'undead') >= 1 ? 0.25 : 0.20;
+      const poolHeal = hpDamage * poolPct;
+      let lowest: Unit | null = null;
+      let lowestFrac = 1;
+      for (const a of this.live[src.team]) {
+        if (a.alive && !a.isSummon && !a.structure && a.mob.families.includes('undead') && a.hpFrac < lowestFrac) {
+          lowestFrac = a.hpFrac;
+          lowest = a;
+        }
+      }
+      if (lowest && poolHeal > 0) {
+        this.heal(lowest, poolHeal, src, true);
+      }
     }
-    if (d > 0 && src && src.mob.families.includes('arthropod') && this.syn(src.team, 'arthropod') >= 1) {
+    if (src && src.alive && kind !== 'dot' && this.syn(src.team, 'nether') >= 1 && src.mob.families.includes('nether') && t.burnT > 0) {
+      this.heal(src, d * 0.20, null, true);
+    }
+    if (d > 0 && src && src.mob.families.includes('arthropod') && this.syn(src.team, 'arthropod') >= 1 && kind !== 'dot') {
       const sc = this.cards[src.card];
       sc.ref = sc.ref ?? {};
       if ((sc.ref.erosionCd ?? 0) <= this.t) {
@@ -2379,6 +2758,11 @@ export class Battle {
         t.erosionStacks = Math.min(6, t.erosionStacks + 1);
         t.erosionTimer = 4.0;
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: `蚀甲 ${t.erosionStacks}`, color: '#b0794c' });
+      }
+      if (kind !== 'true' && !src.ref.inArthropodProc) {
+        src.ref.inArthropodProc = true;
+        this.damage(src, t, d * 0.15, 'true', { noCrit: true, noDodge: true });
+        delete src.ref.inArthropodProc;
       }
     }
     if (o.melee && src && src.alive && t.fx.thorns > 0 && !o.noThorns)
@@ -2413,8 +2797,10 @@ export class Battle {
   }
 
   heal(t: Unit, amount: number, src: Unit | null, silent = false) {
-    if (!t.alive || t.witherT > 0 || amount <= 0) return;
-    const h = Math.min(amount, t.maxHp - t.hp);
+    if (!t.alive || amount <= 0 || (t.ref.healBlockT && t.ref.healBlockT > 0)) return;
+    let actualAmt = amount;
+    if (t.witherT > 0) actualAmt *= 0.5;
+    const h = Math.min(actualAmt, t.maxHp - t.hp);
     if (h <= 0) return;
     t.hp += h;
     if (src) this.cards[src.card].heal += h;
@@ -2423,6 +2809,38 @@ export class Battle {
       this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(h), c: NUM_HEAL });
       this.emit({ k: 'heal', x: t.x, y: t.y, z: t.gz + t.z });
     }
+    // 联动: 金鳃伴游 (combo_axolotl_escort)
+    if (src && src.mob.id === 'gold_axolotl' && this.has(src.team, 'combo_axolotl_escort')) {
+      const tm = this.sides[src.team].timers;
+      if (!tm.axolotl_escort_cd || this.t >= tm.axolotl_escort_cd) {
+        tm.axolotl_escort_cd = this.t + 6.0;
+        for (const a of this.live[src.team]) {
+          if (a.alive && !a.structure && a.row === 'front' && a.mob.families.includes('aquatic')) {
+            a.atkSpd *= 1.15;
+            this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.15; });
+          }
+        }
+        this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '金鳃伴游!', color: '#f1c40f' });
+      }
+    }
+  }
+
+  triggerUndeadWill(team: 0 | 1) {
+    const s = this.sides[team];
+    const tm = s.timers;
+    if (tm.undead_will_cd && this.t < tm.undead_will_cd) return;
+    const curStacks = tm.undead_will_stacks || 0;
+    if (curStacks >= 4) return;
+    tm.undead_will_stacks = curStacks + 1;
+    tm.undead_death_stacks = tm.undead_will_stacks;
+    tm.undead_will_cd = this.t + 2.0;
+    for (const u of this.live[team]) {
+      if (u.alive && !u.isSummon && !u.structure && u.mob.families.includes('undead')) {
+        u.atk *= 1.06;
+        u.addSynergyShield('undead_will', u.maxHp * 0.05, 10.0);
+      }
+    }
+    this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 80, s: `死志 +${tm.undead_will_stacks}`, color: '#a29bfe' });
   }
 
   kill(t: Unit, killer: Unit | null, silent = false) {
@@ -2432,16 +2850,20 @@ export class Battle {
       t.undeadRevived = true;
       t.revived = true;
       const tier = this.syn(t.team, 'undead');
-      const pct = this.has(t.team, 'soul_lantern') ? 0.70 : (tier >= 2 ? 0.50 : 0.35);
+      const pct = this.has(t.team, 'soul_lantern') ? 0.70 : (tier >= 2 ? 0.55 : 0.45);
       t.hp = t.maxHp * pct;
       if (this.has(t.team, 'soul_lantern')) t.atk *= 1.3;
       t.witherT = 0;
       t.burnT = 0;
       t.poisonT = 0;
       t.hasteT = Math.max(t.hasteT, 5.0);
-      t.hasteMul = Math.max(t.hasteMul, 1.15);
+      t.hasteMul = Math.max(t.hasteMul, 1.20);
+      t.ref.undeadReviveDmgResist = this.t + 3.0;
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '复生!', color: '#9be36b' });
       this.emit({ k: 'spawn', u: t, fx: 'revive' });
+      if (tier >= 2) {
+        this.triggerUndeadWill(t.team);
+      }
       return;
     }
     const side = this.sides[t.team];
@@ -2461,6 +2883,9 @@ export class Battle {
     const card = this.cards[t.card];
     card.alive--;
     this.emit({ k: 'death', u: t });
+    if (!silent && !t.isSummon && t.mob.families.includes('undead') && this.syn(t.team, 'undead') >= 2) {
+      this.triggerUndeadWill(t.team);
+    }
     if (killer && killer.team !== t.team) {
       const kc = this.cards[killer.card];
       kc.kills++;
@@ -2493,17 +2918,11 @@ export class Battle {
       }
       if (killer.alive) this.beh(killer).onKill?.(killer, t, this);
     }
-    if (!silent && t.mob.families.includes('undead') && this.syn(t.team, 'undead') >= 2 && !t.isSummon && !t.structure) {
-      const stacks = (this.sides[t.team].timers['undead_death_stacks'] ?? 0) + 1;
-      if (stacks <= 4) {
-        this.sides[t.team].timers['undead_death_stacks'] = stacks;
-        for (const u of this.live[t.team]) {
-          if (u.alive && u.mob.families.includes('undead')) {
-            u.atk *= 1.08;
-            u.addSynergyShield('undead_death', u.maxHp * 0.06, 6.0);
-            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '死志!', color: '#8fbf6a' });
-          }
-        }
+    if (t.ref.parrotMarked && t.ref.parrotMarked.timer > 0 && !t.ref.parrotMarked.transferred) {
+      const nextFoe = this.live[(1 - t.team) as 0 | 1].find((f) => f.alive && !f.structure && f.id !== t.id);
+      if (nextFoe) {
+        nextFoe.ref.parrotMarked = { ...t.ref.parrotMarked, transferred: true };
+        this.emit({ k: 'text', x: nextFoe.x, y: nextFoe.y, z: nextFoe.gz + nextFoe.size, s: '标记转移!', color: '#ff4757' });
       }
     }
     if (!silent) this.beh(t).onDeath?.(t, this, killer);
@@ -2606,6 +3025,14 @@ export class Battle {
       }
     }
     if (u.ab.focused > 0) u.ab.focused = Math.max(0, u.ab.focused - dt);
+    if (u.ref.parrotMarked && u.ref.parrotMarked.timer > 0) {
+      u.ref.parrotMarked.timer -= dt;
+      if (u.ref.parrotMarked.timer <= 0) delete u.ref.parrotMarked;
+    }
+    if (u.ref.ravenMarked && u.ref.ravenMarked.timer > 0) {
+      u.ref.ravenMarked.timer -= dt;
+      if (u.ref.ravenMarked.timer <= 0) delete u.ref.ravenMarked;
+    }
     if (u.stunT > 0) u.stunT -= dt;
     if (u.levT > 0) u.levT -= dt;
     if (u.slowT > 0) u.slowT -= dt;
@@ -2723,17 +3150,45 @@ export class Battle {
     if (t.burnT > 0) t.burnT = Math.max(0, t.burnT - dur);
   }
 
-  slow(t: Unit, move: number, atk: number, dur: number) {
+  slow(t: Unit, move: number, atk: number, dur: number, srcTeam?: 0 | 1) {
     if (t.immune & IMM_SLOW) return;
     t.slowMove = Math.max(t.slowT > 0 ? t.slowMove : 0, move);
     t.slowAtk = Math.max(t.slowT > 0 ? t.slowAtk : 0, atk);
     t.slowT = Math.max(t.slowT, dur);
+    const team = srcTeam ?? ((1 - t.team) as 0 | 1);
+    if (this.has(team, 'combo_frost_patrol')) {
+      const tm = this.sides[team].timers;
+      if (!tm.frost_patrol_cd || this.t >= tm.frost_patrol_cd) {
+        tm.frost_patrol_cd = this.t + 8.0;
+        const conditionCards = new Set(['snow_fox', 'polar_bear', 'stray']);
+        for (const a of this.live[team]) {
+          if (a.alive && !a.structure && !a.isSummon && conditionCards.has(a.mob.id)) {
+            a.addSynergyShield('frost_patrol', a.maxHp * 0.12, 5.0);
+          }
+        }
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '寒冬巡卫!', color: '#70a1ff' });
+      }
+    }
   }
 
-  chillHit(t: Unit) {
+  chillHit(t: Unit, srcTeam?: 0 | 1) {
     if (t.immune & IMM_SLOW) return;
     t.chill = Math.min(3, t.chill + 1);
     t.chillT = 2;
+    const team = srcTeam ?? ((1 - t.team) as 0 | 1);
+    if (this.has(team, 'combo_frost_patrol')) {
+      const tm = this.sides[team].timers;
+      if (!tm.frost_patrol_cd || this.t >= tm.frost_patrol_cd) {
+        tm.frost_patrol_cd = this.t + 8.0;
+        const conditionCards = new Set(['snow_fox', 'polar_bear', 'stray']);
+        for (const a of this.live[team]) {
+          if (a.alive && !a.structure && !a.isSummon && conditionCards.has(a.mob.id)) {
+            a.addSynergyShield('frost_patrol', a.maxHp * 0.12, 5.0);
+          }
+        }
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '寒冬巡卫!', color: '#70a1ff' });
+      }
+    }
   }
 
   hunger(t: Unit, dur: number) {
@@ -2741,7 +3196,25 @@ export class Battle {
     t.hungerT = Math.max(t.hungerT, dur);
   }
 
+  private checkRavenInterrupt(t: Unit) {
+    if (t.ref.ravenMarked && t.ref.ravenMarked.timer >= 2.0 && !t.ref.ravenMarked.triggered) {
+      t.ref.ravenMarked.triggered = true;
+      const ravenSrc = t.ref.ravenMarked.src;
+      if (ravenSrc && ravenSrc.alive) {
+        ravenSrc.ab.markCd = Math.max(0, ravenSrc.ab.markCd - 2.0);
+        for (const a of this.live[ravenSrc.team]) {
+          if (a.alive && !a.structure) {
+            a.hasteT = Math.max(a.hasteT, 3.0);
+            a.hasteMul = Math.max(a.hasteMul, 1.15);
+          }
+        }
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '破绽打断!', color: '#ff4757' });
+      }
+    }
+  }
+
   stun(t: Unit, dur: number) {
+    this.checkRavenInterrupt(t);
     if (t.immune & IMM_STUN || t.boss) {
       if (t.boss) t.stunT = Math.max(t.stunT, dur * 0.2);
       return;
@@ -2751,6 +3224,7 @@ export class Battle {
 
   addPosture(t: Unit, amt: number) {
     if (!t.boss || !t.channeling) return;
+    this.checkRavenInterrupt(t);
     t.posture = Math.min(100, t.posture + amt);
     if (t.posture >= 100) {
       t.channeling = false;
@@ -2786,17 +3260,48 @@ export class Battle {
       dx /= d;
       dy /= d;
     }
-    const p = power / t.mass;
+    let p = power / t.mass;
+    if (t.ref.dolphinEscort && this.t < t.ref.dolphinEscort.expireAt) {
+      p *= 0.5;
+      if (!t.ref.dolphinEscort.roundUsed) {
+        t.ref.dolphinEscort.roundUsed = true;
+        t.atkTimer = Math.max(0, t.atkTimer - t.cd * t.ref.dolphinEscort.advanceRatio);
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '破浪反击!', color: '#70a1ff' });
+      }
+    }
     t.vx += dx * p * 3;
     t.vy += dy * p * 1.6;
     if (!t.flying && p > 70 && t.z <= 1) t.vz = Math.max(t.vz, 120);
+    // 联动: 潮路护航 (combo_sea_routes)
+    if (this.has(t.team, 'combo_sea_routes') && (t.ref.seaEscort || t.ref.turtleShell)) {
+      const tm = this.sides[t.team].timers;
+      if (!tm.sea_routes_cd || this.t >= tm.sea_routes_cd) {
+        tm.sea_routes_cd = this.t + 8.0;
+        t.atkTimer = Math.max(0, t.atkTimer - t.cd * 0.50);
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '潮路护航!', color: '#2ed573' });
+      }
+    }
   }
 
   /** Called whenever a unit teleports (末影之眼 primes its next hit). */
   teleported(u: Unit) {
-    if (!this.has(u.team, 'ender_eye')) return;
-    u.critNext = true;
-    u.empower = true;
+    if (this.has(u.team, 'ender_eye')) {
+      u.critNext = true;
+      u.empower = true;
+    }
+    // 联动: 虚空接力 (combo_void_relay)
+    if (this.has(u.team, 'combo_void_relay')) {
+      const tm = this.sides[u.team].timers;
+      if (!tm.void_relay_cd || this.t >= tm.void_relay_cd) {
+        tm.void_relay_cd = this.t + 8.0;
+        for (const a of this.live[u.team]) {
+          if (a.alive && !a.structure && (a.mob.id === 'sprout' || a.mob.id === 'snareling' || a.mob.id === 'iceologer')) {
+            a.ref.voidRelayBonus = 20;
+          }
+        }
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '虚空接力!', color: '#a55eea' });
+      }
+    }
   }
 
   blink(t: Unit, dist: number) {

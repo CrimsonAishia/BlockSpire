@@ -201,16 +201,18 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           return;
         }
         resetCardCd(u, 'enchant', cd, b);
-        // 绑定核心原生输出卡：按攻击力与攻速乘积降序（优先真实打手）
-        candidates.sort((c1, c2) => {
-          const d1 = b.atkOf(c1) * c1.atkSpd;
-          const d2 = b.atkOf(c2) * c2.atkSpd;
-          return d2 - d1;
-        });
-        const bestCard = candidates[0].card;
-        const targets = alliesOf(u, b).filter((a) => a.card === bestCard && a.alive && !a.isSummon);
-        const atkMul = u.star >= 2 ? 0.35 : 0.25;
-        const spdMul = u.star >= 2 ? 0.20 : 0.15;
+        // 绑定核心原生输出卡：按整卡DPS选核心
+        const cardDpsMap = new Map<number, { dps: number; card: number; units: Unit[] }>();
+        for (const a of candidates) {
+          const entry = cardDpsMap.get(a.card) ?? { dps: 0, card: a.card, units: [] };
+          entry.units.push(a);
+          entry.dps += (b.atkOf(a) * a.atkSpd) / Math.max(0.2, a.cd);
+          cardDpsMap.set(a.card, entry);
+        }
+        const cardEntries = Array.from(cardDpsMap.values()).sort((a1, a2) => a2.dps - a1.dps);
+        const targets = cardEntries[0].units;
+        const atkMul = u.star === 3 ? 0.40 : (u.star === 2 ? 0.35 : 0.25);
+        const spdMul = u.star === 3 ? 0.25 : (u.star === 2 ? 0.20 : 0.15);
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '附魔律令!', color: '#9b59b6' });
         for (const t of targets) {
           // 同类律令取强，不重复叠加
@@ -405,7 +407,8 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           setCardCd(u, 'beast_shield', 1.0, b);
           return;
         }
-        resetCardCd(u, 'beast_shield', 7, b);
+        const cycle = u.star >= 3 ? 6 : 7;
+        resetCardCd(u, 'beast_shield', cycle, b);
         // 按卡分组，选出 2 张原生卡（优先近战或受击者）
         const cardsMap = new Map<number, Unit[]>();
         for (const a of candidates) {
@@ -424,12 +427,15 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
         });
         const chosenCards = cardList.slice(0, 2);
         const shieldPct = u.star >= 3 ? 0.18 : (u.star >= 2 ? 0.16 : 0.12);
-        const shieldCap = u.maxHp * 0.30;
+        const sourceH = cardAllies(u, b).reduce((sum, a) => sum + a.maxHp, 0) || u.maxHp;
+        const shieldCap = sourceH * 0.30;
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '藤木护佑!', color: '#2ed573' });
         for (const [, units] of chosenCards) {
+          const targetCardH = units.reduce((sum, a) => sum + a.maxHp, 0);
+          const totalShieldForCard = Math.min(shieldCap, targetCardH * shieldPct);
+          const perUnit = totalShieldForCard / units.length;
           for (const a of units) {
-            const sh = Math.min(shieldCap, a.maxHp * shieldPct);
-            a.addSynergyShield('whisperer_shield', sh, 5.0);
+            a.addSynergyShield('whisperer_shield', perUnit, 5.0);
             b.emit({ k: 'heal', x: a.x, y: a.y, z: a.gz + a.z + a.size });
             if (a.mob.families.includes('beast')) {
               a.moveSpd *= 1.15;
@@ -499,45 +505,67 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
   key_golem: {
     tick(u, b, dt) {
       if (!isCardLead(u, b)) return;
-      if (coolCard(u, 'key_shield', dt, 7.0, b)) {
-        resetCardCd(u, 'key_shield', 7, b);
+      if (coolCard(u, 'key_shield', dt, 1.5, b)) {
+        const cycle = u.star >= 3 ? 6 : 7;
+        resetCardCd(u, 'key_shield', cycle, b);
         u.ref.stepped_in = false;
         const allies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.card !== u.card);
+        let cardUnits: Unit[] = [];
         if (allies.length > 0) {
           // 绑定一张后排/慢卡
-          allies.sort((a1, a2) => {
-            const r1 = a1.row === 'back' ? 0 : (a1.speed < 40 ? 1 : 2);
-            const r2 = a2.row === 'back' ? 0 : (a2.speed < 40 ? 1 : 2);
-            if (r1 !== r2) return r1 - r2;
-            return a1.hp / a1.maxHp - a2.hp / a2.maxHp;
-          });
-          const target = allies[0];
-          u.ref.protectedUnit = target;
-          const shieldPct = u.star >= 3 ? 0.14 : (u.star >= 2 ? 0.12 : 0.09);
-          const sh = Math.min(u.maxHp * 0.30, target.maxHp * shieldPct);
-          target.addSynergyShield('key_golem_shield', sh, 4.0);
-          if (target.slowT > 0) {
-            target.slowT = 0;
-            target.slowMove = 0;
-            target.slowAtk = 0;
-            b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '解除减速!', color: '#eccc68' });
+          const cardMap = new Map<number, Unit[]>();
+          for (const a of allies) {
+            const list = cardMap.get(a.card) ?? [];
+            list.push(a);
+            cardMap.set(a.card, list);
           }
-          b.emit({ k: 'heal', x: target.x, y: target.y, z: target.gz + target.z + target.size });
+          const cardList = Array.from(cardMap.entries());
+          cardList.sort(([, u1], [, u2]) => {
+            const r1 = u1.some((a) => a.row === 'back' || a.speed < 40) ? 0 : 1;
+            const r2 = u2.some((a) => a.row === 'back' || a.speed < 40) ? 0 : 1;
+            if (r1 !== r2) return r1 - r2;
+            return (u1.reduce((s, a) => s + a.hpFrac, 0) / u1.length) - (u2.reduce((s, a) => s + a.hpFrac, 0) / u2.length);
+          });
+          cardUnits = cardList[0][1];
+        } else {
+          cardUnits = cardAllies(u, b).filter((a) => a.alive);
+        }
+        if (cardUnits.length > 0) {
+          u.ref.protectedUnits = cardUnits;
+          const shieldPct = u.star >= 3 ? 0.16 : (u.star >= 2 ? 0.13 : 0.10);
+          const sourceH = cardAllies(u, b).reduce((s, a) => s + a.maxHp, 0) || u.maxHp;
+          const shieldCap = sourceH * 0.30;
+          const targetCardH = cardUnits.reduce((s, a) => s + a.maxHp, 0);
+          const totalShield = Math.min(shieldCap, targetCardH * shieldPct);
+          const perUnit = totalShield / cardUnits.length;
+          for (const target of cardUnits) {
+            target.addSynergyShield('key_golem_shield', perUnit, 4.0);
+            if (target.slowT > 0 || target.slowMove > 0 || target.slowAtk > 0) {
+              target.slowT = 0;
+              target.slowMove = 0;
+              target.slowAtk = 0;
+              b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '净化减速!', color: '#eccc68' });
+            }
+            b.emit({ k: 'heal', x: target.x, y: target.y, z: target.gz + target.z + target.size });
+          }
         }
       }
       // 受益卡被敌人接近 <= 60 时，傀儡沿路径补位并获得 2 秒 25% 减伤
-      const prot = u.ref.protectedUnit as Unit | undefined;
-      if (prot && prot.alive && !u.ref.stepped_in) {
-        const nearThreat = foesOf(u, b).some((f) => f.alive && !f.structure && dist(f, prot) <= 60);
-        if (nearThreat) {
-          u.ref.stepped_in = true;
-          u.x = clampX(u, prot.x + (u.team === 0 ? 25 : -25));
-          u.y = clampY(prot.y);
-          u.takenMul *= 0.75;
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '机巧补位!', color: '#eccc68' });
-          b.addTimedAction(2.0, () => {
-            if (u.alive) u.takenMul /= 0.75;
-          });
+      const prots = u.ref.protectedUnits as Unit[] | undefined;
+      if (prots && prots.some((p) => p.alive) && !u.ref.stepped_in) {
+        const prot = prots.find((p) => p.alive);
+        if (prot) {
+          const nearThreat = foesOf(u, b).some((f) => f.alive && !f.structure && dist(f, prot) <= 60);
+          if (nearThreat) {
+            u.ref.stepped_in = true;
+            u.x = clampX(u, prot.x + (u.team === 0 ? 25 : -25));
+            u.y = clampY(prot.y);
+            u.takenMul *= 0.75;
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '机巧补位!', color: '#eccc68' });
+            b.addTimedAction(2.0, () => {
+              if (u.alive) u.takenMul /= 0.75;
+            });
+          }
         }
       }
     },

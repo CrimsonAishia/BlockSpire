@@ -93,30 +93,60 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   snow_fox: {
     init(u, b) {
       if (!isCardLead(u, b)) return;
-      const allies = alliesOf(u, b).filter((a) => a.alive && a.mob.role === 'melee');
-      const targets = allies.slice(0, 2);
+      const targets = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && (a.mob.role === 'melee' || a.mob.role === 'tank') && a.card !== u.card);
+      const seenCards = new Set<number>();
+      const cardTargets: Unit[] = [];
       for (const t of targets) {
-        t.moveSpd *= 1.35;
+        if (!seenCards.has(t.card) && seenCards.size < 2) {
+          seenCards.add(t.card);
+          cardTargets.push(t);
+        }
+      }
+      for (const t of cardTargets) {
+        t.ref.terrainSlowResist = 0.5;
         b.addTimedAction(6.0, () => {
-          if (t.alive) t.moveSpd /= 1.35;
+          delete t.ref.terrainSlowResist;
         });
-        b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '踏雪提速!', color: '#70a1ff' });
       }
     },
     tick(u, b, dt) {
       if (!isCardLead(u, b)) return;
+      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
       if (cool(u, 'cleanseCd', dt, 2)) {
-        const allies = alliesOf(u, b).filter((a) => a.alive && a.mob.role === 'melee');
-        if (allies.length > 0) {
-          u.ab.cleanseCd = u.star >= 3 ? 7 : 8;
-          for (const t of allies.slice(0, 2)) {
-            t.slowT = 0;
-            t.hasteT = Math.max(t.hasteT, 4.0);
-            t.hasteMul = Math.max(t.hasteMul, 1.25);
-            if (u.star >= 3) {
-              t.addSynergyShield('snow_fox_shield', t.maxHp * 0.1, 4);
+        const targets = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && (a.mob.role === 'melee' || a.mob.role === 'tank') && a.card !== u.card);
+        const seenCards = new Set<number>();
+        const cardTargets: Unit[] = [];
+        for (const t of targets) {
+          if (!seenCards.has(t.card) && seenCards.size < 2) {
+            seenCards.add(t.card);
+            cardTargets.push(t);
+          }
+        }
+        if (cardTargets.length > 0) {
+          u.ab.cleanseCd = cd;
+          const hasteBonus = u.star >= 3 ? 1.35 : (u.star === 2 ? 1.30 : 1.25);
+          for (const t of cardTargets) {
+            for (const member of alliesOf(u, b).filter((a) => a.alive && a.card === t.card)) {
+              if (member.slowT > 0) {
+                if (u.star >= 3) member.slowT = 0;
+                else member.slowT *= 0.5;
+              }
+              if (!member.ref.foxEngaged) {
+                member.ref.foxEngaged = true;
+                member.atkTimer = Math.max(0, member.atkTimer - member.cd * 0.40);
+              }
+              member.hasteT = Math.max(member.hasteT, 4.0);
+              member.hasteMul = Math.max(member.hasteMul, hasteBonus);
+              member.ref.terrainSlowResist = 0.5;
+              b.addTimedAction(4.0, () => {
+                delete member.ref.terrainSlowResist;
+              });
+              if (u.star >= 3) {
+                const shieldAmt = Math.min(u.maxHp * 0.30, member.maxHp * 0.10);
+                member.addSynergyShield('snow_fox_shield', shieldAmt, 4.0);
+              }
             }
-            b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '霜雪净化!', color: '#70a1ff' });
+            b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '踏雪引路!', color: '#70a1ff' });
           }
         } else {
           u.ab.cleanseCd = 0;
@@ -142,16 +172,43 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   raven: {
     tick(u, b, dt) {
       if (!isCardLead(u, b)) return;
+      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
       if (cool(u, 'markCd', dt, 2)) {
-        const foes = foesOf(u, b).filter((f) => f.alive && (f.channeling || f.animAtk > 0 || f.boss));
+        const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
         if (foes.length > 0) {
-          u.ab.markCd = u.star >= 3 ? 7 : 8;
-          const target = foes[0];
-          target.atkTimer += 0.4;
-          if (target.boss) {
-            b.addPosture(target, u.star >= 3 ? 30 : 20);
+          foes.sort((a, c) => {
+            const scoreC = (c.boss ? 20 : 0) + (c.channeling ? 15 : 0) + (c.mob.role === 'caster' ? 10 : 0) + (c.animAtk > 0 ? 5 : 0);
+            const scoreA = (a.boss ? 20 : 0) + (a.channeling ? 15 : 0) + (a.mob.role === 'caster' ? 10 : 0) + (a.animAtk > 0 ? 5 : 0);
+            return scoreC - scoreA;
+          });
+          const targets = foes.slice(0, 2);
+          u.ab.markCd = cd;
+          const factor = u.star >= 3 ? 0.15 : (u.star === 2 ? 0.12 : 0.10);
+          const allyCards: number[] = [];
+          for (const a of alliesOf(u, b)) {
+            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card && !allyCards.includes(a.card)) {
+              allyCards.push(a.card);
+              if (allyCards.length >= 2) break;
+            }
           }
-          b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '破绽锁定!', color: '#ff4757' });
+          for (const target of targets) {
+            target.atkTimer += 0.4;
+            target.ref.scouted = b.t + 5.0;
+            target.ref.ravenMarked = {
+              factor,
+              timer: 5.0,
+              src: u,
+              boundCards: allyCards.length > 0 ? allyCards : [u.card],
+              triggered: false,
+            };
+            if (target.boss) {
+              b.addPosture(target, u.star >= 3 ? 30 : (u.star === 2 ? 25 : 20));
+              b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: `破势 +${u.star >= 3 ? 30 : (u.star === 2 ? 25 : 20)}!`, color: '#ff4757' });
+            } else {
+              target.stunT = Math.max(target.stunT, 0.4);
+              b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '侦察打断!', color: '#ff4757' });
+            }
+          }
         } else {
           u.ab.markCd = 0;
         }
@@ -232,16 +289,29 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   quick_vine: {
     tick(u, b, dt) {
       if (!isCardLead(u, b)) return;
+      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
       if (cool(u, 'wallCd', dt, 2)) {
-        const backAllies = alliesOf(u, b).filter((a) => a.alive && a.mob.defaultRow === 'back');
+        const backAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.mob.defaultRow === 'back');
         const threatened = backAllies.find((a) => foesOf(u, b).some((f) => f.alive && !f.isRanged && dist(a, f) <= 80));
         if (threatened) {
-          u.ab.wallCd = 8;
-          threatened.addSynergyShield('vine_wall', u.maxHp * 0.4, u.star >= 3 ? 4.0 : 3.0);
+          u.ab.wallCd = cd;
+          const shieldPct = u.star >= 3 ? 0.50 : (u.star === 2 ? 0.45 : 0.40);
+          const dur = u.star >= 3 ? 4.0 : (u.star === 2 ? 3.5 : 3.0);
+          const targetCards = new Set<number>([threatened.card]);
+          for (const a of backAllies) {
+            if (targetCards.size < 2) targetCards.add(a.card);
+          }
+          const shieldPerCard = (u.maxHp * shieldPct) / targetCards.size;
+          for (const cardId of targetCards) {
+            const members = backAllies.filter((a) => a.card === cardId);
+            for (const m of members) {
+              m.addSynergyShield('vine_wall', shieldPerCard / members.length, dur);
+            }
+          }
           b.aoe(threatened.x, threatened.y, 50, u.team, (f) => {
             if (!f.boss) {
               b.knock(f, threatened.x, threatened.y, 35);
-              if (u.star >= 3) f.stunT = Math.max(f.stunT, 1.0);
+              if (u.star >= 3) f.stunT = Math.max(f.stunT, 0.5);
             }
           });
           b.emit({ k: 'boom', x: threatened.x, y: threatened.y, r: 40, color: '#2ed573', big: false });
@@ -262,8 +332,28 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         if (foes.length > 0) {
           u.ab.signalCd = 6;
           const target = foes[0];
+          const factor = u.star >= 3 ? 0.35 : (u.star === 2 ? 0.30 : 0.25);
+          const boundCards: number[] = [];
+          for (const a of alliesOf(u, b)) {
+            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card && !boundCards.includes(a.card)) {
+              boundCards.push(a.card);
+              if (boundCards.length >= 2) break;
+            }
+          }
           target.ab.focused = 5;
-          b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '集火标记!', color: '#ff4757' });
+          target.ref.parrotMarked = {
+            factor,
+            timer: 5.0,
+            src: u,
+            boundCards,
+            transferred: false,
+          };
+          for (const cardId of boundCards) {
+            for (const a of alliesOf(u, b).filter((m) => m.alive && m.card === cardId)) {
+              a.atkTimer = Math.max(0, a.atkTimer - a.cd * 0.25);
+            }
+          }
+          b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '协同标记!', color: '#ff4757' });
         } else {
           u.ab.signalCd = 0;
         }
@@ -313,20 +403,12 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   // 12. 熊猫 (panda)
   panda: {
     tick(u, b, dt) {
-      if ((u.ab.rollCount ?? 0) >= (u.star >= 3 ? 3 : 2)) return;
-      if (cool(u, 'rollCd', dt, 2)) {
-        const allies = alliesOf(u, b).filter((a) => a.alive && a.card !== u.card && a.hp / a.maxHp < 0.5);
-        if (allies.length > 0) {
-          u.ab.rollCd = 10;
-          u.ab.rollCount = (u.ab.rollCount ?? 0) + 1;
-          const protectedAlly = allies[0];
-          u.x = protectedAlly.x + (u.team === 0 ? 20 : -20);
-          u.y = protectedAlly.y;
-          protectedAlly.addSynergyShield('panda_shield', protectedAlly.maxHp * 0.15, 3.0);
-          b.emit({ k: 'tele', x: u.x, y: u.y, x2: protectedAlly.x, y2: protectedAlly.y, z: u.gz });
-          b.emit({ k: 'text', x: protectedAlly.x, y: protectedAlly.y, z: protectedAlly.gz + 40, s: '翻滚护航!', color: '#eccc68' });
-        } else {
-          u.ab.rollCd = 0;
+      if (u.ab.rollCd) u.ab.rollCd = Math.max(0, u.ab.rollCd - dt);
+      if (!u.ref.pandaBoundAlly || !u.ref.pandaBoundAlly.alive) {
+        const backAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.card !== u.card && a.mob.defaultRow === 'back');
+        if (backAllies.length > 0) {
+          u.ref.pandaBoundAlly = backAllies[0];
+          backAllies[0].ref.pandaGuardian = u;
         }
       }
     },
@@ -340,7 +422,16 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         if (foes.length > 0) {
           u.ab.burrowCd = 6;
           for (const f of foes) {
-            b.damage(u, f, u.atk * 1.8, 'phys');
+            let mul = 1.8;
+            if (b.has(u.team, 'combo_vine_colony') && (f.stunT > 0 || f.slowT > 0 || f.ref.charge || f.animAtk > 0)) {
+              const tm = b.sides[u.team].timers;
+              if (!tm.vine_colony_cd || b.t >= tm.vine_colony_cd) {
+                tm.vine_colony_cd = b.t + 7.0;
+                mul = 2.25;
+                b.emit({ k: 'text', x: f.x, y: f.y, z: f.gz + 40, s: '藤巢重击 225%!', color: '#2ed573' });
+              }
+            }
+            b.damage(u, f, u.atk * mul, 'phys');
             b.emit({ k: 'boom', x: f.x, y: f.y, r: 25, color: '#2ed573', big: false });
           }
         } else {
@@ -426,25 +517,61 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
 
   // 17. 发光鱿鱼 (glow_squid)
   glow_squid: {
+    tick(u, b, dt) {
+      if (u.ab.inkCd) u.ab.inkCd = Math.max(0, u.ab.inkCd - dt);
+      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
+      if (cool(u, 'inkCd', dt, 2)) {
+        const allies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon);
+        const seenCards = new Set<number>();
+        const targetAllies: Unit[] = [];
+        for (const a of allies) {
+          if (!seenCards.has(a.card) && seenCards.size < 2) {
+            seenCards.add(a.card);
+            targetAllies.push(a);
+          }
+        }
+        const threatUnit = [u, ...targetAllies].find((a) =>
+          foesOf(u, b).some((f) => f.alive && (dist(a, f) <= 60 || (f.boss && f.channeling && dist(a, f) <= 120)))
+        );
+        if (threatUnit) {
+          u.ab.inkCd = cd;
+          const dur = u.star >= 3 ? 4.0 : (u.star === 2 ? 3.5 : 3.0);
+          b.emit({ k: 'boom', x: threatUnit.x, y: threatUnit.y, r: 50, color: '#1e90ff', big: false });
+          b.emit({ k: 'text', x: threatUnit.x, y: threatUnit.y, z: threatUnit.gz + 30, s: '荧光盲墨!', color: '#1e90ff' });
+          b.aoe(threatUnit.x, threatUnit.y, 60, u.team, (f) => {
+            if (f.boss && f.channeling && !f.ref.squidPoised) {
+              f.ref.squidPoised = true;
+              b.addPosture(f, 25);
+              b.emit({ k: 'text', x: f.x, y: f.y, z: f.gz + f.size, s: '破势 +25!', color: '#ff4757' });
+            } else {
+              f.weakT = Math.max(f.weakT, dur);
+              f.weakMul = Math.max(f.weakMul, 0.25);
+            }
+          });
+        } else {
+          u.ab.inkCd = 0;
+        }
+      }
+    },
     onDamaged(u, _src, _o, b) {
       if (cool(u, 'inkCd', 0, 0)) {
-        u.ab.inkCd = 8;
+        const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
+        const dur = u.star >= 3 ? 4.0 : (u.star === 2 ? 3.5 : 3.0);
+        u.ab.inkCd = cd;
         b.emit({ k: 'boom', x: u.x, y: u.y, r: 50, color: '#1e90ff', big: false });
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + 30, s: '荧光盲墨!', color: '#1e90ff' });
         b.aoe(u.x, u.y, 60, u.team, (f) => {
-          if (f.boss) {
+          if (f.boss && f.channeling && !f.ref.squidPoised) {
+            f.ref.squidPoised = true;
             b.addPosture(f, 25);
             b.emit({ k: 'text', x: f.x, y: f.y, z: f.gz + f.size, s: '破势 +25!', color: '#ff4757' });
           } else {
-            f.weakT = Math.max(f.weakT, 3.0);
+            f.weakT = Math.max(f.weakT, dur);
             f.weakMul = Math.max(f.weakMul, 0.25);
           }
         });
       }
       return false;
-    },
-    tick(u, _b, dt) {
-      if (u.ab.inkCd) u.ab.inkCd = Math.max(0, u.ab.inkCd - dt);
     },
   },
 
@@ -452,22 +579,40 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   gold_axolotl: {
     tick(u, b, dt) {
       if (!isCardLead(u, b)) return;
+      const cd = u.star >= 3 ? 5 : 6;
       if (cool(u, 'healCd', dt, 2)) {
-        const allies = alliesOf(u, b)
-          .filter((a) => a.alive && a.hp < a.maxHp)
-          .sort((a, b2) => a.hp / a.maxHp - b2.hp / b2.maxHp)
-          .slice(0, 2);
-        if (allies.length > 0) {
-          u.ab.healCd = 6;
-          for (const a of allies) {
-            const healAmt = a.maxHp * (u.star >= 3 ? 0.16 : 0.12);
-            b.heal(a, healAmt, u);
-            a.poisonT = 0;
-            a.burnT = 0;
-            if (u.star >= 3) {
-              a.addSynergyShield('axolotl_shield', a.maxHp * 0.1, 3.0);
+        const hurtAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.hp < a.maxHp);
+        if (hurtAllies.length > 0) {
+          const seenCards = new Set<number>();
+          const cardLeads: Unit[] = [];
+          hurtAllies.sort((a, c) => a.hp / a.maxHp - c.hp / c.maxHp);
+          for (const a of hurtAllies) {
+            if (!seenCards.has(a.card) && seenCards.size < 2) {
+              seenCards.add(a.card);
+              cardLeads.push(a);
             }
-            b.emit({ k: 'text', x: a.x, y: a.y, z: a.gz + a.size, s: '灵鳃治愈!', color: '#eccc68' });
+          }
+          u.ab.healCd = cd;
+          const pct = u.star >= 3 ? 0.16 : (u.star === 2 ? 0.12 : 0.10);
+          const maxSourceHeal = u.maxHp * 0.35;
+          let firstCard = true;
+          for (const lead of cardLeads) {
+            const members = alliesOf(u, b).filter((a) => a.alive && a.card === lead.card);
+            const totalTargetH = members.reduce((sum, m) => sum + m.maxHp, 0);
+            const cardHealBudget = Math.min(maxSourceHeal, totalTargetH * pct);
+            const perMember = cardHealBudget / members.length;
+            for (const m of members) {
+              b.heal(m, perMember, u);
+              if (firstCard) {
+                if (m.poisonT > 0) m.poisonT = 0;
+                else if (m.burnT > 0) m.burnT = 0;
+              }
+              if (u.star >= 3) {
+                m.addSynergyShield('axolotl_shield', m.maxHp * 0.10, 3.0);
+              }
+            }
+            firstCard = false;
+            b.emit({ k: 'text', x: lead.x, y: lead.y, z: lead.gz + lead.size, s: '灵鳃治愈!', color: '#eccc68' });
           }
         } else {
           u.ab.healCd = 0;
@@ -480,30 +625,40 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   turtle: {
     tick(u, b, dt) {
       if (cool(u, 'shellCd', dt, 2)) {
-        const frontAllies = alliesOf(u, b).filter((a) => a.alive && dist(u, a) <= 60);
-        if (frontAllies.length > 0) {
-          u.ab.shellCd = 8;
-          for (const a of frontAllies) {
-            a.addSynergyShield('turtle_shield', a.maxHp * 0.15, 4.0);
-            b.emit({ k: 'text', x: a.x, y: a.y, z: a.gz + a.size, s: '坚壳守护!', color: '#2ed573' });
-          }
-        } else {
-          u.ab.shellCd = 0;
-        }
+        u.ab.shellCd = 8;
+        u.ab.shellOpenT = 4.0;
+        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '坚壳展开!', color: '#2ed573' });
       }
+      if (u.ab.shellOpenT) u.ab.shellOpenT = Math.max(0, u.ab.shellOpenT - dt);
     },
   },
 
   // 20. 海豚 (dolphin)
   dolphin: {
     tick(u, b, dt) {
+      if (!isCardLead(u, b)) return;
+      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
       if (cool(u, 'escortCd', dt, 2)) {
-        const meleeAllies = alliesOf(u, b).filter((a) => a.alive && a.mob.role === 'melee').slice(0, 2);
-        if (meleeAllies.length > 0) {
-          u.ab.escortCd = 8;
-          for (const a of meleeAllies) {
-            a.moveSpd = Math.max(a.moveSpd, 1.25);
-            b.emit({ k: 'text', x: a.x, y: a.y, z: a.gz + a.size, s: '破浪护送!', color: '#70a1ff' });
+        const meleeAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && (a.mob.role === 'melee' || a.mob.role === 'tank') && a.card !== u.card);
+        const seenCards = new Set<number>();
+        const cardTargets: Unit[] = [];
+        for (const a of meleeAllies) {
+          if (!seenCards.has(a.card) && seenCards.size < 2) {
+            seenCards.add(a.card);
+            cardTargets.push(a);
+          }
+        }
+        if (cardTargets.length > 0) {
+          u.ab.escortCd = cd;
+          const hasteBonus = u.star >= 3 ? 1.35 : (u.star === 2 ? 1.30 : 1.25);
+          const advanceRatio = u.star >= 3 ? 0.50 : (u.star === 2 ? 0.40 : 0.30);
+          for (const target of cardTargets) {
+            for (const member of alliesOf(u, b).filter((a) => a.alive && a.card === target.card)) {
+              member.hasteT = Math.max(member.hasteT, 4.0);
+              member.hasteMul = Math.max(member.hasteMul, hasteBonus);
+              member.ref.dolphinEscort = { advanceRatio, roundUsed: false, expireAt: b.t + 4.0 };
+            }
+            b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '破浪护送!', color: '#70a1ff' });
           }
         } else {
           u.ab.escortCd = 0;
@@ -694,16 +849,36 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   // 31. 缠缚者 (snareling)
   snareling: {
     tick(u, b, dt) {
+      const cd = u.star >= 3 ? 6.0 : (u.star === 2 ? 6.5 : 7.0);
       if (cool(u, 'snareCd', dt, 2)) {
         const target = foesOf(u, b).find((f) => f.alive && !f.structure);
         if (target) {
-          u.ab.snareCd = 7;
-          if (target.boss) {
-            b.addPosture(target, 30);
-            b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '破势 +30!', color: '#ff4757' });
+          u.ab.snareCd = cd;
+          const stunDur = u.star >= 3 ? 1.5 : (u.star === 2 ? 1.25 : 1.0);
+          if (target.boss && target.channeling) {
+            if (!target.ref.snarelingPoiseCard || target.ref.snarelingPoiseCard !== u.card) {
+              target.ref.snarelingPoiseCard = u.card;
+              b.addPosture(target, 30);
+              b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '破势 +30!', color: '#ff4757' });
+            }
           } else {
-            target.stunT = Math.max(target.stunT, u.star >= 3 ? 1.5 : 1.0);
+            target.stunT = Math.max(target.stunT, stunDur);
             b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '黏液束缚!', color: '#a55eea' });
+          }
+          if (b.has(u.team, 'combo_void_hunt')) {
+            const tm = b.sides[u.team].timers;
+            if (!tm.void_hunt_cd || b.t >= tm.void_hunt_cd) {
+              tm.void_hunt_cd = b.t + 6.0;
+              for (const a of alliesOf(u, b)) {
+                if (a.alive && !a.structure && a.card !== u.card) {
+                  a.ref.voidHuntBonus = 1.20;
+                }
+              }
+              if (target.boss && target.channeling) {
+                b.addPosture(target, 20);
+              }
+              b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + 40, s: '虚空围猎!', color: '#9b59b6' });
+            }
           }
           const sideY = clampY(target.y + (b.rng.chance(0.5) ? 20 : -20));
           u.x = clampX(u, target.x + (u.team === 0 ? -20 : 20));
