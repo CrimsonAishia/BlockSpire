@@ -17,7 +17,7 @@ import {
 } from './terrain.ts';
 import {
   ARENA_D, ARENA_W, IMM_BURN, IMM_HUNGER, IMM_KB, IMM_POISON, IMM_SLOW, IMM_STUN, IMM_WITHER, MELEE_REACH_Z,
-  NUM_CRIT, NUM_DODGE, NUM_DOT, NUM_HEAL, NUM_MAGIC, NUM_PHYS, NUM_TRUE, Unit, baseFx, resetIds,
+  NUM_CRIT, NUM_DODGE, NUM_DOT, NUM_HEAL, NUM_LIFESTEAL, NUM_MAGIC, NUM_PHYS, NUM_TRUE, Unit, baseFx, resetIds,
   type BEvent, type Delayed, type Proj, type UnitFx, type Zone,
 } from './unit.ts';
 
@@ -2758,7 +2758,7 @@ export class Battle {
         k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size,
         v: Math.round(d), c: crit ? NUM_CRIT : kind === 'true' ? NUM_TRUE : kind === 'magic' ? NUM_MAGIC : NUM_PHYS,
       });
-    if (src && src.alive && kind !== 'dot' && src.fx.lifesteal > 0) this.heal(src, d * src.fx.lifesteal, null, true);
+    if (src && src.alive && kind !== 'dot' && src.fx.lifesteal > 0) this.heal(src, d * src.fx.lifesteal, null, 'lifesteal');
     // 亡灵伤害转恢复池：实际生命伤害的 20% (4档及以上 25%) 为同族最缺血原生单位恢复
     if (hpDamage > 0 && src && src.alive && kind !== 'dot' && !src.isSummon && src.mob.families.includes('undead') && this.syn(src.team, 'undead') >= 0) {
       const poolPct = this.syn(src.team, 'undead') >= 1 ? 0.25 : 0.20;
@@ -2772,11 +2772,11 @@ export class Battle {
         }
       }
       if (lowest && poolHeal > 0) {
-        this.heal(lowest, poolHeal, src, true);
+        this.heal(lowest, poolHeal, src, 'lifesteal');
       }
     }
     if (src && src.alive && kind !== 'dot' && this.syn(src.team, 'nether') >= 1 && src.mob.families.includes('nether') && t.burnT > 0) {
-      this.heal(src, d * 0.20, null, true);
+      this.heal(src, d * 0.20, null, 'lifesteal');
     }
     if (d > 0 && src && src.mob.families.includes('arthropod') && this.syn(src.team, 'arthropod') >= 1 && kind !== 'dot') {
       const sc = this.cards[src.card];
@@ -2824,7 +2824,7 @@ export class Battle {
     if (t.hp <= 0) this.kill(t, src);
   }
 
-  heal(t: Unit, amount: number, src: Unit | null, silent = false) {
+  heal(t: Unit, amount: number, src: Unit | null, silent: boolean | 'lifesteal' = false) {
     if (!t.alive || amount <= 0 || (t.ref.healBlockT && t.ref.healBlockT > 0)) return;
     let actualAmt = amount;
     if (t.witherT > 0) actualAmt *= 0.5;
@@ -2833,7 +2833,11 @@ export class Battle {
     t.hp += h;
     if (src) this.cards[src.card].heal += h;
     else this.cards[t.card].heal += h;
-    if (!silent && h >= 4) {
+    if (silent === 'lifesteal') {
+      if (h >= 2) {
+        this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(h), c: NUM_LIFESTEAL });
+      }
+    } else if (!silent && h >= 4) {
       this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(h), c: NUM_HEAL });
       this.emit({ k: 'heal', x: t.x, y: t.y, z: t.gz + t.z });
     }

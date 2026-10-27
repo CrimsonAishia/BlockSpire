@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { Battle } from '../battle/sim.ts';
 import type { Proj, Unit } from '../battle/unit.ts';
-import { NUM_CRIT, NUM_DODGE, NUM_DOT, NUM_HEAL, NUM_MAGIC, NUM_TRUE } from '../battle/unit.ts';
+import { NUM_CRIT, NUM_DODGE, NUM_DOT, NUM_HEAL, NUM_LIFESTEAL, NUM_MAGIC, NUM_TRUE } from '../battle/unit.ts';
 import { BLOCK, DEPLOY_COLS, F, GD, GW, S, type Terrain } from '../battle/terrain.ts';
 import { MOB_MAP, spriteOf } from '../data/mobs.ts';
 import { SpriteRenderer, type SpritePose } from './sprites.ts';
@@ -298,6 +298,7 @@ interface Num {
   text: string;
   color: string;
   size: number;
+  kind?: number;
 }
 
 // ───────────────────────── Arena ─────────────────────────
@@ -632,7 +633,7 @@ export class Arena3D {
     for (const e of ev) {
       switch (e.k) {
         case 'num': {
-          if (e.v > 0 && e.c !== NUM_HEAL && e.c !== NUM_DODGE && e.c !== NUM_DOT) {
+          if (e.v > 0 && e.c !== NUM_HEAL && e.c !== NUM_LIFESTEAL && e.c !== NUM_DODGE && e.c !== NUM_DOT) {
             // Vanilla-style dark damage hearts, more for bigger hits.
             const hx = tx(e.x);
             const hy = ty(e.z) - 0.2;
@@ -650,16 +651,39 @@ export class Arena3D {
               if (e.v >= 50) this.hitStop(0.06);
             }
           }
+          if (e.c === NUM_LIFESTEAL && e.v > 0) {
+            // Lifesteal feedback: small crimson hearts gently floating from the healed unit
+            const hx = tx(e.x);
+            const hy = ty(e.z) + 0.2;
+            const hz = tz(e.y);
+            const red = this.color('#ff4d6d');
+            for (let i = 0; i < n(3); i++) {
+              P.add(hx + (Math.random() - 0.5) * 0.3, hy, hz + (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.8, 1.3 + Math.random() * 0.9, (Math.random() - 0.5) * 0.8,
+                0.65, 0.11, red, 4, 1.2, SH_HEART);
+            }
+          }
           if (!this.opts.numbers) break;
           if (e.c !== NUM_DODGE && e.v <= 0) break;
           if (this.nums.length > 100) this.nums.shift();
           const map: Record<number, [string, number]> = {
-            0: ['#ffffff', 20], [NUM_CRIT]: ['#ffd23f', 27], [NUM_MAGIC]: ['#e29bff', 20], [NUM_HEAL]: ['#7bff8f', 19],
-            [NUM_DOT]: ['#ffb066', 17], [NUM_TRUE]: ['#8ff6ff', 22], [NUM_DODGE]: ['#d0d0d0', 18],
+            0: ['#ffffff', 20], [NUM_CRIT]: ['#ffd23f', 28], [NUM_MAGIC]: ['#e29bff', 20], [NUM_HEAL]: ['#7bff8f', 19],
+            [NUM_LIFESTEAL]: ['#ff7e7e', 18], [NUM_DOT]: ['#ffb066', 17], [NUM_TRUE]: ['#8ff6ff', 22], [NUM_DODGE]: ['#d0d0d0', 18],
           };
           const [color, size] = map[e.c] ?? map[0];
-          const text = e.c === NUM_DODGE ? '闪避' : e.c === NUM_HEAL ? `+${e.v}` : e.c === NUM_CRIT ? `${e.v}!` : `${e.v}`;
-          this.nums.push({ x: tx(e.x) + (Math.random() - 0.5) * 0.5, y: ty(e.z) + 0.2, z: tz(e.y), rise: 0, life: 0.95, max: 0.95, text, color, size });
+          const text = e.c === NUM_DODGE ? '闪避' : e.c === NUM_HEAL ? `+${e.v}` : e.c === NUM_LIFESTEAL ? `+${e.v} ❤` : e.c === NUM_CRIT ? `⚔ ${e.v}!` : `${e.v}`;
+          this.nums.push({
+            x: tx(e.x) + (Math.random() - 0.5) * 0.5,
+            y: ty(e.z) + 0.2,
+            z: tz(e.y),
+            rise: 0,
+            life: e.c === NUM_LIFESTEAL ? 0.8 : 0.95,
+            max: e.c === NUM_LIFESTEAL ? 0.8 : 0.95,
+            text,
+            color,
+            size,
+            kind: e.c,
+          });
           break;
         }
         case 'hit': {
@@ -1973,15 +1997,25 @@ export class Arena3D {
       const [sx, sy, ok] = this.project(n.x, n.y + n.rise, n.z);
       if (!ok) continue;
       const k = n.life / n.max;
-      const size = Math.round(n.size * (k > 0.85 ? 1 + (k - 0.85) * 3 : 1));
+      const pop = n.kind === NUM_CRIT ? (k > 0.85 ? 1 + (k - 0.85) * 1.8 : 1) : (k > 0.85 ? 1 + (k - 0.85) * 2.5 : 1);
+      const size = Math.round(n.size * pop);
       if (size !== lastSize) {
-        ctx.font = `${size}px Pixel, sans-serif`;
+        ctx.font = `${size}px Pixel, ${UI_FONT}`;
         lastSize = size;
       }
       ctx.globalAlpha = k < 0.3 ? k / 0.3 : 1;
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#000';
-      ctx.strokeText(n.text, sx, sy);
+      if (n.kind === NUM_CRIT) {
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#5a1200';
+        ctx.strokeText(n.text, sx, sy);
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeText(n.text, sx, sy);
+      } else {
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#000';
+        ctx.strokeText(n.text, sx, sy);
+      }
       ctx.fillStyle = n.color;
       ctx.fillText(n.text, sx, sy);
     }

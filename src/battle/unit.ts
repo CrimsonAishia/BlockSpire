@@ -452,3 +452,4 @@ export const NUM_HEAL = 3;
 export const NUM_DOT = 4;
 export const NUM_TRUE = 5;
 export const NUM_DODGE = 6;
+export const NUM_LIFESTEAL = 7;
