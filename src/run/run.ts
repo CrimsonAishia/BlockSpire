@@ -8,7 +8,7 @@ import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, e
 import { difficultyPolicy } from '../data/difficulty.ts';
 import { computeSynergies } from '../data/families.ts';
 import type { Family } from '../core/types.ts';
-import { MOB_MAP, RARITY_INFO, mobDef, unitCount } from '../data/mobs.ts';
+import { MOB_MAP, RARITY_INFO, PLAYABLE_BLUE_MOBS, mobDef, unitCount } from '../data/mobs.ts';
 import { MOB_COST } from '../classic/costs.ts';
 import { buildSide } from '../battle/setup.ts';
 import type { BattleConfig, BattleResult } from '../battle/sim.ts';
@@ -44,7 +44,11 @@ export interface BattleSummary {
   cards: { mob: string; star: number; team: 0 | 1; dmg: number; kills: number; heal: number; taken: number; alive: number; spawned: number }[];
 }
 
+export type StarterStrategy = 'purple_blue_random' | 'three_blues' | 'all_random';
+
 export type Pending =
+  | { type: 'starter_strategy' }
+  | { type: 'starter_pick'; strategy: 'purple_blue_random' | 'three_blues'; step: number; picked: string[] }
   | { type: 'starter'; idx: number; crates: { crate: string; label: string; pool: string[] }[] }
   | {
       type: 'battle';
@@ -204,6 +208,8 @@ export interface RunState {
   actTheme?: string;
   /** Visited act themes across the run for relic eligibility */
   visitedThemes?: string[];
+  /** Mobs discovered in the codex by this profile (for starter squad filtering in Omen 3+). */
+  discovered?: string[];
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -289,7 +295,7 @@ function newCard(s: RunState, mob: string, star: 1 | 2 | 3 = 1): Card {
 
 // ───────────────────────── creation ─────────────────────────
 
-export function createRun(commander: string, omen: number, seed = randomSeed()): RunState {
+export function createRun(commander: string, omen: number, seed = randomSeed(), discovered?: string[]): RunState {
   const cmd = COMMANDER_MAP[commander];
   const rng = new Rng(seed);
   const bossPool = ['a1b_raid', 'a1b_monument'];
@@ -333,9 +339,24 @@ export function createRun(commander: string, omen: number, seed = randomSeed()):
     over: false,
     won: false,
     toasts: [],
+    discovered: discovered ? [...discovered] : undefined,
   };
   if (commander === 'witch') withRng(s, (r) => s.potions.push(rollItem(r, { potionOnly: true }), rollItem(r, { potionOnly: true })));
-  s.queue.push({ type: 'starter', idx: 0, crates: STARTERS[commander] ?? STARTERS.steve });
+  if (omen >= 4) {
+    s.queue.push({ type: 'starter_strategy' });
+  } else {
+    const crateType = omen === 3 ? 'ominous' : 'origin';
+    const prefix = omen === 3 ? '随机稀有第 ' : '新手补给第 ';
+    s.queue.push({
+      type: 'starter',
+      idx: 0,
+      crates: [
+        { crate: crateType, label: `${prefix}1 箱`, pool: PLAYABLE_BLUE_MOBS },
+        { crate: crateType, label: `${prefix}2 箱`, pool: PLAYABLE_BLUE_MOBS },
+        { crate: crateType, label: `${prefix}3 箱`, pool: PLAYABLE_BLUE_MOBS },
+      ],
+    });
+  }
   return s;
 }
 
@@ -396,6 +417,96 @@ export function finishStarterOpen(s: RunState) {
     s.queue.shift();
     s.queue.unshift({ type: 'act_intro', act: 1 });
   }
+}
+
+/** Handles choosing a starter squad strategy in Omen 4+. */
+export function chooseStarterStrategy(s: RunState, choice: StarterStrategy, discovered?: string[]) {
+  if (discovered && (!s.discovered || s.discovered.length === 0)) {
+    s.discovered = [...discovered];
+  }
+
+  const p = s.queue[0];
+  if (p?.type !== 'starter_strategy') return;
+  s.queue.shift();
+  if (choice === 'purple_blue_random') {
+    s.queue.unshift({ type: 'starter_pick', strategy: 'purple_blue_random', step: 1, picked: [] });
+  } else if (choice === 'three_blues') {
+    s.queue.unshift({ type: 'starter_pick', strategy: 'three_blues', step: 1, picked: [] });
+  } else if (choice === 'all_random') {
+    // Non-pick random: draws from full playable blue pool without unlock requirement
+    s.queue.unshift({
+      type: 'starter',
+      idx: 0,
+      crates: [
+        { crate: 'ominous', label: '全随机稀有第 1 箱', pool: PLAYABLE_BLUE_MOBS },
+        { crate: 'ominous', label: '全随机稀有第 2 箱', pool: PLAYABLE_BLUE_MOBS },
+        { crate: 'ominous', label: '全随机稀有第 3 箱', pool: PLAYABLE_BLUE_MOBS },
+      ],
+    });
+  }
+}
+
+/** Picks a specific mob during Omen 4+ starter picking. */
+export function pickStarterMob(s: RunState, mob: string) {
+  const p = s.queue[0];
+  if (p?.type !== 'starter_pick') return;
+  gainCard(s, mob, true);
+  p.picked.push(mob);
+
+  if (p.strategy === 'purple_blue_random') {
+    if (p.step === 1) {
+      p.step = 2;
+    } else if (p.step === 2) {
+      s.queue.shift();
+      const owned = allCards(s).map((c) => c.mob);
+      // Non-pick 3rd crate: draws from full playable blue pool without unlock requirement
+      const validBlues = PLAYABLE_BLUE_MOBS.filter((m) => !owned.includes(m));
+      const finalBlues = validBlues.length > 0 ? validBlues : PLAYABLE_BLUE_MOBS;
+      s.queue.unshift({
+        type: 'starter',
+        idx: 2,
+        crates: [
+          { crate: 'ominous', label: '自选史诗核心', pool: [] },
+          { crate: 'ominous', label: '自选稀有搭档', pool: [] },
+          { crate: 'ominous', label: '随机稀有第 3 箱', pool: finalBlues },
+        ],
+      });
+    }
+  } else if (p.strategy === 'three_blues') {
+    if (p.step < 3) {
+      p.step++;
+    } else {
+      s.queue.shift();
+      s.queue.unshift({ type: 'act_intro', act: 1 });
+    }
+  }
+}
+
+/** Undoes the last starter mob picked. */
+export function undoStarterPick(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type !== 'starter_pick' || p.picked.length === 0) return;
+  const lastMob = p.picked.pop()!;
+  const idx = s.team.findIndex((c) => c.mob === lastMob);
+  if (idx !== -1) {
+    s.team.splice(idx, 1);
+  } else {
+    const bIdx = s.bench.findIndex((c) => c.mob === lastMob);
+    if (bIdx !== -1) s.bench.splice(bIdx, 1);
+  }
+  p.step = Math.max(1, p.step - 1);
+}
+
+/** Resets back to the starter strategy selection screen. */
+export function resetStarterStrategy(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type !== 'starter_pick') return;
+  for (const m of p.picked) {
+    const idx = s.team.findIndex((c) => c.mob === m);
+    if (idx !== -1) s.team.splice(idx, 1);
+  }
+  s.queue.shift();
+  s.queue.unshift({ type: 'starter_strategy' });
 }
 
 // ───────────────────────── map ─────────────────────────

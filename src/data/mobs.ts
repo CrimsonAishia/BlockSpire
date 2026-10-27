@@ -1090,6 +1090,8 @@ export const MOBS: MobDef[] = [
 
 export const MOB_MAP: Record<string, MobDef> = Object.fromEntries(MOBS.map((m) => [m.id, m]));
 export const PLAYABLE_MOBS = MOBS.filter((m) => !m.hidden);
+export const PLAYABLE_BLUE_MOBS = PLAYABLE_MOBS.filter((m) => m.rarity === 'blue').map((m) => m.id);
+export const PLAYABLE_PURPLE_MOBS = PLAYABLE_MOBS.filter((m) => m.rarity === 'purple').map((m) => m.id);
 
 export function mobDef(id: string): MobDef {
   const m = MOB_MAP[id];

@@ -4,7 +4,7 @@ import { settle, type RunState } from '../../run/run.ts';
 import { RunHud } from './RunHud.tsx';
 import { MapView } from './MapView.tsx';
 import { BattleStage } from './BattleStage.tsx';
-import { RunCrateOpen, StarterView, CrateChoice, CardDecide } from './RunCrates.tsx';
+import { RunCrateOpen, StarterView, CrateChoice, CardDecide, StarterStrategyView, StarterPickView } from './RunCrates.tsx';
 import { BattleResultView } from './BattleResultView.tsx';
 import { RelicChoice, BossReward } from './RelicChoice.tsx';
 import { ShopView } from './ShopView.tsx';
@@ -54,8 +54,17 @@ export function RunView() {
   if (!p) body = <MapView s={s} v={v} />;
   else
     switch (p.type) {
+      case 'starter_strategy':
+        body = <StarterStrategyView s={s} p={p} v={v} />;
+        hud = false;
+        break;
+      case 'starter_pick':
+        body = <StarterPickView s={s} p={p} v={v} />;
+        hud = false;
+        break;
       case 'starter':
         body = <StarterView s={s} p={p} v={v} />;
+        hud = false;
         break;
       case 'open':
         body = <RunCrateOpen s={s} p={p} v={v} />;

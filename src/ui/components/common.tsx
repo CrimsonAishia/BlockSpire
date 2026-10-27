@@ -478,7 +478,7 @@ export function RelicSlot({ id }: { id: string }) {
 // ───────────────────────── Mob card ─────────────────────────
 
 export function MobCard({
-  mob, star = 1, card, size = '', onClick, selected, tip = true, showCount = true, dim, children, style,
+  mob, star = 1, card, size = '', onClick, selected, tip = true, showCount = true, dim, children, style, locked,
 }: {
   mob: string;
   star?: number;
@@ -491,42 +491,47 @@ export function MobCard({
   dim?: boolean;
   children?: ComponentChildren;
   style?: CSSProperties;
+  locked?: boolean;
 }) {
   const m = mobDef(mob);
   const st = card?.star ?? star;
   const ench = card?.enchant;
   const body = (
     <div
-      class={`mcard r-${m.rarity} ${size} ${onClick ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench ? 'ench' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''}`}
-      style={{ ...(style ?? {}), opacity: dim ? 0.45 : 1 }}
-      onClick={onClick ? () => (sfx('card_flip', { vol: 0.5 }), onClick()) : undefined}
+      class={`mcard r-${m.rarity} ${size} ${onClick && !locked ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench && !locked ? 'ench' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''} ${locked ? 'locked' : ''}`}
+      style={{ ...(style ?? {}), opacity: locked ? 0.6 : dim ? 0.45 : 1 }}
+      onClick={onClick && !locked ? () => (sfx('card_flip', { vol: 0.5 }), onClick()) : undefined}
     >
       <div class="mc-top">
         <span class="mc-rar">{RARITY_INFO[m.rarity].short}</span>
         <span class="mc-stars">
           {[1, 2, 3].map((i) => (
-            <span key={i} class={i <= st ? '' : 'off'}>
+            <span key={i} class={locked || i > st ? 'off' : ''}>
               ★
             </span>
           ))}
         </span>
       </div>
       <div class="mc-art">
-        <img src={url.mob(mob)} loading="lazy" />
-        {ench && <div class="mc-glint" style={{ maskImage: `url(${url.mob(mob)})`, WebkitMaskImage: `url(${url.mob(mob)})` }} />}
+        <img src={url.mob(mob)} class={locked ? 'silhouette' : ''} loading="lazy" />
+        {!locked && ench && <div class="mc-glint" style={{ maskImage: `url(${url.mob(mob)})`, WebkitMaskImage: `url(${url.mob(mob)})` }} />}
       </div>
-      {showCount && <div class="mc-count">×{unitCount(m, st)}</div>}
-      <div class="mc-name">{m.name}</div>
+      {showCount && !locked && <div class="mc-count">×{unitCount(m, st)}</div>}
+      <div class="mc-name">{locked ? '？？？' : m.name}</div>
       <div class="mc-fams">
-        {m.families.map((f) => (
-          <FamBadge key={f} f={f} />
-        ))}
+        {locked ? (
+          <span class="faint" style={{ fontSize: 11, letterSpacing: 1 }}>？？？</span>
+        ) : (
+          m.families.map((f) => (
+            <FamBadge key={f} f={f} />
+          ))
+        )}
       </div>
-      {ench && <div class="mc-ench">✦ {enchantName(ench, card?.enchantLv)}</div>}
+      {!locked && ench && <div class="mc-ench">✦ {enchantName(ench, card?.enchantLv)}</div>}
       <div class="mc-role">
-        {ROLE_INFO[m.role].icon} {ROLE_INFO[m.role].name}
+        {locked ? <span class="faint">？ 未知</span> : `${ROLE_INFO[m.role].icon} ${ROLE_INFO[m.role].name}`}
       </div>
-      {card && card.star < 3 && card.shards > 0 && (
+      {!locked && card && card.star < 3 && card.shards > 0 && (
         <div style={{ position: 'absolute', left: 10, top: 124, fontSize: 12, color: '#ffd76a', textShadow: '1px 1px 0 #000', zIndex: 2 }}>
           升星 {card.shards}/{card.star === 1 ? 1 : 2}
         </div>
@@ -535,7 +540,7 @@ export function MobCard({
       <div class="mc-bar" />
     </div>
   );
-  if (!tip) return body;
+  if (!tip || locked) return body;
   return (
     <Tip content={() => <MobTipContent mob={mob} star={st} enchant={ench} enchantLv={card?.enchantLv} bonus={card?.bonus} />} style={{ display: 'inline-block' }}>
       {body}

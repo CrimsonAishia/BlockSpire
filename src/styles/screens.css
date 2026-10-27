@@ -1385,6 +1385,168 @@
   opacity: 0.8;
 }
 
+/* ───────── Starter Strategy & Pick (Omen 3+) ───────── */
+.starter-strat-screen {
+  overflow-y: auto;
+  padding-bottom: 40px;
+}
+.starter-strat-cards {
+  display: flex;
+  gap: 24px;
+  margin-top: 36px;
+  justify-content: center;
+  align-items: stretch;
+  max-width: 1100px;
+  width: 90%;
+  flex-wrap: wrap;
+}
+.starter-strat-card {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+  max-width: 340px;
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background:
+    radial-gradient(ellipse at 50% 20%, #2b2236, #120f18);
+  clip-path: var(--notch);
+  border: 2px solid #3c304a;
+  transition: transform 0.15s, border-color 0.15s, filter 0.15s;
+  cursor: pointer;
+}
+.starter-strat-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--gold);
+  filter: brightness(1.1);
+}
+.starter-strat-card.strat-purple:hover {
+  border-color: #bb6bd9;
+}
+.starter-strat-card.strat-blue:hover {
+  border-color: #5dade2;
+}
+.strat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 12px;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  margin-bottom: 8px;
+}
+.badge-purple { background: #8e44ad; color: #f5eef8; border: 1px solid #bb6bd9; }
+.badge-blue { background: #2980b9; color: #ebf5fb; border: 1px solid #5dade2; }
+.badge-gray { background: #566573; color: #eaecee; border: 1px solid #abb2b9; }
+.strat-title { font-size: 26px; font-weight: bold; margin-top: 6px; }
+.strat-subtitle { font-size: 15px; color: var(--gold); margin-bottom: 12px; }
+.strat-desc { font-size: 14px; color: var(--ink-dim); text-align: center; line-height: 1.5; min-height: 68px; }
+.strat-preview { display: flex; gap: 8px; margin: 16px 0 20px; }
+.strat-chip { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); }
+.strat-chip.r-purple { background: rgba(142, 68, 173, 0.35); color: #d7bde2; border-color: #8e44ad; }
+.strat-chip.r-blue { background: rgba(41, 128, 185, 0.35); color: #a9cce3; border-color: #2980b9; }
+.strat-chip.r-random { background: rgba(127, 140, 141, 0.35); color: #eaeded; border-color: #7f8c8d; }
+
+.starter-pick-screen {
+  overflow-y: auto;
+  padding-bottom: 30px;
+}
+.starter-slots-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid #332b3d;
+}
+.ss-slot-label { font-size: 14px; color: var(--ink-dim); }
+.ss-slot-box {
+  width: 96px;
+  height: 136px;
+  border: 2px dashed #4b3e5c;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 16, 26, 0.6);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ss-slot-box.cur {
+  border-color: var(--gold);
+  border-style: solid;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+}
+.ss-slot-box.filled {
+  border-style: solid;
+  border-color: #665080;
+}
+.ss-slot-card {
+  transform: scale(0.9);
+}
+.ss-slot-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.fam-pill {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 14px;
+  background: #1e1926;
+  border: 1px solid #3d324d;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.fam-pill:hover { border-color: var(--gold); }
+.fam-pill.active { background: #3d324d; border-color: var(--gold); color: #fff; }
+.starter-pick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-width: 1200px;
+  margin-top: 14px;
+  padding: 0 20px 40px;
+  overflow-y: auto;
+  max-height: 460px;
+}
+.pick-mob-wrap {
+  position: relative;
+  transition: transform 0.15s;
+}
+.pick-mob-wrap:not(.locked):not(.owned):hover {
+  transform: translateY(-4px) scale(1.03);
+}
+.pick-mob-wrap.owned {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pick-mob-wrap.locked {
+  cursor: not-allowed;
+}
+.pick-mob-wrap.locked .mcard {
+  filter: grayscale(0.85) brightness(0.7);
+  border-color: #3f354d;
+}
+.pick-mob-wrap.locked .mc-art img {
+  filter: brightness(0) drop-shadow(0 0 1px rgba(255, 255, 255, 0.45));
+  opacity: 0.8;
+}
+
 /* ───────── Choice screens ───────── */
 .choice-screen {
   background: radial-gradient(ellipse at 50% 30%, #211b28, #08070b 75%);

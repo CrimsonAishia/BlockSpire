@@ -22,7 +22,7 @@ export function NewRun() {
     updateProfile((next) => {
       next.lastOmen = omen;
     });
-    setRun(createRun(cmd, omen));
+    setRun(createRun(cmd, omen, undefined, p.discovered));
     commit();
     go('run');
   };

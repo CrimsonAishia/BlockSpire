@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { CRATE_MAP, GRADE_INFO, gradeOdds, type CrateGrade } from '../../data/crates.ts';
-import { RARITY_INFO, mobDef } from '../../data/mobs.ts';
+import { RARITY_INFO, mobDef, MOB_MAP } from '../../data/mobs.ts';
 import { RARITIES, type Rarity } from '../../core/types.ts';
 import { url } from '../assets.ts';
 import { Btn, MobCard } from '../components/common.tsx';
@@ -43,12 +43,14 @@ interface Props {
 }
 
 export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onContinue, autoStart, extra, pool, startRevealed, onBack }: Props) {
-  const base = CRATE_MAP[crate];
+  const base = CRATE_MAP[crate] ?? CRATE_MAP['origin'];
   const def = useMemo(() => {
-    if (!pool) return base;
-    const filtered = Object.fromEntries(RARITIES.map((r) => [r, base.pool[r].filter((m) => pool.includes(m))])) as typeof base.pool;
-    return { ...base, pool: filtered };
-  }, [crate, pool?.join()]);
+    if (!pool || pool.length === 0) return base;
+    const poolByRarity = Object.fromEntries(
+      RARITIES.map((r) => [r, pool.filter((m) => MOB_MAP[m]?.rarity === r)]),
+    ) as typeof base.pool;
+    return { ...base, pool: poolByRarity };
+  }, [base, pool?.join()]);
   const [stage, setStage] = useState<'ready' | 'opening' | 'spin' | 'reveal'>(startRevealed ? 'reveal' : autoStart ? 'opening' : 'ready');
   const [info, setInfo] = useState<RevealInfo | null>(null);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,8 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
   const items = useMemo(() => {
     const odds = gradeOdds(grade, act);
     const out: string[] = [];
+    const availableRarities = RARITIES.filter((r) => def.pool[r]?.length > 0);
+    const fallbackMob = MOB_MAP[mob] ? mob : (pool?.[0] ?? 'zombie');
     for (let i = 0; i < COUNT; i++) {
       if (i === WIN_INDEX) {
         out.push(mob);
@@ -73,18 +77,24 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
         let x = Math.random() * odds.reduce((a, b) => a + b, 0);
         r = RARITIES.find((_, k) => (x -= odds[k]) <= 0) ?? 'blue';
         tries++;
-      } while (def.pool[r].length === 0 && tries < 20);
-      if (def.pool[r].length === 0) r = RARITIES.find((k) => def.pool[k].length) ?? 'purple';
+      } while ((!def.pool[r] || def.pool[r].length === 0) && tries < 20);
+      if (!def.pool[r] || def.pool[r].length === 0) {
+        r = availableRarities[0] ?? mobDef(fallbackMob).rarity;
+      }
       // Tease: put a high-rarity item right next to the winner sometimes.
       if ((i === WIN_INDEX + 1 || i === WIN_INDEX - 1) && Math.random() < 0.45) {
-        const hi = (['gold', 'red', 'pink'] as Rarity[]).find((k) => def.pool[k].length);
+        const hi = (['gold', 'red', 'pink', 'purple'] as Rarity[]).find((k) => def.pool[k]?.length);
         if (hi) r = hi;
       }
-      const pool = def.pool[r];
-      out.push(pool[Math.floor(Math.random() * pool.length)]);
+      const pList = def.pool[r];
+      if (pList && pList.length > 0) {
+        out.push(pList[Math.floor(Math.random() * pList.length)]);
+      } else {
+        out.push(fallbackMob);
+      }
     }
     return out;
-  }, [crate, mob]);
+  }, [crate, mob, def]);
 
   const start = () => {
     if (stage !== 'ready') return;
@@ -178,7 +188,8 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
   }, [stage, info]);
 
   const odds = gradeOdds(grade, act);
-  const total = odds.reduce((a, b) => a + b, 0);
+  const activeOdds = RARITIES.map((r, i) => ((def.pool[r]?.length ?? 0) > 0 ? odds[i] : 0));
+  const total = activeOdds.reduce((a, b) => a + b, 0) || 1;
 
   return (
     <div class="screen crate-screen">
@@ -195,18 +206,18 @@ export function CrateOpen({ crate, grade, mob, lucky, title, act, onReveal, onCo
           <img class="crate-art float" src={url.crate(crate)} />
           <div class="crate-odds">
             {RARITIES.map((r, i) =>
-              odds[i] > 0 && def.pool[r].length ? (
+              activeOdds[i] > 0 ? (
                 <div key={r} class={`odd r-${r}`}>
                   <span class="dot" />
-                  {RARITY_INFO[r].name} <b>{((odds[i] / total) * 100).toFixed(odds[i] / total < 0.01 ? 1 : 0)}%</b>
+                  {RARITY_INFO[r].name} <b>{((activeOdds[i] / total) * 100).toFixed(activeOdds[i] / total < 0.01 ? 1 : 0)}%</b>
                 </div>
               ) : null,
             )}
           </div>
           <div class="crate-pool">
             {RARITIES.flatMap((r) =>
-              def.pool[r].map((m) => (
-                <div key={m} class={`pool-item r-${r}`} title={mobDef(m).name}>
+              (def.pool[r] ?? []).map((m) => (
+                <div key={m} class={`pool-item r-${r}`} title={mobDef(m)?.name ?? m}>
                   <img src={url.mob(m)} />
                 </div>
               )),

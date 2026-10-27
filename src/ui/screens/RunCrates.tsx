@@ -1,15 +1,18 @@
+import { useState } from 'preact/hooks';
 import type { Pending, RunState, GainOutcome } from '../../run/run.ts';
 import {
   allCards, applyOpen, backToCrates, chooseCrate, decideCard, dustValue, finishOpen, openContext, rollStarter, shardsNeeded, skipCrates,
+  chooseStarterStrategy, pickStarterMob, undoStarterPick, resetStarterStrategy,
 } from '../../run/run.ts';
 import { CRATE_MAP, GRADE_INFO, effectiveOdds } from '../../data/crates.ts';
-import { MOB_MAP, RARITY_INFO, mobDef } from '../../data/mobs.ts';
+import { MOB_MAP, PLAYABLE_BLUE_MOBS, PLAYABLE_PURPLE_MOBS, RARITY_INFO, mobDef } from '../../data/mobs.ts';
+import { FAMILIES } from '../../data/families.ts';
 import { RARITIES } from '../../core/types.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, FamBadge, MobCard, MobTipContent, Tip } from '../components/common.tsx';
 import { CrateOpen, type RevealInfo } from './CrateOpen.tsx';
 import { act } from './RunView.tsx';
-import { discover } from '../store.ts';
+import { discover, profile } from '../store.ts';
 import { Hint } from '../components/hints.tsx';
 import { sfx } from '../../audio/audio.ts';
 
@@ -44,7 +47,7 @@ export function RunCrateOpen({ s, p }: { s: RunState; p: P<'open'>; v?: number }
       title={p.title}
       act={s.act}
       startRevealed={!!p.applied}
-      pool={s.queue[1]?.type === 'starter' ? s.queue[1].crates[s.queue[1].idx].pool : undefined}
+      pool={s.queue[1]?.type === 'starter' ? s.queue[1].crates[s.queue[1].idx]?.pool : undefined}
       onReveal={() => {
         discover(p.result.mob);
         const fresh = !p.applied;
@@ -62,14 +65,223 @@ export function RunCrateOpen({ s, p }: { s: RunState; p: P<'open'>; v?: number }
   );
 }
 
+export function StarterStrategyView({ s, p }: { s: RunState; p: P<'starter_strategy'>; v?: number }) {
+  const discovered = profile.value.discovered;
+  const isOmen5 = s.omen >= 5;
+  return (
+    <div class="screen choice-screen starter-strat-screen">
+      <div class="choice-head" style={{ marginTop: 32, gap: 6 }}>
+        <div class="choice-title title-shadow gold-t">
+          {isOmen5 ? '不祥之兆 V · 终局初始战备' : '不祥之兆 IV · 初始阵容规划'}
+        </div>
+        <div class="subtle" style={{ fontSize: 18, maxWidth: 880 }}>
+          {isOmen5
+            ? '在不祥之兆 V 的终极挑战中，你可以选择全自选单核、全自选羁绊或全随机阵容：'
+            : '在不祥之兆 IV 的严峻挑战中，你可以选择自选 3 蓝羁绊开局，或全随机 3 蓝开局：'}
+        </div>
+      </div>
+      <div class="starter-strat-cards">
+        {isOmen5 && (
+          <div class="starter-strat-card strat-purple" onClick={() => (sfx('levelup'), act((r) => chooseStarterStrategy(r, 'purple_blue_random', discovered)))}>
+            <div class="strat-badge badge-purple">推荐 · 核心突围</div>
+            <div class="strat-title">单核突围</div>
+            <div class="strat-subtitle">自选一紫 + 自选一蓝 + 随机一蓝</div>
+            <div class="strat-desc">
+              自选 1 名已解锁史诗核心与 1 名稀有搭档，第 3 张开启全图鉴随机稀有箱。兼具单核强度与应变上限。
+            </div>
+            <div class="strat-preview">
+              <span class="strat-chip r-purple">★ 自选紫卡</span>
+              <span class="strat-chip r-blue">★ 自选蓝卡</span>
+              <span class="strat-chip r-random">? 随机蓝箱</span>
+            </div>
+            <Btn variant="gold" wide onClick={() => (sfx('levelup'), act((r) => chooseStarterStrategy(r, 'purple_blue_random', discovered)))}>
+              选择此策略
+            </Btn>
+          </div>
+        )}
+
+        <div class="starter-strat-card strat-blue" onClick={() => (sfx('levelup'), act((r) => chooseStarterStrategy(r, 'three_blues', discovered)))}>
+          <div class="strat-badge badge-blue">稳定 · 羁绊启动</div>
+          <div class="strat-title">阵营协奏</div>
+          <div class="strat-subtitle">自选三张蓝卡</div>
+          <div class="strat-desc">
+            自由挑选 3 名已解锁稀有卡牌。可开局直接激活 3 亡灵、3 野兽、3 节肢或 3 构造体等成型种族羁绊，下限扎实。
+          </div>
+          <div class="strat-preview">
+            <span class="strat-chip r-blue">★ 自选蓝卡</span>
+            <span class="strat-chip r-blue">★ 自选蓝卡</span>
+            <span class="strat-chip r-blue">★ 自选蓝卡</span>
+          </div>
+          <Btn variant="gold" wide onClick={() => (sfx('levelup'), act((r) => chooseStarterStrategy(r, 'three_blues', discovered)))}>
+            选择此策略
+          </Btn>
+        </div>
+
+        <div class="starter-strat-card strat-random" onClick={() => (sfx('crate_open'), act((r) => chooseStarterStrategy(r, 'all_random', discovered)))}>
+          <div class="strat-badge badge-gray">挑战 · 纯看运气</div>
+          <div class="strat-title">全凭天意</div>
+          <div class="strat-subtitle">三个箱子全随机蓝卡</div>
+          <div class="strat-desc">
+            全图鉴稀有卡池纯随机开启 3 个补给箱。纯粹看脸与临场应变，经典的随机开局挑战！
+          </div>
+          <div class="strat-preview">
+            <span class="strat-chip r-random">? 随机蓝箱</span>
+            <span class="strat-chip r-random">? 随机蓝箱</span>
+            <span class="strat-chip r-random">? 随机蓝箱</span>
+          </div>
+          <Btn variant="" wide onClick={() => (sfx('crate_open'), act((r) => chooseStarterStrategy(r, 'all_random', discovered)))}>
+            选择此策略
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StarterPickView({ s, p }: { s: RunState; p: P<'starter_pick'>; v?: number }) {
+  const [famFilter, setFamFilter] = useState<string>('all');
+  const isPurple = p.strategy === 'purple_blue_random' && p.step === 1;
+  const poolIds = isPurple ? PLAYABLE_PURPLE_MOBS : PLAYABLE_BLUE_MOBS;
+  const discSet = new Set(s.discovered ?? profile.value.discovered ?? []);
+  const owned = new Set(allCards(s).map((c) => c.mob));
+
+  const filteredMobs = poolIds
+    .map((id) => mobDef(id))
+    .filter((m) => {
+      if (famFilter === 'all') return true;
+      return discSet.has(m.id) && m.families.includes(famFilter as any);
+    });
+
+  const totalUnlocked = poolIds.filter((id) => discSet.has(id)).length;
+
+  const title = isPurple
+    ? '战备选拔 · 挑选史诗核心（紫卡）'
+    : p.strategy === 'purple_blue_random'
+    ? '战备选拔 · 挑选稀有搭档（蓝卡）'
+    : `阵营组建 · 挑选第 ${p.step} 名稀有卡（蓝卡 ${p.step}/3）`;
+
+  const desc = isPurple
+    ? `挑选 1 张已解锁史诗生物（已解锁 ${totalUnlocked}/${poolIds.length}），未解锁卡牌以剪影显示。`
+    : p.strategy === 'purple_blue_random'
+    ? `挑选 1 张已解锁稀有生物（已解锁 ${totalUnlocked}/${poolIds.length}），第 3 位将随机抽取。`
+    : `挑选 1 张已解锁稀有生物（已解锁 ${totalUnlocked}/${poolIds.length}），建议凑齐种族羁绊。`;
+
+  return (
+    <div class="screen choice-screen starter-pick-screen">
+      <div class="choice-head" style={{ marginTop: 32, gap: 4 }}>
+        <div class="choice-title title-shadow gold-t">{title}</div>
+        <div class="subtle" style={{ fontSize: 16 }}>{desc}</div>
+
+        <div class="starter-slots-bar">
+          <div class="ss-slot-label">当前已选阵容（{s.team.length}/3）：</div>
+          <div class="row gap12 center">
+            {[0, 1, 2].map((slotIdx) => {
+              const card = s.team[slotIdx];
+              const isCur = slotIdx === s.team.length;
+              const isLockedRandom = p.strategy === 'purple_blue_random' && slotIdx === 2;
+              return (
+                <div key={slotIdx} class={`ss-slot-box ${isCur ? 'cur' : ''} ${card ? 'filled' : ''}`}>
+                  {card ? (
+                    <div class="ss-slot-card">
+                      <MobCard mob={card.mob} card={card} size="sm" />
+                    </div>
+                  ) : isLockedRandom ? (
+                    <div class="ss-slot-placeholder">
+                      <img src={url.crate('ominous')} style={{ width: 44, height: 44, opacity: 0.8 }} />
+                      <span>第 3 箱随机</span>
+                    </div>
+                  ) : (
+                    <div class="ss-slot-placeholder">
+                      <span>{slotIdx === 0 && p.strategy === 'purple_blue_random' ? '待选紫卡' : '待选蓝卡'}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div class="row gap8 center" style={{ marginTop: 6 }}>
+            {p.picked.length > 0 && (
+              <Btn size="tiny" onClick={() => (sfx('page'), act((r) => undoStarterPick(r)))}>
+                ↩ 撤销上一步
+              </Btn>
+            )}
+            <Btn size="tiny" onClick={() => (sfx('page'), act((r) => resetStarterStrategy(r)))}>
+              ⟲ 重选方案
+            </Btn>
+          </div>
+        </div>
+
+        <div class="row gap6 wrap center" style={{ marginTop: 8 }}>
+          <button
+            class={`fam-pill ${famFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setFamFilter('all')}
+          >
+            全部 ({totalUnlocked}/{poolIds.length})
+          </button>
+          {Object.values(FAMILIES).map((f) => {
+            const famList = poolIds.filter((id) => mobDef(id).families.includes(f.id));
+            if (famList.length === 0) return null;
+            const famUnlocked = famList.filter((id) => discSet.has(id)).length;
+            if (famUnlocked === 0) return null;
+            return (
+              <button
+                key={f.id}
+                class={`fam-pill ${famFilter === f.id ? 'active' : ''}`}
+                style={{ '--fc': f.color } as never}
+                onClick={() => setFamFilter(f.id)}
+              >
+                <FamBadge f={f.id} /> ({famUnlocked})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div class="starter-pick-grid">
+        {filteredMobs.map((m) => {
+          const isUnlocked = discSet.has(m.id);
+          const isOwned = owned.has(m.id);
+          const canPick = isUnlocked && !isOwned;
+          return (
+            <div
+              key={m.id}
+              class={`pick-mob-wrap ${!isUnlocked ? 'locked' : ''} ${isOwned ? 'owned' : ''}`}
+              title={!isUnlocked ? '？？？（图鉴未解锁）' : isOwned ? '已在队伍中' : `点击自选：${m.name}`}
+            >
+              <MobCard
+                mob={m.id}
+                size="sm"
+                locked={!isUnlocked}
+                dim={isOwned}
+                onClick={
+                  canPick
+                    ? () => {
+                        discover(m.id);
+                        sfx('card_flip');
+                        act((r) => pickStarterMob(r, m.id));
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function StarterView({ s, p }: { s: RunState; p: P<'starter'>; v?: number }) {
   const go = () => act((r) => r.queue.unshift(rollStarter(r)));
+  const isOmen = s.omen >= 3;
   return (
     <div class="screen starter-screen">
       <div class="starter-inner">
-        <div class="starter-title title-shadow">组建初始阵容</div>
+        <div class="starter-title title-shadow">{isOmen ? '不祥战备 · 开启补给箱' : '组建初始阵容'}</div>
         <div class="subtle" style={{ fontSize: 18 }}>
-          连开三个新手补给箱，组成你的第一支怪物小队。之后每场胜利都能开出新的生物。
+          {isOmen
+            ? '全图鉴稀有卡池随机抽取，组建你的高难初始小队。'
+            : '连开三个新手补给箱，组成你的第一支怪物小队。之后每场胜利都能开出新的生物。'}
         </div>
         <div class="starter-steps">
           {p.crates.map((c, i) => {
@@ -83,11 +295,11 @@ export function StarterView({ s, p }: { s: RunState; p: P<'starter'>; v?: number
                   <MobCard mob={card.mob} card={card} />
                 ) : (
                   <div class="ss-crate">
-                    <img src={url.crate('origin')} class={i === p.idx ? 'float' : ''} />
+                    <img src={url.crate(c.crate ?? 'origin')} class={i === p.idx ? 'float' : ''} />
                   </div>
                 )}
                 <div class="ss-pool">
-                  {c.pool.filter((m) => MOB_MAP[m]).slice(0, 8).map((m) => (
+                  {c.pool.filter((m) => MOB_MAP[m]).slice(0, 10).map((m) => (
                     <img key={m} src={url.mob(m)} title={mobDef(m).name} />
                   ))}
                 </div>
@@ -98,11 +310,13 @@ export function StarterView({ s, p }: { s: RunState; p: P<'starter'>; v?: number
         <Btn variant="gold" size="big" onClick={go}>
           打开第 {p.idx + 1} 个补给箱
         </Btn>
-        <Hint id="starter" pos="bottom">
-          <b>欢迎来到方块尖塔！</b>每张卡牌是一支怪物小队，战斗全自动进行。
-          <br />
-          先连开三个新手箱组成初始阵容；之后每赢一场都能挑一个补给箱继续开。
-        </Hint>
+        {!isOmen && (
+          <Hint id="starter" pos="bottom">
+            <b>欢迎来到方块尖塔！</b>每张卡牌是一支怪物小队，战斗全自动进行。
+            <br />
+            先连开三个新手箱组成初始阵容；之后每赢一场都能挑一个补给箱继续开。
+          </Hint>
+        )}
       </div>
     </div>
   );
