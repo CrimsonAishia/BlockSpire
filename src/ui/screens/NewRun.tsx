@@ -145,8 +145,8 @@ export function NewRun() {
                       </div>
                     </div>
                     <div class="omen-stats-bar">
-                      <span class="omen-stat-chip">💖 敌方生命 <b>+{Math.round((policy.hpMul - 1) * 100)}%</b></span>
-                      <span class="omen-stat-chip">⚔️ 敌方攻击 <b>+{Math.round((policy.atkMul - 1) * 100)}%</b></span>
+                      <span class="omen-stat-chip">💖 敌方生命 <b>+{Math.round((policy.hpMul - 1) * 100)}% + {Math.round(policy.dynamicStepRate * 100)}%/幕</b></span>
+                      <span class="omen-stat-chip">⚔️ 敌方攻击 <b>+{Math.round((policy.atkMul - 1) * 100)}% + {Math.round(policy.dynamicStepRate * 100)}%/幕</b></span>
                       <span class="omen-stat-chip gold">🏆 通关积分 <b>+{Math.round((policy.scoreMul - 1) * 100)}%</b></span>
                       <span class="omen-stat-sub">通关后解锁下一级并点亮该统领勋标</span>
                     </div>

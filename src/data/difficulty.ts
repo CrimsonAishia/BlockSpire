@@ -4,6 +4,7 @@ export interface DifficultyPolicy {
   omen: 0 | 1 | 2 | 3 | 4 | 5;
   name: string;
   summary: string;
+  dynamicStepRate: number;
   hpMul: number;
   atkMul: number;
   formationBudgetMul: number;
@@ -41,6 +42,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 0,
     name: '探索',
     summary: '熟悉指挥官、羁绊和地形的基准冒险。',
+    dynamicStepRate: 0.0,
     hpMul: 1.0,
     atkMul: 1.0,
     formationBudgetMul: 1.0,
@@ -72,6 +74,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 1,
     name: '险路',
     summary: '精英战更早出现，敌军编队配合更为严密。',
+    dynamicStepRate: 0.01,
     hpMul: 1.075,
     atkMul: 1.05,
     formationBudgetMul: 1.075,
@@ -109,6 +112,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 2,
     name: '异化',
     summary: '精英战固定配备 1 个敌军战术与随机词缀。',
+    dynamicStepRate: 0.02,
     hpMul: 1.175,
     atkMul: 1.1,
     formationBudgetMul: 1.15,
@@ -148,6 +152,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 3,
     name: '武装',
     summary: '开局生命 -1，物价上涨 10%，每幕强制遭遇精英。',
+    dynamicStepRate: 0.03,
     hpMul: 1.275,
     atkMul: 1.15,
     formationBudgetMul: 1.225,
@@ -193,6 +198,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 4,
     name: '围猎',
     summary: '扎营恢复减半，普通战带战术，精英常驻双战术。',
+    dynamicStepRate: 0.04,
     hpMul: 1.375,
     atkMul: 1.2,
     formationBudgetMul: 1.31,
@@ -242,6 +248,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     omen: 5,
     name: '终末',
     summary: '终局挑战：每幕双精英闸门，首领强化与连战。',
+    dynamicStepRate: 0.05,
     hpMul: 1.5,
     atkMul: 1.25,
     formationBudgetMul: 1.4,
@@ -300,4 +307,24 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
 export function difficultyPolicy(omen = 0): DifficultyPolicy {
   const level = Math.max(0, Math.min(DIFFICULTY_POLICIES.length - 1, Math.floor(omen))) as 0 | 1 | 2 | 3 | 4 | 5;
   return DIFFICULTY_POLICIES[level];
+}
+
+/**
+ * Dynamic act difficulty bonus:
+ * Omen 1 to 5 has a 1% to 5% base step rate per act (Omen 0 is 0%).
+ * Act 1: 1 * stepRate
+ * Act 2: 2 * stepRate
+ * Act 3: 3 * stepRate
+ * Act k: k * stepRate
+ */
+export function difficultyDynamicBonus(omen = 0, act = 1): number {
+  const pol = difficultyPolicy(omen);
+  return Math.round(Math.max(1, Math.floor(act)) * pol.dynamicStepRate * 10000) / 10000;
+}
+
+/**
+ * Returns the base dynamic step rate for a given omen level (0.01 to 0.05).
+ */
+export function omenDynamicRate(omen = 0): number {
+  return difficultyPolicy(omen).dynamicStepRate;
 }

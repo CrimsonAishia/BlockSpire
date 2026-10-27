@@ -356,7 +356,7 @@ export const RELIC_TIER_INFO: Record<RelicTier, { name: string; color: string; p
 };
 
 export { COMMANDERS, COMMANDER_MAP, SKILL_INFO, type CommanderDef, type SkillId } from './commanders.ts';
-export { DIFFICULTY_POLICIES, difficultyPolicy, type DifficultyPolicy } from './difficulty.ts';
+export { DIFFICULTY_POLICIES, difficultyPolicy, difficultyDynamicBonus, omenDynamicRate, type DifficultyPolicy } from './difficulty.ts';
 import { DIFFICULTY_POLICIES } from './difficulty.ts';
 
 export interface OmenDef {

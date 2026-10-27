@@ -5,7 +5,7 @@ import { RARITIES } from '../core/types.ts';
 import { CRATE_MAP, cratesForAct, baseCratesForAct, expeditionCratesForAct, rollCrate, type CrateGrade, type OpenContext, type OpenResult } from '../data/crates.ts';
 import { ENC_MAP, ENCOUNTERS, enemyScales, riftEncounters, tierForRow, type EncCard, type EncounterDef } from '../data/encounters.ts';
 import { AFFIXES, COMMANDER_MAP, ENCHANTS, ENCHANT_MAP, ENEMY_ENCHANTS, ITEMS, enchantName, ITEM_MAP, POTION_MAP, RELICS, RELIC_MAP, RELIC_TIER_INFO, rollItem, type ItemTier, type RelicTier } from '../data/items.ts';
-import { difficultyPolicy } from '../data/difficulty.ts';
+import { difficultyPolicy, difficultyDynamicBonus } from '../data/difficulty.ts';
 import { computeSynergies } from '../data/families.ts';
 import type { Family } from '../core/types.ts';
 import { MOB_MAP, RARITY_INFO, PLAYABLE_BLUE_MOBS, mobDef, unitCount } from '../data/mobs.ts';
@@ -625,9 +625,9 @@ export function actDifficultyRamp(act: number, row: number): number {
 export function enemyMuls(s: RunState, kind: 'battle' | 'elite' | 'boss' | 'event', row: number) {
   const sc = enemyScales(s.act, row, kind);
   const pol = difficultyPolicy(s.omen);
-  const ramp = s.omen > 0 ? actDifficultyRamp(s.act, row) : 1.0;
-  const hpMul = 1 + (pol.hpMul - 1) * ramp;
-  const atkMul = 1 + (pol.atkMul - 1) * ramp;
+  const dynBonus = difficultyDynamicBonus(s.omen, s.act);
+  const hpMul = pol.hpMul + dynBonus;
+  const atkMul = pol.atkMul + dynBonus;
   let hp = sc.hp * hpMul;
   let atk = sc.atk * atkMul;
   if (hasRelic(s, 'ominous_bottle')) {
