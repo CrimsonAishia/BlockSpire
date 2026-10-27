@@ -265,8 +265,14 @@ export function dustValue(mob: string, star: number) {
   return RARITY_INFO[mobDef(mob).rarity].dust * (star === 1 ? 1 : star === 2 ? 2.5 : 5);
 }
 
+/** Prices rise faster in later acts as emeralds accumulate across the run. */
+export function shopActPriceMul(act: number) {
+  const progress = Math.max(0, act - 1);
+  return 1 + 0.35 * progress + 0.1 * progress * progress;
+}
+
 export function priceMul(s: RunState) {
-  let m = 1;
+  let m = shopActPriceMul(s.act);
   if (s.commander === 'villager') m *= 0.8;
   if (hasRelic(s, 'gold_ingot')) m *= 0.85;
   if (difficultyPolicy(s.omen).shopPriceMul > 1) m *= difficultyPolicy(s.omen).shopPriceMul;
@@ -544,7 +550,7 @@ export function enterNode(s: RunState, id: string) {
       s.queue.push(makeRiftBattle(s));
       break;
     case 'shop':
-      s.queue.push({ type: 'shop', stock: genShop(s), reroll: 15, orders: s.commander === 'villager' ? (hasRelic(s, 'trading_post') ? 2 : 1) : undefined });
+      s.queue.push({ type: 'shop', stock: genShop(s), reroll: Math.round(15 * priceMul(s)), orders: s.commander === 'villager' ? (hasRelic(s, 'trading_post') ? 2 : 1) : undefined });
       break;
     case 'rest':
       s.queue.push({ type: 'rest', actions: hasRelic(s, 'crafting_table') ? 2 : 1, done: [] });
@@ -673,15 +679,15 @@ export function dynamicFormation(
   }
 
   const tier = tierForRow(row);
-  const shouldAddSupport = act >= 5 || kind === 'elite' || pol.omen > 0 || (pol.supportChance > 0 && rng.chance(pol.supportChance));
+  const shouldAddSupport = act >= 4 || kind === 'elite' || pol.omen > 0 || (pol.supportChance > 0 && rng.chance(pol.supportChance));
 
   // Target cards based on Tier and Difficulty (Section 6.1)
   let targetCards = baseCards.length;
-  if (act >= 5) {
-    // Act 5-7: Expedition & Endgame (Player has 6 slots in Act 5, 7 slots in Act 6-7)
-    // Base is strictly equal cards across all difficulties (6 in Act 5, 7 in Act 6-7).
+  const baseEqual = act >= 6 ? 7 : act === 5 ? 6 : act === 4 ? 5 : 0;
+  if (act >= 4) {
+    // Act 4: Sift Realm (Player has 5 slots). Act 5: Expedition (Player has 6 slots). Act 6-7: Endgame (Player has 7 slots).
+    // Base is strictly equal cards across all difficulties (5 in Act 4, 6 in Act 5, 7 in Act 6-7).
     // Omen +1 card pressure follows the original probability algorithm.
-    const baseEqual = act >= 6 ? 7 : 6;
     if (kind === 'elite') {
       if (pol.omen <= 2) {
         targetCards = baseEqual;
@@ -804,7 +810,7 @@ export function dynamicFormation(
   const progressMul = 0.95 + progress * 0.1;
   const kindBudgetMul = kind === 'elite' ? 1.15 : 1.0;
   const avgBaseCardThreat = baseThreat / Math.max(1, baseCards.length);
-  const budgetScale = act >= 5 ? 1.15 : 0.85;
+  const budgetScale = act >= 4 ? 1.15 : 0.85;
   const normalizedThreat = Math.max(baseThreat, avgBaseCardThreat * targetCards * budgetScale);
   const targetBudget = act === 1
     ? act1FormationPolicy(row, kind, omen).threatBudget
@@ -869,7 +875,7 @@ export function dynamicFormation(
   const actMobs = (act === 1 ? act1SupportPool(row, kind) : [...new Set(ENCOUNTERS.filter((e) => e.act === act || (act === 7 && e.act === 3)).flatMap((e) => e.cards.map((c) => c[0])))])
     .filter((id) => {
       const m = mobDef(id);
-      return !m.boss && !m.structure && !m.hidden;
+      return !m.boss && !m.structure && !m.hidden && !(kind === 'battle' && m.rarity === 'gold');
     })
     .sort();
 
@@ -877,7 +883,7 @@ export function dynamicFormation(
     while (cards.length < targetCards) {
       const curThreat = encounterThreat({ cards });
       const remainingBudget = effectiveMaxBudget - curThreat;
-      if (remainingBudget <= 0.4 && (act >= 5 ? cards.length >= targetCards : cards.length >= Math.min(baseCards.length + 1, targetCards))) break;
+      if (remainingBudget <= 0.4 && (act >= 4 ? cards.length >= targetCards : cards.length >= Math.min(baseCards.length + 1, targetCards))) break;
 
       const trySynergy = rng.chance(pol.synergyChance);
       const synBefore = computeSynergies(cards.map((c) => mobDef(c[0]).families)).active;
@@ -1021,7 +1027,8 @@ export function dynamicFormation(
       }
 
       // Over budget: try dropping one non-core weak support card (from newly added support cards)
-      if (cards.length > baseCards.length) {
+      const minRetainCards = act >= 4 ? baseEqual : baseCards.length;
+      if (cards.length > minRetainCards) {
         let weakestIdx = -1;
         let weakestThreat = Infinity;
         for (let i = baseCards.length; i < cards.length; i++) {
@@ -1806,12 +1813,12 @@ export function rerollShop(s: RunState) {
   const p = s.queue[0];
   if (p.type !== 'shop' || s.emeralds < p.reroll) return;
   s.emeralds -= p.reroll;
-  p.reroll += 10;
+  p.reroll += Math.round(10 * priceMul(s));
   const keepServices = p.stock.filter((x) => x.kind === 'heal' || x.kind === 'upgrade');
   p.stock = [...genShop(s).filter((x) => x.kind !== 'heal' && x.kind !== 'upgrade'), ...keepServices];
 }
 
-/** Half the shop price back for an inventory item (shops only). */
+/** Half the base item price back (shops only); resale does not rise with act prices. */
 export function sellValue(id: string) {
   return Math.max(5, Math.round((ITEM_MAP[id]?.price ?? 20) * 0.5));
 }
@@ -2028,6 +2035,9 @@ export function startAct(s: RunState, act: number) {
     s.actTheme = withRng(s, (r) => (r.chance(0.5) ? 'ember_forge' : undefined));
   } else if (act === 3) {
     s.actTheme = withRng(s, (r) => (r.chance(0.3) ? 'high_halls' : undefined));
+  } else if (act === 4) {
+    s.slots = Math.min(7, Math.max(s.slots, 5));
+    s.actTheme = undefined;
   } else if (act === 5) {
     s.slots = Math.min(7, Math.max(s.slots, 6));
     s.actTheme = withRng(s, (r) => r.pick(['lonely_fortress', 'overgrown_temple', 'abyssal_monument']));
