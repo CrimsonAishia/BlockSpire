@@ -96,7 +96,7 @@ export function ShopView({ s, p }: { s: RunState; p: P; v?: number }) {
         </div>
         <div class="shop-sell">
           <div class="subtle" style={{ fontSize: 14 }}>
-            出售物品（半价回收） {s.potions.length}/{s.potionSlots}
+            出售物品（基础价半价回收） {s.potions.length}/{s.potionSlots}
           </div>
           <div class="row gap4 wrap">
             {s.potions.length === 0 && <span class="faint" style={{ fontSize: 13 }}>物品栏是空的</span>}
@@ -111,6 +111,7 @@ export function ShopView({ s, p }: { s: RunState; p: P; v?: number }) {
           </div>
         </div>
         <div class="col gap8" style={{ width: '100%' }}>
+          <div class="subtle" style={{ fontSize: 13 }}>第 {s.act} 幕 · 商品与刷新费用随幕数上涨，连续刷新逐次加价。</div>
           <Btn
             wide
             disabled={s.emeralds < p.reroll}
