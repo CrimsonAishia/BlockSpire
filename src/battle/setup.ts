@@ -153,43 +153,86 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     }
 
     // ── Relics ──
-    if (relics.has('iron_sword') && !ranged) atkMul *= 1.12;
-    if (relics.has('bow') && ranged) atkMul *= 1.12;
-    if (relics.has('iron_chestplate') && c.row === 'front') hpMul *= 1.18;
-    if (relics.has('shield')) fx.projTaken *= 0.8;
+    if (relics.has('iron_sword') && !ranged) atkMul *= 1.15;
+    if (relics.has('bow') && ranged) atkMul *= 1.15;
+    if (relics.has('iron_chestplate') && c.row === 'front') hpMul *= 1.20;
+    if (relics.has('shield')) fx.projTaken *= 0.75;
     if (relics.has('spider_eye')) fx.poisonMul *= 1.6;
     if (relics.has('blaze_rod')) fx.burnMul *= 1.6;
     if (relics.has('bone') && has('undead') && count >= 2) count += 1;
     if (relics.has('hay_bale') && has('beast') && !m.boss) count += 1;
-    if (relics.has('netherite_plate') && m.role === 'tank') hpMul *= 1.2;
+    if (relics.has('netherite_plate') && (m.role === 'tank' || c.row === 'front')) hpMul *= 1.30;
     if (combos.has('village_guard') && (m.id === 'snow_golem' || m.id === 'copper_golem')) hpMul *= 1.25;
     if (combos.has('monument') && m.id === 'drowned') fx.projTaken *= 0.85;
     if (combos.has('venom_web') && (m.id === 'spider' || m.id === 'cave_spider' || m.id === 'bogged')) fx.poisonMul *= 1.2;
     if (relics.has('saddle') && has('beast')) {
       moveSpd *= 1.25;
-      fx.firstHitMul = 2;
+      fx.firstHitMul = 2.5;
     }
     if (relics.has('honey_bottle')) immune |= IMM_POISON | IMM_HUNGER;
-    if (relics.has('diamond_sword')) fx.crit += 0.12;
+    if (relics.has('diamond_sword')) {
+      fx.crit += 0.15;
+      fx.critMul = Math.max(fx.critMul, 2.0);
+    }
     if (relics.has('spyglass') && ranged) {
-      rangeMul *= 1.2;
-      fx.farBonus = 0.15;
+      rangeMul *= 1.25;
+      fx.farBonus = 0.25;
     }
+    if (relics.has('lookout') && ranged) rangeMul *= 1.15;
     if (relics.has('ender_pearl')) fx.pearl = true;
-    if (relics.has('heart_of_the_sea') && has('aquatic')) hpMul *= 1.2;
-    if (relics.has('music_disc') && has('nether')) atkSpd *= 1.2;
-    if (relics.has('beacon')) {
-      hpMul *= 1.1;
-      atkMul *= 1.1;
-      atkSpd *= 1.1;
-    }
+    if (relics.has('heart_of_the_sea') && has('aquatic')) hpMul *= 1.25;
+    if (relics.has('music_disc') && has('nether')) atkSpd *= 1.25;
     if (relics.has('cursed_crown')) {
-      atkMul *= 1.10;
-      hpMul *= 0.94;
+      atkMul *= 1.35;
+      fx.dmgTaken *= 1.10;
     }
     if (relics.has('nether_star')) {
-      hpMul *= 1.25;
-      atkMul *= 1.25;
+      hpMul *= 1.30;
+      atkMul *= 1.30;
+    }
+    if (relics.has('scale_mail') && !ranged) {
+      moveSpd *= 0.92;
+      immune |= IMM_KB;
+    }
+    if (relics.has('archers_armor') && ranged) rangeMul *= 1.12;
+    if (relics.has('mystery_armor')) {
+      hpMul *= 1.15;
+      atkMul *= 1.10;
+    }
+    if (relics.has('full_metal_armor') && c.row === 'front') {
+      fx.dmgTaken *= 0.80;
+      immune |= IMM_KB;
+    }
+    if (relics.has('encrusted_anchor') && c.row === 'front') {
+      hpMul *= 1.30;
+      moveSpd *= 0.85;
+    }
+    if (relics.has('stalwart_armor') && c.row === 'front') moveSpd *= 0.85;
+    if (relics.has('bone_club') && !ranged) {
+      atkMul *= 1.60;
+      atkSpd *= 0.83;
+    }
+    if (relics.has('winter_soul_bow') && ranged) atkMul *= 1.15;
+    if (relics.has('gale_bow') && ranged) rangeMul *= 0.85;
+    if (relics.has('sturdy_shulker')) {
+      fx.projTaken *= 0.60;
+      moveSpd *= 0.85;
+    }
+    if (relics.has('swift_striker')) atkMul *= 0.90;
+    if (relics.has('opulent_armor')) hpMul *= 0.90;
+    if (relics.has('dripstone')) fx.knock = (fx.knock || 30) * 1.5;
+    if (relics.has('battle_robe') && (m.role === 'caster' || m.dmgKind === 'magic')) {
+      atkMul *= 1.15;
+      atkSpd *= 1.25;
+    }
+    if (relics.has('temporal_sand')) atkSpd *= 1.15;
+    if (relics.has('guardian_eye') && !ranged) fx.breach = (fx.breach || 0) + 0.40;
+    if (relics.has('evocation_robe') && (m.role === 'support' || m.role === 'caster')) {
+      atkSpd *= 1.25;
+      hpMul *= 1.15;
+    }
+    if (relics.has('mechanized_sawblade') && !ranged) {
+      atkSpd *= 0.85;
     }
 
     // ── Elite affix (不祥之兆) ──

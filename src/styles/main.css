@@ -729,7 +729,12 @@ a.mc-btn {
   gap: 4px;
   align-items: center;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.relic-row::-webkit-scrollbar {
+  display: none;
 }
 .relic-slot {
   width: 40px;

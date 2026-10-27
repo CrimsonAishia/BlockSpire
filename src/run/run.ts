@@ -1170,7 +1170,7 @@ export function toggleArmed(s: RunState, potion: string) {
   else if (s.potions.includes(potion)) s.armed.push(potion);
 }
 
-function battleEmeralds(s: RunState, kind: string, row: number, r: Rng) {
+export function battleEmeralds(s: RunState, kind: string, row: number, r: Rng) {
   const am = [1, 1, 1.3, 1.6, 1.9][s.act] ?? 1.9;
   let e = 0;
   if (kind === 'battle' || kind === 'event') e = (12 + row * 0.6 + r.int(0, 5)) * am;
@@ -1178,8 +1178,9 @@ function battleEmeralds(s: RunState, kind: string, row: number, r: Rng) {
   else e = 70 * am;
   if (s.commander === 'steve') e += 4;
   if (s.chains?.banner === 1) e *= 1.25;
-  if (hasRelic(s, 'emerald_block')) e += 8;
-  if (hasRelic(s, 'ominous_bottle')) e *= 1.3;
+  if (hasRelic(s, 'emerald_block')) e += 10;
+  if (hasRelic(s, 'ominous_bottle')) e *= 1.5;
+  if (hasRelic(s, 'gilded_piglin_armor')) e *= 1.5;
   return Math.round(e);
 }
 
@@ -1229,7 +1230,7 @@ export function resolveBattle(s: RunState, res: BattleResult) {
     let missed: string | undefined;
     const dropChance = p.kind === 'elite' ? 0.75 : p.kind === 'boss' ? 1 : 0.35;
     const boost = p.kind === 'boss' ? 1 : p.kind === 'elite' ? 0.6 : 0;
-    if (!hasRelic(s, 'dragon_breath'))
+    if (!hasRelic(s, 'dragon_breath') && !hasRelic(s, 'conduit'))
       withRng(s, (r) => {
         if (r.chance(dropChance)) {
           const it = rollItem(r, { boost });
@@ -1411,8 +1412,8 @@ const THEME_RELIC_MAP: Record<string, string> = {
   frost_scythe: 'lonely_fortress',
   vine_whip: 'overgrown_temple',
   encrusted_anchor: 'abyssal_monument',
-  mechanical_saw: 'nether_fortress',
-  chill_gale_dagger: 'gale_sanctum',
+  mechanized_sawblade: 'nether_fortress',
+  chill_gale_knife: 'gale_sanctum',
   unstable_robes: 'broken_citadel',
 };
 
@@ -1669,8 +1670,15 @@ export function gainRelic(s: RunState, id: string) {
     s.maxHearts = Math.max(1, s.maxHearts - 1);
     s.hearts = Math.min(s.hearts, s.maxHearts);
   }
-  if (id === 'dragon_breath') s.potionSlots++;
-  toast(s, `获得宝物「${RELIC_MAP[id].name}」`, 'gold');
+  if (id === 'dragon_breath') s.potionSlots += 2;
+  if (id === 'gilded_piglin_armor') {
+    gainEmeralds(s, 60);
+    s.potionSlots = Math.max(1, s.potionSlots - 1);
+    if (s.potions.length > s.potionSlots) s.potions.length = s.potionSlots;
+  }
+  if (id === 'opulent_armor') gainEmeralds(s, 50);
+  if (id === 'spelunker_armor') gainEmeralds(s, 15);
+  toast(s, `获得宝物「${RELIC_MAP[id]?.name ?? id}」`, 'gold');
 }
 
 export function chooseRelic(s: RunState, id: string | null) {
@@ -1918,7 +1926,10 @@ export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant') {
   const p = s.queue[0];
   if (p.type !== 'rest' || p.actions <= 0 || p.done.includes(action)) return;
   if (action === 'rest') {
-    if (hasRelic(s, 'sculk_catalyst')) return;
+    if (hasRelic(s, 'sculk_catalyst') || hasRelic(s, 'cursed_crown')) {
+      toast(s, '受到宝物诅咒，无法在营火休息！', 'bad');
+      return;
+    }
     s.hearts = Math.min(s.maxHearts, s.hearts + restHeal(s));
   }
   p.actions--;

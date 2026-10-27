@@ -77,7 +77,14 @@ export function RunHud({ s }: { s: RunState }) {
         })}
       </div>
       <div class="sep" />
-      <div class="relic-row grow">
+      <div
+        class="relic-row grow"
+        onWheel={(e) => {
+          if (e.deltaY) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
+      >
         {s.relics.map((r) => (
           <RelicSlot key={r} id={r} />
         ))}

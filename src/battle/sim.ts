@@ -458,24 +458,65 @@ export class Battle {
         }
       }
 
-      for (const u of this.live[team]) if (has('enchanted_apple')) u.shield = u.maxHp * 0.3;
-      if (has('bell')) for (const e of this.live[foe]) e.glowT = 10;
+      for (const u of this.live[team]) {
+        if (has('enchanted_apple')) {
+          u.shield = Math.max(u.shield, u.maxHp * 0.35);
+          this.emit({ k: 'heal', x: u.x, y: u.y, z: u.gz + u.z });
+          this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '【附魔金苹果·坚固护盾!】', color: '#ffcc33' });
+        }
+        if (has('stalwart_armor') && u.row === 'front') {
+          u.shield = Math.max(u.shield, u.maxHp * 0.35);
+          this.emit({ k: 'heal', x: u.x, y: u.y, z: u.gz + u.z });
+          this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '【坚毅护甲·坚岩护盾!】', color: '#74b9ff' });
+        }
+        if (has('clock')) {
+          u.hasteT = Math.max(u.hasteT, 8.0);
+          u.hasteMul = Math.max(u.hasteMul, 1.35);
+          u.speedT = Math.max(u.speedT, 8.0);
+          u.speedMul = Math.max(u.speedMul, 1.25);
+        }
+      }
+      if (has('clock')) {
+        this.emit({ k: 'roar', x: this.rowX(team, 'mid'), y: ARENA_D / 2, r: 120, color: '#f1c40f' });
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '【时钟·急促冲锋!】', color: '#f1c40f' });
+        this.emit({ k: 'sfx', id: 'horn' });
+      }
+      if (has('soul_robe')) {
+        this.addSouls(team, 8);
+        this.emit({ k: 'text', x: team === 0 ? 50 : ARENA_W - 50, y: ARENA_D / 2, z: 50, s: '【灵魂长袍·魂能充盈(+8)!】', color: '#00d2d3' });
+      }
+      if (has('bell')) {
+        this.emit({ k: 'roar', x: this.rowX(foe, 'mid'), y: ARENA_D / 2, r: 180, color: '#fffa65' });
+        this.emit({ k: 'text', x: this.rowX(foe, 'mid'), y: ARENA_D / 2, z: 90, s: '【警钟·全军现形!】', color: '#fffa65' });
+        this.emit({ k: 'sfx', id: 'anvil_land' });
+        for (const e of this.live[foe]) e.glowT = 10;
+      }
       if (has('nether_star')) {
         let best = -1;
         let bestHp = -1;
         this.cards.forEach((c, i) => {
-          if (c.team !== team) return;
-          const hp = this.live[team].filter((u) => u.card === i).reduce((s, u) => s + u.maxHp, 0);
+          if (c.team !== foe) return;
+          const hp = this.live[foe].filter((u) => u.card === i).reduce((s, u) => s + u.maxHp, 0);
           if (hp > bestHp) {
             bestHp = hp;
             best = i;
           }
         });
-        for (const u of this.live[team])
-          if (u.card === best && !(u.immune & IMM_WITHER)) {
-            u.witherT = 5;
-            u.witherDps = u.maxHp * 0.025;
-          }
+        const foeTarget = this.live[foe].find((u) => u.card === best && !(u.immune & IMM_WITHER));
+        if (foeTarget) {
+          foeTarget.witherT = 12;
+          foeTarget.witherDps = foeTarget.maxHp * 0.035;
+          const srcCenter = { x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 30 };
+          this.emit({ k: 'beam', a: srcCenter, b: foeTarget, color: '#9b59b6', t: 1.5 });
+          this.emit({ k: 'boom', x: foeTarget.x, y: foeTarget.y, r: 40, color: '#8e44ad', big: false });
+          this.emit({ k: 'text', x: foeTarget.x, y: foeTarget.y, z: foeTarget.gz + foeTarget.z + foeTarget.size, s: '【下界之星·凋零诅咒!】', color: '#c56cf0' });
+        }
+      }
+      if (has('temporal_sand')) {
+        for (const u of this.live[team]) {
+          u.atkTimer = Math.max(0, u.atkTimer - 2.0);
+        }
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 80, s: '【停滞沙漏·技能提前!】', color: '#f39c12' });
       }
     }
   }
@@ -501,6 +542,15 @@ export class Battle {
     } else {
       this.emit({ k: 'sfx', id: 'potion_throw' });
       this.pendingItems.push({ t: 0.45, team, id, x, y });
+    }
+    if (this.has(team, 'shadow_shifter')) {
+      for (const a of this.live[team]) {
+        a.atkTimer *= 0.5;
+        if (a.cast && a.cast.phase === 'windup') {
+          a.cast.endTime = Math.max(this.t + 0.1, a.cast.endTime - 1.5);
+        }
+      }
+      this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '【暗影转换·冷却缩短50%!】', color: '#8e44ad' });
     }
     return true;
   }
@@ -800,16 +850,25 @@ export class Battle {
     }
     // Knockback velocity
     if (u.vx !== 0 || u.vy !== 0) {
-      // 滴水石锥: slamming into a wall, tree or pillar hurts.
-      if (!u.flying && u.vx * u.vx + u.vy * u.vy > 110 * 110 && this.has((1 - u.team) as 0 | 1, 'dripstone')) {
+      // 滴水石锥: slamming into obstacles or bowling into other enemies
+      if (!u.flying && u.vx * u.vx + u.vy * u.vy > 100 * 100 && this.has((1 - u.team) as 0 | 1, 'dripstone')) {
         const nx = u.x + u.vx * dt * 3;
         const ny = u.y + u.vy * dt * 3;
         if (isBlocked(this.terrain, cellX(nx), cellY(ny)) && !u.boss && !u.structure) {
           u.vx = u.vy = 0;
-          this.damage((u.ref.lastHitBy as Unit | undefined) ?? null, u, u.maxHp * 0.06, 'true', { noCrit: true, noDodge: true });
-          this.stun(u, 0.5);
+          this.damage((u.ref.lastHitBy as Unit | undefined) ?? null, u, u.maxHp * 0.10, 'true', { noCrit: true, noDodge: true });
+          this.stun(u, 0.8);
           this.emit({ k: 'land', x: u.x, y: u.y, z: u.gz, big: true });
-          this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 6, s: '撞墙!', color: '#d8c8a8', tac: true });
+          this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 6, s: '【冲撞撞墙!】', color: '#d8c8a8', tac: true });
+        } else if (!u.structure) {
+          this.aoe(u.x, u.y, u.radius + 16, (1 - u.team) as 0 | 1, (other) => {
+            if (other !== u && !other.ref.dripHit && !other.structure) {
+              other.ref.dripHit = this.t + 0.6;
+              this.damage(null, other, u.maxHp * 0.10, 'true', { noCrit: true });
+              this.stun(other, 0.8);
+              this.emit({ k: 'text', x: other.x, y: other.y, z: other.gz + other.size + 6, s: '【保龄冲撞!】', color: '#f39c12' });
+            }
+          });
         }
       }
       u.x = clampX(u.x + u.vx * dt, u.radius);
@@ -1299,6 +1358,26 @@ export class Battle {
       amt += u.atk * u.ref.forestWatchBonus;
       delete u.ref.forestWatchBonus;
     }
+    if (this.has(u.team, 'chill_gale_knife') && (u.ref.chillGaleHits ?? 0) < 3) {
+      u.ref.chillGaleHits = (u.ref.chillGaleHits ?? 0) + 1;
+      amt *= 1.80;
+      this.blink(u, 25);
+      this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '【寒风突刺!】', color: '#74b9ff' });
+    }
+    if (this.has(u.team, 'assassins_armor') && (u.ref.assassinHits ?? 0) < 2) {
+      u.ref.assassinHits = (u.ref.assassinHits ?? 0) + 1;
+      amt *= 1.50;
+      u.takenMul *= 0.70;
+      this.addTimedAction(3, () => { if (u.alive) u.takenMul /= 0.70; });
+      this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '【刺客伏击!】', color: '#e74c3c' });
+    }
+    if (this.has(u.team, 'ocelot_armor') && u.ref.targetSwitched) {
+      delete u.ref.targetSwitched;
+      u.critNext = true;
+      u.speedT = Math.max(u.speedT, 3.0);
+      u.speedMul = Math.max(u.speedMul, 1.35);
+      this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '【豹猫猎袭!】', color: '#f39c12' });
+    }
     const dealt = this.damage(u, t, amt, u.dk, { melee: true });
     this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.z + t.size * 0.5, big: amt > 60, color: '#fff' });
     this.onAttackHit(u, t, dealt, false);
@@ -1306,6 +1385,15 @@ export class Battle {
       this.aoe(t.x, t.y, 45, u.team, (e) => {
         if (e !== t) this.damage(u, e, amt * u.fx.sweep, u.dk, { melee: true, noCrit: true });
       });
+    }
+    // Ghost cloak: back-row units evade when threatened by melee.
+    if (t.alive && this.has(t.team, 'ghost_cloak_relic') && !t.ref.ghostCloakUsed && t.row === 'back') {
+      t.ref.ghostCloakUsed = true;
+      t.ghost = true;
+      t.shield = Math.max(t.shield, t.maxHp * 0.30);
+      this.addTimedAction(2.0, () => { t.ghost = false; });
+      this.emit({ k: 'tele', x: t.x, y: t.y, x2: t.x, y2: t.y, z: t.gz + t.z });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '【幽灵斗篷·隐匿!】', color: '#9b59b6' });
     }
     // Ender pearl: back-row units escape their first melee attacker.
     if (t.alive && t.fx.pearl && !t.pearlUsed && t.row === 'back') {
@@ -1395,6 +1483,121 @@ export class Battle {
           hit++;
           this.damage(u, e, avgAtk * 0.35, 'magic', { noCrit: true });
         });
+      }
+    }
+
+    // ── 冬日魂弓 (Winter Soul Bow)：远程每第 3 次攻击极寒重矢贯穿 ──
+    if (this.has(u.team, 'winter_soul_bow') && ranged && !u.structure) {
+      u.ab.winterShots = (u.ab.winterShots ?? 0) + 1;
+      if (u.ab.winterShots >= 3) {
+        u.ab.winterShots = 0;
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【极寒重矢!】', color: '#74b9ff' });
+        this.freeze(t, this.atkOf(u) * 1.4, 3.0, u);
+        this.slow(t, 0.40, 0.25, 3.0, u.team);
+      }
+    }
+
+    // ── 雷霆箭袋 (Thundering Quiver)：远程每第 3 次普攻连环雷电 ──
+    if (this.has(u.team, 'thundering_quiver') && ranged && !u.structure) {
+      u.ab.thunderShots = (u.ab.thunderShots ?? 0) + 1;
+      if (u.ab.thunderShots >= 3) {
+        u.ab.thunderShots = 0;
+        this.emit({ k: 'bolt', x: t.x, y: t.y });
+        this.emit({ k: 'sfx', id: 'lightning' });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【连环雷击!】', color: '#55c1ff' });
+        this.lightning(u, t.x, t.y, this.atkOf(u) * 0.8, 50);
+      }
+    }
+
+    // ── 骨棒 (Bone Club)：近战普攻造成 0.5 秒强力眩晕 ──
+    if (this.has(u.team, 'bone_club') && !ranged && !u.structure) {
+      this.stun(t, 0.5);
+      this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.size, big: true, color: '#ced6e0' });
+      this.emit({ k: 'sfx', id: 'stomp' });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【重击敲晕!】', color: '#d9d5cd' });
+    }
+
+    // ── 寒霜镰刀 (Frost Scythe)：对冰冻/寒意/减速目标附加 80% 霜斩 ──
+    if (this.has(u.team, 'frost_scythe') && (t.freezeT > 0 || t.slowT > 0 || t.chill > 0)) {
+      const tm = this.sides[u.team].timers;
+      if (!tm.frost_scythe_cd || this.t >= tm.frost_scythe_cd) {
+        tm.frost_scythe_cd = this.t + 3.0;
+        this.damage(u, t, this.atkOf(u) * 0.8, 'magic', { noCrit: true });
+        if (t.boss && t.channeling) this.addPosture(t, 25);
+        this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.size, big: true, color: '#74b9ff' });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【寒霜斩击!】', color: '#74b9ff' });
+      }
+    }
+
+    // ── 藤鞭 (Vine Whip)：攻击受控目标溅射 70% 伤害 ──
+    if (this.has(u.team, 'vine_whip') && !ranged && (t.stunT > 0 || t.slowT > 0 || t.freezeT > 0)) {
+      this.aoe(t.x, t.y, 50, u.team, (e) => {
+        if (e !== t) this.damage(u, e, this.atkOf(u) * 0.7, 'phys', { noCrit: true });
+      });
+      this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.size, big: false, color: '#2ecc71' });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【荆棘裂笞!】', color: '#2ecc71' });
+    }
+
+    // ── 覆壳锚 (Encrusted Anchor)：前排普攻向周围扇形溅射 70% ──
+    if (this.has(u.team, 'encrusted_anchor') && !ranged && u.row === 'front') {
+      this.aoe(t.x, t.y, 45, u.team, (e) => {
+        if (e !== t) {
+          this.damage(u, e, this.atkOf(u) * 0.7, 'phys', { noCrit: true });
+          this.emit({ k: 'hit', x: e.x, y: e.y, z: e.gz + e.size, big: false, color: '#2e86de' });
+        }
+      });
+      const tm = this.sides[u.team].timers;
+      if (!tm.anchor_text_cd || this.t >= tm.anchor_text_cd) {
+        tm.anchor_text_cd = this.t + 2.0;
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 10, s: '【覆壳横扫!】', color: '#2e86de' });
+      }
+    }
+
+    // ── 珊瑚剑 (Coral Blade)：每 4 次普攻治疗最虚弱的 2 支队伍各 10% ──
+    if (this.has(u.team, 'coral_blade') && !u.structure && !u.isSummon) {
+      const tm = this.sides[u.team].timers;
+      tm.coral_hits = (tm.coral_hits ?? 0) + 1;
+      if (tm.coral_hits >= 4) {
+        tm.coral_hits = 0;
+        const allies = this.live[u.team].filter((a) => a.alive && !a.structure).sort((a, b) => a.hpFrac - b.hpFrac);
+        for (let i = 0; i < Math.min(2, allies.length); i++) {
+          this.heal(allies[i], allies[i].maxHp * 0.10, u);
+          this.emit({ k: 'heal', x: allies[i].x, y: allies[i].y, z: allies[i].gz + allies[i].z });
+        }
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 10, s: '【潮涌治愈!】', color: '#00cec9' });
+        this.emit({ k: 'sfx', id: 'splash' });
+      }
+    }
+
+    // ── 迅捷刺刀 (Swift Striker)：普攻削减主动冷却 0.5 秒 ──
+    if (this.has(u.team, 'swift_striker')) {
+      u.atkTimer = Math.max(0, u.atkTimer - 0.5);
+      if (u.cast && u.cast.phase === 'windup') {
+        u.cast.endTime = Math.max(this.t + 0.1, u.cast.endTime - 0.5);
+      }
+      const cdKey = `swift_c${u.card}`;
+      const cd = this.sides[u.team].timers[cdKey] ?? 0;
+      if (this.t >= cd) {
+        this.sides[u.team].timers[cdKey] = this.t + 2.0;
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 10, s: '【极速充能!】', color: '#ff9ff3' });
+      }
+    }
+
+    // ── 猎人之誓 (Hunter's Promise)：同目标第 3 次命中协同狙击 120% ──
+    if (this.has(u.team, 'hunters_promise') && !u.structure) {
+      t.ref.hunterHits = (t.ref.hunterHits ?? 0) + 1;
+      if (t.ref.hunterHits >= 3) {
+        t.ref.hunterHits = 0;
+        this.damage(u, t, this.atkOf(u) * 1.2, 'phys', { noCrit: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【协同狙击!】', color: '#ff7675' });
+      }
+    }
+
+    // ── 霜咬护甲 (Frostbite Armor)：对寒意/冰冻额外贡献 25 破势 ──
+    if (this.has(u.team, 'frostbite_armor') && (t.chill > 0 || t.freezeT > 0 || t.slowT > 0)) {
+      if (t.boss && t.channeling) {
+        this.addPosture(t, 25);
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【霜咬破势 +25!】', color: '#81ecec' });
       }
     }
 
@@ -1873,24 +2076,6 @@ export class Battle {
     };
 
     if (this.walls.length) tickWalls(this, team, dt);
-    // 刷怪笼: the biggest squad keeps getting reinforcements.
-    if (this.has(team, 'spawner') && (tm.spawned ?? 0) < 4)
-      every('spawner', 10, 8, () => {
-        let best = -1;
-        let n = 0;
-        this.cards.forEach((c, i) => {
-          const plan = this.plans[i];
-          if (c.team !== team || c.alive <= 0 || mobDef(c.mob).structure || mobDef(c.mob).boss || !plan.uid) return;
-          if (plan.count > n) {
-            n = plan.count;
-            best = i;
-          }
-        });
-        const owner = live.find((u) => u.card === best && !u.isSummon) ?? live.find((u) => u.card === best);
-        if (!owner) return;
-        const u = this.summon(owner, this.plans[best].mob, owner.x - (team === 0 ? 30 : -30), owner.y + this.rng.range(-25, 25), 1, { fx: 'summon' });
-        if (u) tm.spawned = (tm.spawned ?? 0) + 1;
-      });
     const hasAliveFamily = (f: Family) => live.some((u) => u.alive && !u.isSummon && !u.structure && !u.boss && u.mob.families.includes(f));
     const ill = this.syn(team, 'illager');
     if (ill >= 1 && hasAliveFamily('illager')) {
@@ -2021,28 +2206,84 @@ export class Battle {
         this.summon(owner, reinfMob, reinfX, ARENA_D * 0.65, 0.65, { fx: 'summon' });
       });
     }
+    if (this.has(team, 'clock'))
+      every('clock_pulse', 12, 12, () => {
+        for (const u of this.live[team]) {
+          if (!u.alive || u.structure) continue;
+          u.hasteT = Math.max(u.hasteT, 2.0);
+          u.hasteMul = Math.max(u.hasteMul, 1.35);
+          u.speedT = Math.max(u.speedT, 2.0);
+          u.speedMul = Math.max(u.speedMul, 1.25);
+        }
+        this.emit({ k: 'roar', x: this.rowX(team, 'mid'), y: ARENA_D / 2, r: 80, color: '#f1c40f' });
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '【时钟·急促推进!】', color: '#f1c40f' });
+        this.emit({ k: 'sfx', id: 'horn' });
+      });
+    if (this.has(team, 'beacon'))
+      every('beacon_pulse', 5, 5, () => {
+        const beaconPos = { x: this.rowX(team, 'back'), y: ARENA_D / 2, z: 40 };
+        this.emit({ k: 'roar', x: beaconPos.x, y: beaconPos.y, r: 240, color: '#ffeaa7' });
+        this.emit({ k: 'text', x: beaconPos.x, y: beaconPos.y, z: 90, s: '【圣光信标!】', color: '#ffeaa7' });
+        this.emit({ k: 'sfx', id: 'level_up' });
+        for (const a of this.live[team]) {
+          if (!a.alive || a.structure) continue;
+          this.heal(a, a.maxHp * 0.08, null);
+          a.weakT = 0;
+          a.slowT = 0;
+        }
+        for (const e of this.live[foe]) {
+          if (!e.alive || e.structure) continue;
+          this.damage(null, e, 120, 'magic', { noCrit: true });
+          e.blindT = Math.max(e.blindT, 2.5);
+        }
+      });
     if (this.has(team, 'tnt'))
-      once('tnt', 4, () => {
-        const c = this.densest(foe, 90);
-        if (!c) return;
+      once('tnt', 3, () => {
+        const c = this.densest(foe, 90) ?? { x: this.rowX(foe, 'mid'), y: ARENA_D / 2 };
         const bm = this.boomMul(team);
-        const dmg = 100 * (1 + 0.6 * (s.plan.act - 1)) * bm.d;
-        const r = 95 * bm.r;
-        this.emit({ k: 'boom', x: c.x, y: c.y, r, color: '#ff5533', big: true });
-        this.emit({ k: 'shake', a: 9 });
+        const r = 100 * bm.r;
+        this.emit({ k: 'boom', x: c.x, y: c.y, r, color: '#ff4757', big: true });
+        this.emit({ k: 'shake', a: 12 });
         this.emit({ k: 'sfx', id: 'explode' });
+        this.emit({ k: 'debris', x: c.x, y: c.y, z: 10, s: 8, f: 1, block: true });
+        this.emit({ k: 'text', x: c.x, y: c.y, z: 80, s: '【烈性炸药·轰爆!】', color: '#ff4757' });
         this.aoe(c.x, c.y, r, team, (e) => {
-          this.damage(null, e, dmg, 'phys', { noCrit: true });
-          this.knock(e, c.x, c.y, 140);
+          this.damage(null, e, e.maxHp * 0.18, 'true', { noCrit: true });
+          e.armor = Math.max(0, e.armor * 0.6);
+          this.knock(e, c.x, c.y, 160);
         });
         this.blast(c.x, c.y, r);
       });
     if (this.has(team, 'conduit'))
-      every('conduit', 3, 3, () => {
-        const foes = this.live[foe].filter((e) => !e.structure);
+      every('conduit', 2, 2, () => {
+        const foes = this.live[foe].filter((e) => e.alive && !e.structure);
         if (!foes.length) return;
-        const e = this.rng.pick(foes);
-        this.lightning(null, e.x, e.y, 45 * (1 + 0.6 * (s.plan.act - 1)), 30);
+        const c = this.densest(foe, 80);
+        const primary = c ? (foes.reduce((best, cur) => Math.hypot(cur.x - c.x, cur.y - c.y) < Math.hypot(best.x - c.x, best.y - c.y) ? cur : best, foes[0])) : this.rng.pick(foes);
+        this.lightning(null, primary.x, primary.y, 160, 30);
+        if (primary.boss && primary.channeling) this.addPosture(primary, 20);
+        this.emit({ k: 'text', x: primary.x, y: primary.y, z: primary.gz + primary.size + 15, s: '【潮涌核心·雷霆重击!】', color: '#00cec9' });
+        const others = foes.filter((e) => e !== primary);
+        others.sort((a, b) => Math.hypot(a.x - primary.x, a.y - primary.y) - Math.hypot(b.x - primary.x, b.y - primary.y));
+        for (const sub of others.slice(0, 2)) {
+          this.emit({ k: 'beam', a: primary, b: sub, color: '#00d2d3', t: 0.3 });
+          this.damage(null, sub, 80, 'magic', { noCrit: true });
+        }
+      });
+    if (this.has(team, 'spawner'))
+      every('spawner_reinf', 8, 8, () => {
+        const allies = this.live[team].filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon);
+        if (!allies.length) return;
+        allies.sort((a, b) => b.star - a.star || b.maxHp - a.maxHp);
+        const best = allies[0];
+        const sx = best.x - (team === 0 ? 30 : -30);
+        const sy = clampY(best.y + this.rng.range(-20, 20));
+        const summoned = this.summon(best, best.mob.id, sx, sy, 1, { fx: 'summon' });
+        if (summoned) {
+          this.emit({ k: 'spawn', u: summoned, fx: 'summon' });
+          this.emit({ k: 'text', x: sx, y: sy, z: 60, s: '【刷怪箱·强力增援!】', color: '#2ed573' });
+          this.emit({ k: 'sfx', id: 'pop' });
+        }
       });
     if (this.syn(team, 'aquatic') >= 1 && hasAliveFamily('aquatic')) {
       const period = this.syn(team, 'aquatic') >= 2 ? 2.5 : 3.5;
@@ -2252,6 +2493,90 @@ export class Battle {
     }
 
     // ── V3.3 遗迹远征宝物效果 ──
+    // ── 时钟 (Clock)：每 12 秒敲响钟声加速 2 秒 ──
+    if (this.has(team, 'clock')) {
+      every('clock_bell', 12.0, 10.0, () => {
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '【钟声敲响 · 急促加速!】', color: '#f1c40f' });
+        this.emit({ k: 'sfx', id: 'bell' });
+        for (const u of live) {
+          if (u.alive && !u.structure) {
+            u.hasteT = Math.max(u.hasteT, 2.0);
+            u.hasteMul = Math.max(u.hasteMul, 1.35);
+          }
+        }
+      });
+    }
+
+    // ── 信标 (Beacon)：每 5 秒圣光冲击，治疗全体 8% + 伤害致盲敌人 1.5 秒 ──
+    if (this.has(team, 'beacon')) {
+      every('beacon_pulse', 5.0, 5.0, () => {
+        this.emit({ k: 'roar', x: this.rowX(team, 'mid'), y: ARENA_D / 2, r: 400, color: '#f1c40f' });
+        this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 100, s: '【圣光信标 · 圣光脉冲!】', color: '#f1c40f' });
+        this.emit({ k: 'sfx', id: 'magic' });
+        for (const a of live) {
+          if (a.alive && !a.structure) this.heal(a, a.maxHp * 0.08, null);
+        }
+        for (const e of this.live[foe]) {
+          if (e.alive && !e.structure) {
+            this.damage(null, e, 50 + this.t * 3, 'magic', { noCrit: true });
+            e.blindT = Math.max(e.blindT, 1.5);
+          }
+        }
+      });
+    }
+
+    // ── 潮涌核心 (Conduit)：每 2 秒雷霆劈击敌方核心造成 150% 魔法伤害并弹跳 3 人，破势 20 ──
+    if (this.has(team, 'conduit')) {
+      every('conduit_strike', 2.0, 2.0, () => {
+        const foes = this.live[foe].filter((e) => e.alive && !e.structure);
+        if (!foes.length) return;
+        const target = foes.find((e) => e.boss) ?? foes[0];
+        const allies = live.filter((a) => a.alive && !a.structure && !a.isSummon);
+        const avgAtk = allies.length ? allies.reduce((s, a) => s + a.atk, 0) / allies.length : 30;
+        this.lightning(null, target.x, target.y, avgAtk * 1.5, 60);
+        if (target.boss && target.channeling) this.addPosture(target, 20);
+        this.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size + 15, s: '【雷暴之心 -20破势!】', color: '#00cec9' });
+        let bounced = 0;
+        for (const e of foes) {
+          if (e !== target && bounced < 3) {
+            bounced++;
+            this.damage(null, e, avgAtk * 1.0, 'magic', { noCrit: true });
+            if (e.boss && e.channeling) this.addPosture(e, 20);
+          }
+        }
+      });
+    }
+
+    // ── TNT (TNT)：开战 3 秒后引爆，造成 18% 最大生命真实伤害并削去 40% 护甲 6 秒 ──
+    if (this.has(team, 'tnt')) {
+      once('tnt_blast', 3.0, () => {
+        const c = this.densest(foe, 75);
+        if (!c) return;
+        this.emit({ k: 'boom', x: c.x, y: c.y, r: 80, color: '#ff5533', big: true });
+        this.emit({ k: 'sfx', id: 'explode', v: 0.9 });
+        this.emit({ k: 'text', x: c.x, y: c.y, z: 90, s: '【连环高爆TNT!】', color: '#ff5533' });
+        this.aoe(c.x, c.y, 80, team, (e) => {
+          this.damage(null, e, e.maxHp * 0.18, 'true', { noCrit: true });
+          e.weakT = Math.max(e.weakT, 6.0);
+          e.weakMul = Math.max(e.weakMul, 0.40);
+        });
+      });
+    }
+
+    // ── 刷怪笼 (Spawner)：每 8 秒为出战数量最多的卡牌额外召唤 1 只单位加入战斗 ──
+    if (this.has(team, 'spawner')) {
+      every('spawner_spawn', 8.0, 8.0, () => {
+        const primaryCard = this.cards.filter((c) => c.team === team && c.alive > 0).sort((a, b) => b.alive - a.alive)[0];
+        if (primaryCard) {
+          const owner = live.find((u) => u.card === this.cards.indexOf(primaryCard)) ?? live[0];
+          if (owner) {
+            this.summon(owner, primaryCard.mob, owner.x, owner.y + this.rng.range(-20, 20), 0.7, { lifespan: 15, fx: 'spawn' });
+            this.emit({ k: 'text', x: owner.x, y: owner.y, z: owner.gz + owner.size + 10, s: '【刷怪笼援军!】', color: '#2ecc71' });
+          }
+        }
+      });
+    }
+
     if (this.has(team, 'mycelium_spores')) {
       for (const at of [4, 14, 24]) {
         once(`mycelium_${at}`, at, () => {
@@ -2416,6 +2741,7 @@ export class Battle {
         }
       }
       if (o.proj && src.fx.farBonus > 0 && Math.abs(src.x - t.x) > 250) d *= 1 + src.fx.farBonus;
+      if (src.ref.shadowWalkerBonus && this.t < src.ref.shadowWalkerBonus) d *= 1.45;
     }
     if (src) {
       // Natural enemies (wolves vs skeletons, cold vs fire...).
@@ -2671,6 +2997,42 @@ export class Battle {
       }
     }
     d *= t.takenMul;
+    if (this.has(t.team, 'nimble_turtle') && !t.structure && t.maxHp > 0) {
+      const cap = t.maxHp * 0.25;
+      if (d > cap) {
+        d = cap;
+        this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.size, big: true, color: '#f1c40f' });
+        this.emit({ k: 'sfx', id: 'shield_block' });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【龟甲防秒杀!】', color: '#1dd1a1' });
+      }
+    }
+    if (this.has(t.team, 'champions_armor') && !t.structure && t.row === 'front') {
+      if (d >= t.maxHp * 0.25) {
+        this.emit({ k: 'roar', x: t.x, y: t.y, r: 80, color: '#ff9f43' });
+        this.emit({ k: 'sfx', id: 'stomp' });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【冠军反震!】', color: '#ff9f43' });
+        this.aoe(t.x, t.y, 70, t.team, (e) => {
+          this.damage(t, e, d * 1.0, 'phys', { noCrit: true });
+          this.knock(e, t.x, t.y, 140);
+        });
+      }
+    }
+    if (this.has(t.team, 'snow_armor') && !t.structure && t.row === 'front' && (t.hp - d) / t.maxHp < 0.50) {
+      if (!this.sides[t.team].timers['snow_armor_used']) {
+        this.sides[t.team].timers['snow_armor_used'] = 1;
+        this.emit({ k: 'zone', x: t.x, y: t.y, r: 160, color: '#74b9ff', t: 2.5 });
+        this.emit({ k: 'roar', x: t.x, y: t.y, r: 160, color: '#00d2d3' });
+        this.emit({ k: 'sfx', id: 'freeze' });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【绝对零度·冰环!】', color: '#00d2d3' });
+        t.shield = Math.max(t.shield, t.maxHp * 0.25);
+        for (const e of this.live[(1 - t.team) as 0 | 1]) {
+          if (e.alive && !e.structure) {
+            this.freeze(e, 80, 2.5, t);
+            this.slow(e, 0.5, 0.3, 2.5, t.team);
+          }
+        }
+      }
+    }
     if (t.echoMul > 0 && kind !== 'dot') {
       const echoBonus = d * t.echoMul;
       d *= 1 + t.echoMul;
@@ -2693,6 +3055,10 @@ export class Battle {
           d *= 0.80;
         }
       }
+    }
+    if (this.has(t.team, 'mercenary_armor') && !t.structure) {
+      const hasAdjacent = this.live[t.team].some((a) => a !== t && a.alive && a.row === t.row && Math.abs(a.y - t.y) <= 80);
+      if (hasAdjacent) d *= 0.82;
     }
     if (this.has(t.team, 'iron_hide_amulet') && !t.structure && !t.isSummon && t.row === 'front') {
       const cardKey = `iron_hide_c${t.card}`;
@@ -2725,10 +3091,49 @@ export class Battle {
         }
       }
     }
+    // 灵巧龟甲 (Nimble Turtle): 防秒杀天花板
+    if (this.has(t.team, 'nimble_turtle') && !t.structure && d > t.maxHp * 0.25) {
+      d = t.maxHp * 0.25;
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 12, s: '【龟甲防秒杀!】', color: '#7bed9f' });
+    }
+
+    // 勇士护甲 (Champion's Armor): 前排承受伤害转反击
+    if (this.has(t.team, 'champions_armor') && t.row === 'front' && !t.structure) {
+      t.ref.championDmg = (t.ref.championDmg ?? 0) + Math.min(t.hp, d);
+      if (t.ref.championDmg >= t.maxHp * 0.25) {
+        t.ref.championDmg = 0;
+        this.aoe(t.x, t.y, 50, t.team, (e) => {
+          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true });
+        });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【反击震击!】', color: '#f39c12' });
+      }
+    }
+
+    // 雪地护甲 (Snow Armor): 前排生命跌破 40% 爆发极寒冰环
+    if (this.has(t.team, 'snow_armor') && !t.structure && !this.sides[t.team].timers['snow_armor_used'] && (t.hp - d) / t.maxHp <= 0.40 && t.row === 'front') {
+      this.sides[t.team].timers['snow_armor_used'] = 1;
+      t.addSynergyShield('snow_armor', t.maxHp * 0.25, 4.0);
+      this.aoe(t.x, t.y, 65, t.team, (e) => {
+        this.freeze(e, t.maxHp * 0.05, 2.5, t);
+        this.slow(e, 0.4, 0.3, 2.5, t.team);
+      });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【绝对零度·冰环!】', color: '#74b9ff' });
+      this.emit({ k: 'sfx', id: 'potion_break' });
+    }
+
     const hadShield = t.shield > 0;
     if (t.shield > 0) {
-      const { absorbed } = t.consumeShield(d);
-      d -= absorbed;
+      let shieldDmgMul = 1;
+      if (src && this.has(src.team, 'dark_armor')) shieldDmgMul += 0.80;
+      if (src && this.has(src.team, 'mechanized_sawblade') && !src.isRanged) shieldDmgMul += 1.00;
+      const { absorbed } = t.consumeShield(d * shieldDmgMul);
+      d = Math.max(0, d - absorbed / shieldDmgMul);
+      if (hadShield && t.shield <= 0 && src && this.has(src.team, 'mechanized_sawblade') && !src.isRanged) {
+        src.hasteT = Math.max(src.hasteT, 5.0);
+        src.hasteMul = Math.max(src.hasteMul, 1.50);
+        this.emit({ k: 'sfx', id: 'anvil_land' });
+        this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.size, s: '【锯刃狂怒!】', color: '#e67e22' });
+      }
       if (absorbed > 0) {
         if (this.has(t.team, 'combo_forest_watch') && (t.row === 'front' || t.mob.role === 'tank' || t.mob.role === 'melee')) {
           const tm = this.sides[t.team].timers;
@@ -2800,6 +3205,14 @@ export class Battle {
           e.erosionTimer = 4.0;
         });
       }
+      if (hadShield && t.shield <= 0 && this.has(t.team, 'stalwart_armor') && t.row === 'front') {
+        this.emit({ k: 'boom', x: t.x, y: t.y, r: 60, color: '#74b9ff', big: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '【坚岩破裂震击!】', color: '#74b9ff' });
+        this.aoe(t.x, t.y, 60, t.team, (e) => {
+          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true });
+          this.stun(e, 1.0);
+        });
+      }
       if (d <= 0) {
         this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: Math.round(absorbed), c: NUM_DOT });
         return 0;
@@ -2821,7 +3234,12 @@ export class Battle {
         k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size,
         v: Math.round(d), c: crit ? NUM_CRIT : kind === 'true' ? NUM_TRUE : kind === 'magic' ? NUM_MAGIC : NUM_PHYS,
       });
-    if (src && src.alive && kind !== 'dot' && src.fx.lifesteal > 0) this.heal(src, d * src.fx.lifesteal, null, 'lifesteal');
+    if (src && src.alive && kind !== 'dot') {
+      let ls = src.fx.lifesteal;
+      if (!hadShield && this.has(src.team, 'dark_armor') && !src.isRanged) ls += 0.12;
+      if (src.ref.shadowWalkerBonus && this.t < src.ref.shadowWalkerBonus) ls += 0.15;
+      if (ls > 0) this.heal(src, d * ls, null, 'lifesteal');
+    }
     // 亡灵伤害转恢复池：实际生命伤害的 20% (4档及以上 25%) 为同族最缺血原生单位恢复
     if (hpDamage > 0 && src && src.alive && kind !== 'dot' && !src.isSummon && src.mob.families.includes('undead') && this.syn(src.team, 'undead') >= 0) {
       const poolPct = this.syn(src.team, 'undead') >= 1 ? 0.25 : 0.20;
@@ -2890,8 +3308,21 @@ export class Battle {
   heal(t: Unit, amount: number, src: Unit | null, silent: boolean | 'lifesteal' = false) {
     if (!t.alive || amount <= 0 || (t.ref.healBlockT && t.ref.healBlockT > 0)) return;
     let actualAmt = amount;
+    if (src && this.has(src.team, 'nourishment_satchel')) actualAmt *= 1.30;
+    if (src && this.has(src.team, 'evocation_robe')) actualAmt *= 1.20;
     if (t.witherT > 0) actualAmt *= 0.5;
     const h = Math.min(actualAmt, t.maxHp - t.hp);
+    const overheal = actualAmt - h;
+    if (overheal > 0 && src && this.has(src.team, 'nourishment_satchel')) {
+      t.shield = Math.min(t.maxHp * 0.4, t.shield + overheal);
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '【滋养护盾!】', color: '#2ecc71' });
+    }
+    if (src && this.has(src.team, 'enchanters_tome') && t !== src) {
+      t.hasteT = Math.max(t.hasteT, 4.0);
+      t.hasteMul = Math.max(t.hasteMul, 1.25);
+      t.atkTimer = 0;
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '【法典协能!】', color: '#1abc9c' });
+    }
     if (h <= 0) return;
     t.hp += h;
     if (src) this.cards[src.card].heal += h;
@@ -2964,9 +3395,14 @@ export class Battle {
     const side = this.sides[t.team];
     if (!silent && !t.isSummon && this.has(t.team, 'turtle_helmet') && !side.turtleUsed) {
       side.turtleUsed = true;
-      t.hp = t.maxHp * (this.has(t.team, 'soul_lantern') ? 0.7 : 0.5);
-      if (this.has(t.team, 'soul_lantern')) t.atk *= 1.3;
-      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '海龟壳!', color: '#7bed9f' });
+      t.hp = t.maxHp * (this.has(t.team, 'soul_lantern') ? 0.8 : 0.6);
+      if (this.has(t.team, 'soul_lantern')) {
+        t.atk *= 1.4;
+        t.immune |= IMM_KB | IMM_SLOW;
+      }
+      this.emit({ k: 'sfx', id: 'totem' });
+      this.emit({ k: 'heal', x: t.x, y: t.y, z: t.gz + t.z });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '【海龟不屈复活!】', color: '#7bed9f' });
       this.emit({ k: 'spawn', u: t, fx: 'revive' });
       return;
     }
@@ -3028,6 +3464,10 @@ export class Battle {
         if (cur < 8) this.sides[killer.team].timers['illager_kill_stacks'] = cur + 1;
       }
       if (killer.alive) this.beh(killer).onKill?.(killer, t, this);
+      if (killer.alive && this.has(killer.team, 'shadow_walker')) {
+        killer.ref.shadowWalkerBonus = this.t + 4.0;
+        this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.size, s: '【暗影狂步!】', color: '#2c3e50' });
+      }
     }
     if (t.ref.parrotMarked && t.ref.parrotMarked.timer > 0 && !t.ref.parrotMarked.transferred) {
       const nextFoe = this.live[(1 - t.team) as 0 | 1].find((f) => f.alive && !f.structure && f.id !== t.id);
@@ -3042,12 +3482,25 @@ export class Battle {
       this.soulEnemyKills[foe]++;
       this.addSouls(foe, 1);
     }
-    if (!silent && this.has(t.team, 'gunpowder') && !t.structure && this.rng.chance(0.3)) {
+    if (!silent && this.has(t.team, 'gunpowder') && !t.structure) {
       const bm = this.boomMul(t.team);
-      const dmg = t.maxHp * 0.25 * bm.d;
-      this.emit({ k: 'boom', x: t.x, y: t.y, r: 60 * bm.r, color: '#ff8844', big: false });
-      this.emit({ k: 'sfx', id: 'explode', v: 0.5 });
-      this.aoe(t.x, t.y, 60 * bm.r, t.team, (e) => this.damage(t, e, dmg, 'phys', { noCrit: true }));
+      const dmg = t.maxHp * 1.0 * bm.d;
+      this.emit({ k: 'boom', x: t.x, y: t.y, r: 70 * bm.r, color: '#ff8844', big: true });
+      this.emit({ k: 'shake', a: 8 });
+      this.emit({ k: 'sfx', id: 'explode', v: 0.8 });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【炸药殉爆!】', color: '#ff8844' });
+      this.aoe(t.x, t.y, 70 * bm.r, t.team, (e) => this.damage(t, e, dmg, 'phys', { noCrit: true }));
+    }
+    // 阴森护甲: 多单位队伍有成员阵亡时，其余队员回复 15% 并狂暴
+    if (!silent && this.has(t.team, 'grim_armor') && !t.structure && !t.isSummon) {
+      for (const a of this.live[t.team]) {
+        if (a.card === t.card && a.alive) {
+          this.heal(a, a.maxHp * 0.15, null);
+          a.hasteT = Math.max(a.hasteT, 3.0);
+          a.hasteMul = Math.max(a.hasteMul, 1.25);
+        }
+      }
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【阴森狂暴!】', color: '#8e44ad' });
     }
     // Archetype triggers of the side that got the kill.
     if (!silent && !t.structure) {
@@ -3062,34 +3515,44 @@ export class Battle {
           this.damage(netherAllies[0] ?? null, e, dmg, 'magic', { noCrit: true, fire: true });
         });
       }
-      // 岩浆膏: burning enemies go off.
+      // 岩浆膏: burning enemies go off and spread ignite.
       if (t.burnT > 0 && this.has(foe, 'magma_cream')) {
         const bm = this.boomMul(foe);
         const r = 70 * bm.r;
-        const dmg = t.maxHp * 0.2 * bm.d;
+        const dmg = t.maxHp * 0.20 * bm.d;
         const src = (t.ref.burnSrc as Unit | null) ?? null;
-        this.emit({ k: 'boom', x: t.x, y: t.y, r, color: '#ff7a1a', big: false });
-        this.emit({ k: 'sfx', id: 'fireball', v: 0.5 });
+        this.emit({ k: 'boom', x: t.x, y: t.y, r, color: '#ff7a1a', big: true });
+        this.emit({ k: 'sfx', id: 'fireball', v: 0.8 });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【连环殉爆!】', color: '#ff7a1a' });
         this.aoe(t.x, t.y, r, foe, (e) => {
           this.damage(src, e, dmg, 'magic', { noCrit: true, fire: true });
-          this.burn(e, Math.max(4, dmg * 0.1), 3, src);
+          this.burn(e, Math.max(8, dmg * 0.15), 4, src);
         });
       }
-      // 河豚: poison jumps to the two nearest neighbours.
-      if (t.poisonT > 0 && t.poisonStacks > 0 && this.has(foe, 'pufferfish')) {
-        const near = this.live[t.team]
-          .filter((e) => e !== t && e.alive && !e.structure && Math.hypot(e.x - t.x, e.y - t.y) < 90)
-          .sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))
-          .slice(0, 2);
-        for (const e of near) {
-          for (let k = 0; k < t.poisonStacks; k++) this.poison(e, t.poisonDps, Math.max(3, t.poisonT), Math.max(t.poisonStacks, 3), (t.ref.poisonSrc as Unit | null) ?? null);
-          this.emit({ k: 'hit', x: e.x, y: e.y, z: e.gz + e.z + e.size * 0.5, big: false, color: '#6dd14a' });
-        }
+      // 河豚: poison explosion and spread.
+      if (t.poisonT > 0 && this.has(foe, 'pufferfish')) {
+        const burst = Math.max(t.poisonDps * Math.max(t.poisonStacks, 1) * 3, t.maxHp * 0.15);
+        this.emit({ k: 'boom', x: t.x, y: t.y, r: 65, color: '#2ecc71', big: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【剧毒扩散!】', color: '#2ecc71' });
+        this.emit({ k: 'sfx', id: 'potion_break' });
+        this.aoe(t.x, t.y, 65, foe, (e) => {
+          this.damage(null, e, burst, 'true', { noCrit: true });
+          this.poison(e, Math.max(6, t.poisonDps), 4, 3, null);
+        });
       }
-      // 回响碎片: every fallen ally sharpens the rest.
-      if (this.has(t.team, 'echo_shard') && side.echo < 10) side.echo++;
+      // 回响碎片: every fallen ally sharpens the rest with ATK and Lifesteal.
+      if (this.has(t.team, 'echo_shard') && side.echo < 10) {
+        side.echo++;
+        for (const a of this.live[t.team]) {
+          if (a.alive && !a.structure) a.fx.lifesteal = (a.fx.lifesteal || 0) + 0.02;
+        }
+        this.emit({ k: 'text', x: this.rowX(t.team, 'mid'), y: ARENA_D / 2, z: 80, s: `【回响强化 +${side.echo}!】`, color: '#bd00ff' });
+      }
     }
-    if (this.has(foe, 'sculk_catalyst') && !t.isSummon) for (const a of this.live[foe]) this.heal(a, a.maxHp * 0.02, null, true);
+    if (this.has(foe, 'sculk_catalyst') && !t.isSummon) {
+      for (const a of this.live[foe]) this.heal(a, a.maxHp * 0.03, null, true);
+      this.emit({ k: 'text', x: this.rowX(foe, 'mid'), y: ARENA_D / 2, z: 90, s: '【幽匿回响 +3%!】', color: '#00d2d3' });
+    }
     // 筛界 ③: the fallen enemy's soul drifts to the nearest Sift mob of the other side.
     if (!t.structure && !t.isSummon && !t.ghost && this.syn(foe, 'sift') >= 1) {
       const cd = this.sides[foe].timers.sift_kill_cd ?? 0;
@@ -3115,8 +3578,11 @@ export class Battle {
       for (const u of this.units) {
         if (u.card !== t.card || u.alive || u.isSummon) continue;
         u.alive = true;
-        u.hp = u.maxHp * (this.has(u.team, 'soul_lantern') ? 0.7 : 0.5);
-        if (this.has(u.team, 'soul_lantern')) u.atk *= 1.3;
+        u.hp = u.maxHp * (this.has(u.team, 'soul_lantern') ? 0.8 : 0.7);
+        if (this.has(u.team, 'soul_lantern')) {
+          u.atk *= 1.4;
+          u.immune |= IMM_KB | IMM_SLOW;
+        }
         u.deadT = 0;
         u.burnT = u.poisonT = u.witherT = 0;
         u.ref.anchor = 1;
@@ -3124,7 +3590,9 @@ export class Battle {
         this.live[u.team].push(u);
         this.emit({ k: 'spawn', u, fx: 'revive' });
       }
-      this.emit({ k: 'text', x: t.x, y: t.y, z: 80, s: '重生锚!', color: '#c56cf0' });
+      this.emit({ k: 'boom', x: t.x, y: t.y, r: 80, color: '#9b59b6', big: true });
+      this.emit({ k: 'sfx', id: 'totem' });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: 80, s: '【重生锚·全员复活!】', color: '#c56cf0' });
     }
   }
 
@@ -3146,7 +3614,14 @@ export class Battle {
       u.ref.ravenMarked.timer -= dt;
       if (u.ref.ravenMarked.timer <= 0) delete u.ref.ravenMarked;
     }
-    if (u.stunT > 0) u.stunT -= dt;
+    if (u.stunT > 0) {
+      u.stunT -= dt;
+      if (u.stunT <= 0 && this.has(u.team, 'reinforced_mail')) {
+        u.takenMul *= 0.70;
+        this.addTimedAction(3.0, () => { if (u.alive) u.takenMul /= 0.70; });
+        this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '【强化锁甲·重振!】', color: '#95a5a6' });
+      }
+    }
     if (u.levT > 0) u.levT -= dt;
     if (u.slowT > 0) u.slowT -= dt;
     if (u.chillT > 0) {
@@ -3266,9 +3741,10 @@ export class Battle {
 
   slow(t: Unit, move: number, atk: number, dur: number, srcTeam?: 0 | 1) {
     if (t.immune & IMM_SLOW) return;
+    const actualDur = this.has(t.team, 'reinforced_mail') ? dur * 0.5 : dur;
     t.slowMove = Math.max(t.slowT > 0 ? t.slowMove : 0, move);
     t.slowAtk = Math.max(t.slowT > 0 ? t.slowAtk : 0, atk);
-    t.slowT = Math.max(t.slowT, dur);
+    t.slowT = Math.max(t.slowT, actualDur);
     const team = srcTeam ?? ((1 - t.team) as 0 | 1);
     if (this.has(team, 'combo_frost_patrol')) {
       const tm = this.sides[team].timers;
@@ -3329,6 +3805,13 @@ export class Battle {
 
   stun(t: Unit, dur: number) {
     this.checkRavenInterrupt(t);
+    if (this.has(t.team, 'unstable_robes') && !t.structure && (this.sides[t.team].timers['unstable_robes_procs'] || 0) < 2) {
+      this.sides[t.team].timers['unstable_robes_procs'] = (this.sides[t.team].timers['unstable_robes_procs'] || 0) + 1;
+      this.blink(t, 60);
+      t.addSynergyShield('unstable_robes', t.maxHp * 0.25, 4.0);
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【不稳定长袍·脱困护盾!】', color: '#c56cf0' });
+      return;
+    }
     if (t.immune & IMM_STUN || t.boss) {
       if (t.boss) t.stunT = Math.max(t.stunT, dur * 0.2);
       return;
@@ -3351,15 +3834,21 @@ export class Battle {
     } = {}
   ): CastState | null {
     if (!u.alive || u.stunT > 0 || u.channeling || u.cast) return null;
+    let windup = windupDuration;
+    let recovery = recoveryDuration;
+    if (this.has(u.team, 'battle_robe') && (u.mob.role === 'caster' || u.dk === 'magic')) {
+      windup *= 0.65;
+      recovery *= 0.65;
+    }
     const castId = u.castSeq++;
     const cast: CastState = {
       id: castId,
       name,
       phase: 'windup',
       startTime: this.t,
-      windupDuration,
-      endTime: this.t + windupDuration,
-      recoveryDuration,
+      windupDuration: windup,
+      endTime: this.t + windup,
+      recoveryDuration: recovery,
       posture: 0,
       target: opts.target,
       targetPos: opts.targetPos,
@@ -3433,7 +3922,8 @@ export class Battle {
   addPosture(t: Unit, amt: number) {
     if (!t.boss || !t.channeling || (t.cast && t.cast.phase !== 'windup')) return;
     this.checkRavenInterrupt(t);
-    t.posture = Math.min(100, t.posture + amt);
+    const actualAmt = this.has((1 - t.team) as 0 | 1, 'guardian_eye') ? amt * 1.30 : amt;
+    t.posture = Math.min(100, t.posture + actualAmt);
     if (t.cast) t.cast.posture = t.posture;
     if (t.posture >= 100) {
       this.breakPosture(t);
@@ -3591,6 +4081,15 @@ export class Battle {
             a.y = clampY(a.y - ny * push * wa * 2);
             b.x = clampX(b.x + nx * push * wb * 2, b.radius);
             b.y = clampY(b.y + ny * push * wb * 2);
+
+            const moving = Math.hypot(a.vx, a.vy) > 60 ? a : Math.hypot(b.vx, b.vy) > 60 ? b : null;
+            if (moving && this.has((1 - moving.team) as 0 | 1, 'dripstone') && (!moving.ref.dripstoneCd || this.t >= moving.ref.dripstoneCd)) {
+              moving.ref.dripstoneCd = this.t + 1.0;
+              this.damage(null, moving, moving.maxHp * 0.10, 'true', { noCrit: true });
+              this.stun(moving, 0.8);
+              this.emit({ k: 'hit', x: moving.x, y: moving.y, z: moving.gz + moving.size, big: true, color: '#a4b0be' });
+              this.emit({ k: 'text', x: moving.x, y: moving.y, z: moving.gz + moving.size + 10, s: '【钟乳穿刺!】', color: '#a4b0be' });
+            }
           }
         }
       }
