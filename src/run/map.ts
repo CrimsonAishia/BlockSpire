@@ -52,19 +52,17 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
   const ordered = Object.values(nodes).sort((a, b) => a.row - b.row || a.col - b.col);
   const policy = difficultyPolicy(omen);
   const gateRows = new Set<number>();
-  if (policy.requiredEliteGates === 1) {
+  // 必经精英闸门梯度配置：
+  // - Act 1 (发展期)：0 场必经精英，必须留出非精英路线供玩家发育并绕行；
+  // - Act 2 (过渡期)：必须经过 1 场精英战（即使是不祥 V 也由 2 场下调为 1 场平滑过渡）；
+  // - Act 3+ (后续终局)：恢复完整必经精英闸门配置（不祥 III–IV 为 1 场，不祥 V 为 2 场）。
+  const effectiveGates = act === 1 ? 0 : act === 2 ? Math.min(1, policy.requiredEliteGates) : policy.requiredEliteGates;
+
+  if (effectiveGates === 1) {
     gateRows.add(rng.int(7, 10));
-  } else if (policy.requiredEliteGates >= 2) {
-    if (act === 1) {
-      // Act 1 developmental pacing: Gate 1 is fixed at row 5 (right before row 6 treasure),
-      // avoiding unfair checkmates on rows 3-4 and giving players floors 0-4 to establish their core.
-      rng.int(3, 5); // consume RNG call to preserve stream determinism
-      gateRows.add(5);
-      gateRows.add(rng.int(8, 10));
-    } else {
-      gateRows.add(rng.int(3, 5));
-      gateRows.add(rng.int(8, 10));
-    }
+  } else if (effectiveGates >= 2) {
+    gateRows.add(rng.int(3, 5));
+    gateRows.add(rng.int(8, 10));
   }
 
   for (const n of ordered) {
@@ -93,13 +91,27 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
       add('event', 22);
       const isAdjToGate = gateRows.has(n.row - 1) || gateRows.has(n.row + 1);
       const prevRowHasElite = ordered.some((m) => m.row === n.row - 1 && m.type === 'elite');
-      if (!isAdjToGate && !prevRowHasElite && n.row >= (policy.omen >= 1 ? 3 : 4) && !pTypes.includes('elite')) {
-        add('elite', policy.eliteWeight);
+      // 第一幕前 3 层 (Row 0~3) 属于队伍奠基期，不生成精英，从第 4 层起才允许分支精英
+      const minEliteRow = act === 1 ? 4 : (policy.omen >= 1 ? 3 : 4);
+      if (!isAdjToGate && !prevRowHasElite && n.row >= minEliteRow && !pTypes.includes('elite')) {
+        // 第一幕同层已有精英时不再生成额外精英，确保分支多样性且有路可绕
+        const rowHasElite = ordered.some((m) => m.row === n.row && m.type === 'elite');
+        if (act !== 1 || !rowHasElite) {
+          add('elite', policy.eliteWeight);
+        }
       }
       if (n.row >= 4 && n.row !== MAP_ROWS - 2 && !pTypes.includes('rest')) add('rest', 11);
-      if (n.row >= 2 && !pTypes.includes('shop')) add('shop', 9);
+      // 商店：Row 2 起允许生成，在第一幕前期控制商店权重，避免过早占用战斗格子
+      if (n.row >= 2 && !pTypes.includes('shop')) {
+        add('shop', act === 1 && n.row <= 3 ? 5 : 9);
+      }
       n.type = rng.weighted(opts, w);
     }
+  }
+
+  // 第一幕发展期不变量保证：确保一定存在至少一条完全没有精英（minElites === 0）的可行路线
+  if (act === 1) {
+    ensureAct1Bypassable(nodes);
   }
   // A rift into the Sift opens somewhere in the middle of the Nether and the End.
   if (act === 2 || act === 3) {
@@ -114,4 +126,44 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
 
 export function startNodes(map: ActMap): MapNode[] {
   return Object.values(map.nodes).filter((n) => n.row === 0);
+}
+
+/** 保证第 1 幕始终至少存在一条完全绕开精英（minElites === 0）的路线 */
+function ensureAct1Bypassable(nodes: Record<string, MapNode>) {
+  const memo: Record<string, { cost: number; path: string[] }> = {};
+  function dp(id: string): { cost: number; path: string[] } {
+    if (memo[id]) return memo[id];
+    const n = nodes[id];
+    if (!n) return { cost: 0, path: [] };
+    const cost = n.type === 'elite' ? 1 : 0;
+    if (!n.next || n.next.length === 0) return { cost, path: [id] };
+    let best = { cost: Infinity, path: [] as string[] };
+    for (const nxt of n.next) {
+      const res = dp(nxt);
+      if (res.cost < best.cost) {
+        best = res;
+      }
+    }
+    const totalCost = cost + (best.cost === Infinity ? 0 : best.cost);
+    const fullPath = [id, ...best.path];
+    return (memo[id] = { cost: totalCost, path: fullPath });
+  }
+
+  const starts = Object.values(nodes).filter((n) => n.row === 0);
+  let bestOverall = { cost: Infinity, path: [] as string[] };
+  for (const s of starts) {
+    const res = dp(s.id);
+    if (res.cost < bestOverall.cost) {
+      bestOverall = res;
+    }
+  }
+
+  if (bestOverall.cost > 0) {
+    for (const id of bestOverall.path) {
+      const n = nodes[id];
+      if (n && n.type === 'elite') {
+        n.type = 'battle';
+      }
+    }
+  }
 }
