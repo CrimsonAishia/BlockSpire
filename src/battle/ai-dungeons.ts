@@ -34,15 +34,20 @@ function setCardCd(u: Unit, key: string, cd: number, b: Battle) {
 
 function coolCard(u: Unit, key: string, dt: number, init: number, b: Battle) {
   const cRef = getCardRef(u, b);
-  if (!cRef) {
-    if (u.ab[key] === undefined) u.ab[key] = init;
-    u.ab[key] -= dt;
-    return u.ab[key] <= 0;
+  if (!cRef) return cool(u, key, dt, init, b);
+  if (cRef.skillTicks?.[key] === b.t) {
+    u.ab[key] = cRef[key];
+    return false;
   }
+  cRef.skillTicks ??= {};
+  cRef.skillTicks[key] = b.t;
   if (cRef[key] === undefined) cRef[key] = init;
-  cRef[key] -= dt;
+  cRef[key] -= dt * (cRef.skillCycles?.[key] ? b.skillSpeedOf(u) : 1);
   u.ab[key] = cRef[key];
-  return cRef[key] <= 0;
+  if (cRef[key] > 0) return false;
+  cRef.skillCycles ??= {};
+  cRef.skillCycles[key] = true;
+  return true;
 }
 
 function resetCardCd(u: Unit, key: string, cd: number, b: Battle): number {
@@ -215,19 +220,26 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
         const spdMul = u.star === 3 ? 0.25 : (u.star === 2 ? 0.20 : 0.15);
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '附魔律令!', color: '#9b59b6' });
         for (const t of targets) {
-          // 同类律令取强，不重复叠加
-          if (t.ref.enchantTier && t.ref.enchantTier >= atkMul) continue;
+          // 同档刷新、强档替换；旧回调只回收自己，避免急速轮转空档或叠加。
+          const previous = t.ref.enchantBuff as { attack: number; speed: number } | undefined;
+          if (previous && t.ref.enchantTier > atkMul) continue;
+          if (previous) {
+            t.atk /= previous.attack;
+            t.atkSpd /= previous.speed;
+          }
+          const effect = { attack: 1 + atkMul, speed: 1 + spdMul };
+          t.ref.enchantBuff = effect;
           t.ref.enchantTier = atkMul;
           b.emit({ k: 'beam', a: u, b: t, color: '#9b59b6', t: 0.5 });
-          const bonusAtk = t.atk * atkMul;
-          t.atk += bonusAtk;
-          t.atkSpd *= (1 + spdMul);
+          t.atk *= effect.attack;
+          t.atkSpd *= effect.speed;
           b.addTimedAction(6.0, () => {
-            if (t.alive) {
-              t.atk = Math.max(0, t.atk - bonusAtk);
-              t.atkSpd /= (1 + spdMul);
-              t.ref.enchantTier = 0;
-            }
+            if (t.ref.enchantBuff !== effect) return;
+            // 死亡时也清理，乘除配对保留复活等其他攻击倍率。
+            t.atk /= effect.attack;
+            t.atkSpd /= effect.speed;
+            delete t.ref.enchantBuff;
+            t.ref.enchantTier = 0;
           });
           if (u.star >= 3) {
             t.addSynergyShield('enchanter_shield', t.maxHp * 0.08, 4.0);

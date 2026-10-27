@@ -106,10 +106,15 @@ export const smart = (u: Unit, b: Battle) => b.smart[u.team] && TAC.abil;
 
 export const foesOf = (u: Unit, b: Battle) => b.live[(1 - u.team) as 0 | 1];
 
-export function cool(u: Unit, key: string, dt: number, init: number) {
+export function cool(u: Unit, key: string, dt: number, init: number, b?: Battle) {
   if (u.ab[key] === undefined) u.ab[key] = init;
-  u.ab[key] -= dt;
-  return u.ab[key] <= 0;
+  u.ab[key] -= dt * (b && u.ref.skillCycles?.[key] ? b.skillSpeedOf(u) : 1);
+  if (u.ab[key] > 0) return false;
+  if (b) {
+    u.ref.skillCycles ??= {};
+    u.ref.skillCycles[key] = true;
+  }
+  return true;
 }
 
 export function resetCd(u: Unit, key: string, cd: number, b?: Battle): number {
@@ -916,7 +921,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
 
   evoker: {
     tick(u, b, dt) {
-      if (cool(u, 'sc', dt, 1.5)) {
+      if (cool(u, 'sc', dt, 1.5, b)) {
         u.ab.sc = 9;
         let alive = 0;
         for (const a of b.live[u.team]) if (a.ref.owner === u) alive++;
@@ -1251,7 +1256,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
   illusioner: {
     tick(u, b, dt) {
       if (u.isSummon) return;
-      if (cool(u, 'ic', dt, 0.5)) {
+      if (cool(u, 'ic', dt, 0.5, b)) {
         u.ab.ic = 12;
         const n = u.star >= 3 ? 4 : 3;
         for (let i = 0; i < n; i++) {
@@ -1262,7 +1267,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
         }
         b.emit({ k: 'sfx', id: 'illusion' });
       }
-      if (cool(u, 'bc', dt, 3)) {
+      if (cool(u, 'bc', dt, 3, b)) {
         u.ab.bc = 10;
         const foeCards = [...new Set(b.live[(1 - u.team) as 0 | 1].filter((e) => !e.structure).map((e) => e.card))];
         b.rng.shuffle(foeCards);

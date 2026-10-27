@@ -126,6 +126,7 @@ export interface SideState {
   /** 回响碎片 stacks (allies lost this battle). */
   echo: number;
   beastKillStacks: number;
+  hornVexes?: Unit[];
   aquaticAvgAtk: number;
 }
 
@@ -779,7 +780,7 @@ export class Battle {
 
   private compact() {
     // Drop long-dead corpses so loops stay short in long battles.
-    this.units = this.units.filter((u) => u.alive || u.deadT < 2 || u.ref.anchor);
+    this.units = this.units.filter((u) => u.alive || u.deadT < 2 || u.ref.anchor || (!u.isSummon && this.has(u.team, 'respawn_anchor') && !this.sides[u.team].timers.anchor));
   }
 
   private checkEnd() {
@@ -968,6 +969,21 @@ export class Battle {
     }
   }
 
+  private isNativeIllager(u: Unit): boolean {
+    return !u.isSummon && !u.structure && !u.boss && u.mob.families.includes('illager');
+  }
+
+  private illagerHornActive(u: Unit): boolean {
+    return this.isNativeIllager(u) && this.syn(u.team, 'illager') >= 1 && this.t < (this.sides[u.team].timers['illager_horn_active'] ?? 0);
+  }
+
+  /** Cooldown recovery for repeatable illager spells; never scales cast or summon lifetimes. */
+  skillSpeedOf(u: Unit): number {
+    if (!this.isNativeIllager(u) || !['caster', 'summoner', 'support'].includes(u.mob.role)) return 1;
+    const ill = this.syn(u.team, 'illager');
+    return ill >= 4 ? 1.35 : ill >= 3 ? 1.20 : 1;
+  }
+
   /** Effective attack-speed multiplier including statuses and side effects. */
   atkSpeedOf(u: Unit): number {
     let s = u.atkSpd;
@@ -978,6 +994,7 @@ export class Battle {
     if (fat > 0) s *= 1 - fat;
     if (this.has(u.team, 'clock') && this.t > 20) s *= 1.25;
     if (u.hasteT > 0) s *= u.hasteMul;
+    if (this.illagerHornActive(u)) s *= 1.20;
     if (u.freezeT > 0) s *= 0.85;
     if (this.tideOn && !this.tideImmune(u)) s *= 0.75;
     if (u.gh >= 1 && u.isRanged && !u.flying && this.has(u.team, 'lookout')) s *= 1.2;
@@ -1127,6 +1144,7 @@ export class Battle {
   moveSpeedOf(u: Unit): number {
     let s = u.speed * u.moveSpd * this.buff(u.team, 'move');
     if (u.speedT > 0) s *= u.speedMul;
+    if (this.illagerHornActive(u)) s *= 1.20;
     if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
       s *= 1.15;
     }
@@ -1155,6 +1173,12 @@ export class Battle {
     if (u.weakT > 0) a *= 1 - u.weakMul;
     if (u.blindT > 0) a *= 0.8;
     if (u.killStacks > 0) a *= 1 + u.fx.killAtk * u.killStacks;
+    const ill = this.syn(u.team, 'illager');
+    if (this.illagerHornActive(u)) a *= ill >= 4 ? 1.35 : 1.22;
+    if (ill >= 3 && this.isNativeIllager(u)) {
+      const stacks = this.sides[u.team].timers['illager_kill_stacks'] ?? 0;
+      a *= 1 + stacks * (ill >= 4 ? 0.03 : 0.02);
+    }
     if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 1) {
       const beastPct = this.syn(u.team, 'beast') >= 2 ? 0.10 : 0.08;
       const stacks = this.sides[u.team].beastKillStacks || 0;
@@ -1164,9 +1188,9 @@ export class Battle {
     const echo = this.sides[u.team].echo;
     if (echo > 0) a *= 1 + 0.03 * echo;
     if (this.has(u.team, 'ominous_banner') && u.mob.families.includes('illager')) {
-      let n = -1;
-      for (const o of this.live[u.team]) if (o.mob.families.includes('illager') && !o.isSummon) n++;
-      if (n > 0) a *= 1 + 0.04 * Math.min(8, n);
+      let n = 0;
+      for (const o of this.live[u.team]) if (o !== u && o.alive && this.isNativeIllager(o)) n++;
+      if (n > 0) a *= 1 + 0.06 * Math.min(8, n);
     }
     return a * this.buff(u.team, 'atk');
   }
@@ -2079,31 +2103,28 @@ export class Battle {
     const hasAliveFamily = (f: Family) => live.some((u) => u.alive && !u.isSummon && !u.structure && !u.boss && u.mob.families.includes(f));
     const ill = this.syn(team, 'illager');
     if (ill >= 1 && hasAliveFamily('illager')) {
-      const hornPeriod = ill >= 2 ? 6.0 : 7.0;
+      const hornPeriod = ill >= 4 ? 5.0 : ill >= 3 ? 6.0 : 7.0;
+      const hornDuration = ill >= 4 ? 6.0 : 5.0;
       const blowHorn = () => {
-        const illagers = live.filter((u) => u.alive && !u.structure && !u.isSummon && u.mob.families.includes('illager'));
+        const illagers = live.filter((u) => u.alive && this.isNativeIllager(u));
         if (!illagers.length) return;
-        this.sides[team].timers['illager_horn_active'] = this.t + 5.0;
+        this.sides[team].timers['illager_horn_active'] = this.t + hornDuration;
         delete this.sides[team].timers['illager_horn_extended'];
         this.emit({ k: 'sfx', id: 'horn' });
         this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '灾厄号角！', color: '#ff4757' });
-        for (const u of illagers) {
-          u.hasteT = Math.max(u.hasteT, 5.0);
-          u.hasteMul = Math.max(u.hasteMul, 1.20);
-          u.atk *= 1.22;
-          this.addTimedAction(5.0, () => {
-            if (u.alive) u.atk /= 1.22;
-          });
+        if (ill >= 2) {
+          for (const u of illagers) u.addSynergyShield('illager_horn', u.maxHp * (ill >= 4 ? 0.20 : 0.12), hornDuration);
         }
-        // 召唤自适应灵质恼鬼：存活原生灾厄总H的6%，4档12%面板DPS/2只，6档10%/3只，存活6秒，旧一轮被替换
+        if (ill >= 4) tm['illager_kill_stacks'] = Math.min(10, (tm['illager_kill_stacks'] ?? 0) + 1);
+        // 召唤预算只读取原生面板，排除号角与击杀成长，避免召唤物递归放大；旧一轮被替换。
         const totalH = illagers.reduce((sum, u) => sum + u.maxHp, 0);
         const vexHp = Math.max(20, totalH * 0.06);
         const totalDps = illagers.reduce((sum, u) => sum + (u.atk * u.atkSpd) / Math.max(0.2, u.cd), 0);
-        const vexCount = ill >= 2 ? 3 : 2;
-        const vexDpsMul = ill >= 2 ? 0.10 : 0.12;
+        const vexCount = ill >= 4 ? 4 : ill >= 3 ? 3 : 2;
+        const vexDpsMul = ill >= 3 ? 0.10 : 0.12;
         const targetDps = totalDps * vexDpsMul;
         const owner = illagers[0];
-        const sideObj = this.sides[team] as any;
+        const sideObj = this.sides[team];
         if (sideObj.hornVexes) {
           for (const oldVex of sideObj.hornVexes) {
             if (oldVex.alive) {
@@ -2118,19 +2139,18 @@ export class Battle {
           if (vex) {
             vex.maxHp = vex.hp = vexHp;
             vex.atk = Math.max(4, targetDps * (vex.cd / Math.max(0.1, vex.atkSpd)));
-            vex.fx = { ...vex.fx, dodge: 0.40 };
+            vex.fx = { ...vex.fx, dodge: 0.40, lifesteal: 0 };
             newVexes.push(vex);
           }
         }
         sideObj.hornVexes = newVexes;
       };
-      const engaged = tm.illager_horn_engaged || live.some((u) => u.alive && u.target && Math.hypot(u.x - u.target.x, u.y - u.target.y) <= Math.max(160, this.rangeOf(u) + 30));
+      const engaged = live.some((u) => u.alive && this.isNativeIllager(u) && u.target?.alive && Math.hypot(u.x - u.target.x, u.y - u.target.y) <= Math.max(160, this.rangeOf(u) + 30));
       if (!tm.illager_horn_start && (engaged || this.t >= 4.0)) {
         tm.illager_horn_start = 1;
-        tm.illager_horn_engaged = 1;
+        tm.illager_horn_cycle = hornPeriod;
         blowHorn();
-      }
-      if (tm.illager_horn_start) {
+      } else if (tm.illager_horn_start) {
         every('illager_horn_cycle', hornPeriod, hornPeriod, blowHorn);
       }
     }
@@ -2716,17 +2736,7 @@ export class Battle {
         if (t.hpFrac <= 0.25) d *= 1 + (src.fx.executeLowHpTier2 || src.fx.executeLowHp * 1.75);
         else if (t.hpFrac <= 0.50) d *= 1 + src.fx.executeLowHp;
       }
-      if (src.mob.families.includes('illager') && this.syn(src.team, 'illager') >= 0 && !src.ref.illagerRushed && kind !== 'dot') {
-        src.ref.illagerRushed = true;
-        src.hasteT = Math.max(src.hasteT, 5.0);
-        src.hasteMul = Math.max(src.hasteMul, 1.20);
-        this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '战意!', color: '#ff6b6b' });
-      }
-      if (this.syn(src.team, 'illager') >= 2) {
-        d *= 1.12;
-        const killStacks = this.sides[src.team].timers['illager_kill_stacks'] ?? 0;
-        if (killStacks > 0) d *= 1 + killStacks * 0.02;
-      }
+      if (this.syn(src.team, 'illager') >= 3 && src.mob.families.includes('illager') && !src.boss && !src.structure && kind !== 'dot') d *= 1.12;
       if (this.syn(src.team, 'arthropod') >= 1 && t.poisonStacks >= 5 && kind !== 'dot') {
         d += amount * 0.15;
       }
@@ -2973,15 +2983,7 @@ export class Battle {
     if (t.ref.undeadReviveDmgResist && this.t < t.ref.undeadReviveDmgResist) {
       d *= 0.80;
     }
-    if (t.mob.families.includes('illager') && this.syn(t.team, 'illager') >= 0 && !t.ref.illagerRushed && kind !== 'dot') {
-      t.ref.illagerRushed = true;
-      t.hasteT = Math.max(t.hasteT, 5.0);
-      t.hasteMul = Math.max(t.hasteMul, 1.20);
-      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '战意!', color: '#ff6b6b' });
-    }
-    if (this.t < (this.sides[t.team].timers['illager_horn_active'] ?? 0) && t.mob.families.includes('illager')) {
-      d *= 0.85;
-    }
+    if (this.illagerHornActive(t)) d *= this.syn(t.team, 'illager') >= 4 ? 0.75 : 0.85;
     if (this.has(t.team, 'combo_armored_caravan') && !t.structure && !t.isSummon && (t.mob.id === 'armored_piglin' || t.mob.id === 'royal_guard') && (t.hp - d) / t.maxHp < 0.50) {
       const tm = this.sides[t.team].timers;
       if (!tm.armored_caravan_cd || this.t >= tm.armored_caravan_cd) {
@@ -3455,18 +3457,20 @@ export class Battle {
           }
         }
       }
-      if (this.syn(killer.team, 'illager') >= 1 && !t.isSummon && !t.structure) {
+      if (!silent && this.syn(killer.team, 'illager') >= 1 && killer.mob.families.includes('illager') && !killer.boss && !killer.structure && !t.isSummon && !t.structure) {
         const hornActive = this.sides[killer.team].timers['illager_horn_active'] ?? 0;
         if (this.t < hornActive && !this.sides[killer.team].timers['illager_horn_extended']) {
           this.sides[killer.team].timers['illager_horn_extended'] = 1;
           this.sides[killer.team].timers['illager_horn_active'] += 2.0;
-          killer.addSynergyShield('illager_kill', killer.maxHp * 0.12, 5.0);
+          const wounded = this.live[killer.team].filter((u) => u.alive && this.isNativeIllager(u)).sort((a, b) => a.hpFrac - b.hpFrac)[0];
+          wounded?.addSynergyShield('illager_kill', wounded.maxHp * 0.12, 5.0);
           this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.z + killer.size, s: '号角延续!', color: '#ff4757' });
         }
       }
-      if (this.syn(killer.team, 'illager') >= 2 && !t.isSummon && !t.structure) {
+      if (!silent && this.syn(killer.team, 'illager') >= 3 && killer.mob.families.includes('illager') && !killer.boss && !killer.structure && !t.isSummon && !t.structure) {
         const cur = this.sides[killer.team].timers['illager_kill_stacks'] ?? 0;
-        if (cur < 8) this.sides[killer.team].timers['illager_kill_stacks'] = cur + 1;
+        const cap = this.syn(killer.team, 'illager') >= 4 ? 10 : 8;
+        this.sides[killer.team].timers['illager_kill_stacks'] = Math.min(cap, cur + 1);
       }
       if (killer.alive) this.beh(killer).onKill?.(killer, t, this);
       if (killer.alive && this.has(killer.team, 'shadow_walker')) {
@@ -3577,7 +3581,7 @@ export class Battle {
       }
     }
     // Respawn anchor: first fully wiped card revives once.
-    if (!silent && card.alive <= 0 && this.has(t.team, 'respawn_anchor') && !side.timers.anchor && !t.isSummon) {
+    if (!silent && this.has(t.team, 'respawn_anchor') && !side.timers.anchor && !t.isSummon && !this.units.some((u) => u.card === t.card && u.alive && !u.isSummon)) {
       side.timers.anchor = 1;
       card.anchorUsed = true;
       for (const u of this.units) {
@@ -3592,7 +3596,7 @@ export class Battle {
         u.burnT = u.poisonT = u.witherT = 0;
         u.ref.anchor = 1;
         card.alive++;
-        this.live[u.team].push(u);
+        if (!this.live[u.team].includes(u)) this.live[u.team].push(u);
         this.emit({ k: 'spawn', u, fx: 'revive' });
       }
       this.emit({ k: 'boom', x: t.x, y: t.y, r: 80, color: '#9b59b6', big: true });

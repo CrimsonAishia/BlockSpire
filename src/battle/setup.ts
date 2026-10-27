@@ -290,15 +290,13 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
       fx.poisonStacks = Math.max(fx.poisonStacks, tier('arthropod') >= 1 ? 5 : 3);
     }
     if (tier('illager') >= 0) {
-      atkMul *= 1.12;
-      hpMul *= 1.10;
+      atkMul *= 1.15;
+      hpMul *= 1.15;
+      atkSpd *= 1.20;
       fx.executeLowHp = 0.20;
       fx.executeLowHpTier2 = 0.35;
     }
-    if (tier('illager') >= 2) {
-      if (m.role === 'caster') atkSpd *= 1.20;
-      if (!ranged) fx.lifesteal += 0.15;
-    }
+    if (tier('illager') >= 2 && !ranged) fx.lifesteal += 0.15;
     if (tier('nether') >= 0) {
       immune |= IMM_BURN;
       fx.burnHit = Math.max(fx.burnHit, Math.max(4, baseAtk() * 0.25));
