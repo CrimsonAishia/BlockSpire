@@ -1328,11 +1328,7 @@ export function resolveBattle(s: RunState, res: BattleResult) {
         if (slotGained) s.slots = Math.min(7, s.slots + 1);
         const healed = Math.min(2, s.maxHearts - s.hearts);
         s.hearts += healed;
-        if (s.act <= 4) {
-          follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
-        } else {
-          follow.push({ type: 'boss_reward', relics: [], slotGained: false, healed });
-        }
+        follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
         if (s.act < 7) follow.push({ type: 'act_intro', act: s.act + 1 });
         else follow.push({ type: 'victory' });
       }
@@ -2084,6 +2080,14 @@ export function startAct(s: RunState, act: number) {
   s.visited = [];
   s.done = [];
   s.usedEnc = s.usedEnc.filter((x) => x.startsWith('ev:'));
+}
+
+/** Repairs interactions left incomplete by older saves without awarding anything twice. */
+export function recoverPendingInteractions(s: RunState) {
+  for (const p of s.queue) {
+    if (p.type === 'boss_reward' && p.relics.length === 0) p.relics = relicChoices(s, 3, ['boss']);
+  }
+  if (!s.queue.length && s.nodeId && !s.done.includes(s.nodeId) && s.map.nodes[s.nodeId]?.type === 'event') enterEvent(s);
 }
 
 /** Runs node-completion hooks once when the queue drains after a node. */

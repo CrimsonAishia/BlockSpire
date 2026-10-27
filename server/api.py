@@ -202,6 +202,9 @@ def daily_rule(date_str: str) -> dict:
     omen = [3, 2, 4, 3][(epoch_day // 4) % 4]
     return {"commander": commander, "omen": omen}
 
+# Keep these percentages aligned with src/data/difficulty.ts scoreMul.
+SCORE_MULTIPLIERS = (100, 125, 150, 180, 220, 260)
+
 def score_of(r: dict) -> int:
     base = (
         r["floor"] * 10
@@ -211,7 +214,8 @@ def score_of(r: dict) -> int:
         + r["red"] * 20
         + (500 if r["won"] else 0)
     )
-    return round(base * (1 + 0.2 * r["omen"]))
+    # Integer arithmetic matches JavaScript Math.round, including half-point ties.
+    return (base * SCORE_MULTIPLIERS[r["omen"]] + 50) // 100
 
 def is_int(v, lo: int, hi: int) -> bool:
     return isinstance(v, int) and not isinstance(v, bool) and lo <= v <= hi
@@ -225,7 +229,7 @@ def check_run(v):
     omen = v.get("omen")
     act = v.get("act")
     won = v.get("won")
-    if not (is_int(omen, 0, 5) and is_int(act, 1, 4) and isinstance(won, bool)):
+    if not (is_int(omen, 0, 5) and is_int(act, 1, 7) and isinstance(won, bool)):
         return "对局数据无效"
     floor = v.get("floor")
     if not is_int(floor, (act - 1) * 14, act * 14):
@@ -239,10 +243,10 @@ def check_run(v):
         return "对局数据无效"
     gold = v.get("gold")
     red = v.get("red")
-    if not (is_int(gold, 0, 30) and is_int(red, 0, 60) and gold + red <= crates):
+    if not (is_int(gold, 0, crates) and is_int(red, 0, crates) and gold + red <= crates):
         return "开箱数据无效"
     team = v.get("team")
-    if not isinstance(team, list) or len(team) > 5:
+    if not isinstance(team, list) or len(team) > 7:
         return "阵容无效"
     for c in team:
         if not (isinstance(c, list) and len(c) >= 2 and isinstance(c[0], str)):
@@ -439,7 +443,7 @@ def submit_run(redis_exec, body: dict, ip: str, now_ms: int):
         "won": run["won"],
         "act": run["act"],
         "floor": run["floor"],
-        "team": run["team"][:5],
+        "team": run["team"][:7],
         "at": now_ms,
     }, ensure_ascii=False)
 

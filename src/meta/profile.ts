@@ -1,5 +1,5 @@
 // Persistent meta-progression: unlocks, codex discovery, achievements, settings.
-import type { RunState } from '../run/run.ts';
+import { recoverPendingInteractions, type RunState } from '../run/run.ts';
 import type { Rules, Teams } from '../classic/match.ts';
 import { PLAYABLE_MOBS } from '../data/mobs.ts';
 import { computeSynergies } from '../data/families.ts';
@@ -155,6 +155,7 @@ export function loadRun(): RunState | null {
   try {
     const r = JSON.parse(raw) as RunState;
     if (!r || r.over) return null;
+    recoverPendingInteractions(r);
     return r;
   } catch {
     return null;

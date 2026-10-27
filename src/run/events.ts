@@ -65,7 +65,7 @@ function randomRelic(s: RunState, r: Rng, tiers: ('common' | 'rare' | 'legendary
 
 export const EVENTS: EventDef[] = [
   {
-    id: 'wandering_trader', name: '流浪商人', acts: [1, 2, 3, 4],
+    id: 'wandering_trader', name: '流浪商人', acts: [1, 2, 3, 4, 5, 6, 7],
     text: '一位穿着蓝袍的流浪商人牵着两只羊驼拦住了你的去路。“交易吗？我这儿的东西，你在别处可买不到。”',
     choices: (s) => [
       {
@@ -118,7 +118,7 @@ export const EVENTS: EventDef[] = [
     },
   },
   {
-    id: 'enchanting', name: '附魔台', acts: [1, 2, 3, 4],
+    id: 'enchanting', name: '附魔台', acts: [1, 2, 3, 4, 5, 6, 7],
     text: '书架环绕着一张附魔台，奇异的符文在空中缓缓漂浮。',
     choices: (s) => [
       {
@@ -394,7 +394,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'anvil', name: '铁砧', acts: [1, 2, 3, 4],
+    id: 'anvil', name: '铁砧', acts: [1, 2, 3, 4, 5, 6, 7],
     text: '一座废弃的铁匠铺，铁砧还算完好。你可以把两件“装备”合二为一。',
     choices: (s) => [
       {
@@ -415,7 +415,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'brewing', name: '酿造台', acts: [1, 2, 3, 4],
+    id: 'brewing', name: '酿造台', acts: [1, 2, 3, 4, 5, 6, 7],
     text: '一个无人看管的酿造台还在咕嘟作响，旁边堆着烈焰粉和下界疣。',
     choices: (s) => [
       {

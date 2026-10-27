@@ -56,7 +56,7 @@ export function BossReward({ s, p }: { s: RunState; p: Extract<Pending, { type: 
             </span>
           )}
         </div>
-        <div class="subtle">选择一件首领宝物——它们强大，但往往伴随代价。</div>
+        <div class="subtle">{p.relics.length ? '选择一件首领宝物——它们强大，但往往伴随代价。' : '当前可获得的首领宝物已全部收集，继续前进。'}</div>
       </div>
       <div class="relic-tiles">
         {p.relics.map((id) => (
@@ -64,7 +64,7 @@ export function BossReward({ s, p }: { s: RunState; p: Extract<Pending, { type: 
         ))}
       </div>
       <div class="choice-foot">
-        <Btn onClick={() => act((r) => chooseRelic(r, null))}>不要宝物</Btn>
+        <Btn onClick={() => act((r) => chooseRelic(r, null))}>{p.relics.length ? '不要宝物' : '继续'}</Btn>
       </div>
     </div>
   );
