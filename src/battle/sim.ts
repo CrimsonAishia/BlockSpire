@@ -2292,14 +2292,20 @@ export class Battle {
         if (!foes.length) return;
         const c = this.densest(foe, 80);
         const primary = c ? (foes.reduce((best, cur) => Math.hypot(cur.x - c.x, cur.y - c.y) < Math.hypot(best.x - c.x, best.y - c.y) ? cur : best, foes[0])) : this.rng.pick(foes);
-        this.lightning(null, primary.x, primary.y, 160, 30);
+        const act = Math.max(1, s.plan.act ?? 1);
+        const allies = live.filter((a) => a.alive && !a.structure && !a.isSummon);
+        const avgAtk = allies.length ? allies.reduce((sum, a) => sum + a.atk, 0) / allies.length : 30;
+        const mainDmg = Math.round(25 * act + avgAtk * (0.4 + 0.2 * act));
+        const subDmg = Math.round(mainDmg * 0.5);
+        this.lightning(null, primary.x, primary.y, mainDmg, 30);
         if (primary.boss && primary.channeling) this.addPosture(primary, 20);
         this.emit({ k: 'text', x: primary.x, y: primary.y, z: primary.gz + primary.size + 15, s: '【潮涌核心·雷霆重击!】', color: '#00cec9' });
         const others = foes.filter((e) => e !== primary);
         others.sort((a, b) => Math.hypot(a.x - primary.x, a.y - primary.y) - Math.hypot(b.x - primary.x, b.y - primary.y));
         for (const sub of others.slice(0, 2)) {
           this.emit({ k: 'beam', a: primary, b: sub, color: '#00d2d3', t: 0.3 });
-          this.damage(null, sub, 80, 'magic', { noCrit: true });
+          this.damage(null, sub, subDmg, 'magic', { noCrit: true });
+          if (sub.boss && sub.channeling) this.addPosture(sub, 20);
         }
       });
     if (this.has(team, 'spawner'))
@@ -2552,28 +2558,6 @@ export class Battle {
           if (e.alive && !e.structure) {
             this.damage(null, e, 50 + this.t * 3, 'magic', { noCrit: true });
             e.blindT = Math.max(e.blindT, 1.5);
-          }
-        }
-      });
-    }
-
-    // ── 潮涌核心 (Conduit)：每 2 秒雷霆劈击敌方核心造成 150% 魔法伤害并弹跳 3 人，破势 20 ──
-    if (this.has(team, 'conduit')) {
-      every('conduit_strike', 2.0, 2.0, () => {
-        const foes = this.live[foe].filter((e) => e.alive && !e.structure);
-        if (!foes.length) return;
-        const target = foes.find((e) => e.boss) ?? foes[0];
-        const allies = live.filter((a) => a.alive && !a.structure && !a.isSummon);
-        const avgAtk = allies.length ? allies.reduce((s, a) => s + a.atk, 0) / allies.length : 30;
-        this.lightning(null, target.x, target.y, avgAtk * 1.5, 60);
-        if (target.boss && target.channeling) this.addPosture(target, 20);
-        this.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size + 15, s: '【雷暴之心 -20破势!】', color: '#00cec9' });
-        let bounced = 0;
-        for (const e of foes) {
-          if (e !== target && bounced < 3) {
-            bounced++;
-            this.damage(null, e, avgAtk * 1.0, 'magic', { noCrit: true });
-            if (e.boss && e.channeling) this.addPosture(e, 20);
           }
         }
       });

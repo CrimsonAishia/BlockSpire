@@ -322,7 +322,7 @@ export const RELICS: RelicDef[] = [
   { id: 'respawn_anchor', name: '重生锚', tier: 'boss', desc: '每场战斗中首个被全灭的友方卡牌以 70% 生命满状态全员复活；代价：大地图生命上限 -1 颗心。' },
   { id: 'ominous_bottle', name: '不祥之瓶', tier: 'boss', desc: '敌军全属性 +12%；但开箱品质升档几率 +20%，战斗胜利绿宝石 +50%。' },
   { id: 'sculk_catalyst', name: '幽匿催发体', tier: 'boss', desc: '任意敌人死亡时，全体存活友军回复 3% 最大生命；代价：无法在营火休息回血。' },
-  { id: 'conduit', name: '潮涌核心', tier: 'boss', desc: '每 2 秒召唤雷霆劈击敌方核心造成 150% 魔法伤害并弹跳 3 人，每次附加 20 破势；代价：战斗中不再掉落消耗品。' },
+  { id: 'conduit', name: '潮涌核心', tier: 'boss', desc: '每 2 秒召唤雷霆劈击敌方密集处造成魔法伤害（随幕数与全队平均攻击成长）并弹射 2 人（50%伤害），附加 20 破势；代价：战斗中不再掉落消耗品。' },
   { id: 'dragon_breath', name: '龙息', tier: 'boss', desc: '药水类物品效果翻倍，物品栏位 +2；代价：战斗中不再额外掉落消耗品。' },
   { id: 'cursed_crown', name: '失落王冠', tier: 'boss', tag: '爆发', desc: '全体友军直伤 +35%，暴击伤害提升至 200%；代价：受到伤害 +10%，无法在营火休息。' },
   { id: 'frost_scythe', name: '寒霜镰刀', tier: 'boss', tag: '冰冻流', icon: 'boss_frost_scythe', desc: '友军对冰冻/寒意目标伤害 +40%，普攻暴击时对目标追加一次 80% 范围霜斩。' },
