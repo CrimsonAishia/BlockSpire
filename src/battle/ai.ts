@@ -172,13 +172,34 @@ export function splitSlime(u: Unit, b: Battle): Unit[] {
   const syn = b.syn(u.team, 'slime') >= 0;
   let n = u.star >= 3 ? 3 : 2;
   if (syn) n += 1;
-  const mul = (syn ? 1.3 : 1) * b.sides[u.team].plan.summonMul * (b.has(u.team, 'combo_slime_party') ? 1 / 0.36 : 1);
+  const hasParty = b.has(u.team, 'combo_slime_party');
+  const isTriple = b.syn(u.team, 'slime') >= 1;
+  const isFirstGen = u.gen === 0;
+  let hpRatio: number;
+  let atkRatio: number;
+  if (hasParty) {
+    if (isTriple) {
+      hpRatio = isFirstGen ? 0.60 : 0.45;
+      atkRatio = isFirstGen ? 0.75 : 0.55;
+    } else {
+      hpRatio = 0.468;
+      atkRatio = 0.715;
+    }
+    if (isFirstGen) {
+      hpRatio = Math.min(0.80, hpRatio * b.sides[u.team].plan.summonMul);
+      atkRatio = Math.min(0.90, atkRatio * b.sides[u.team].plan.summonMul);
+    }
+  } else {
+    const mul = (syn ? 1.3 : 1) * (isFirstGen ? b.sides[u.team].plan.summonMul : 1);
+    hpRatio = Math.min(1.0, 0.36 * mul);
+    atkRatio = Math.min(1.0, 0.55 * mul);
+  }
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + b.rng.range(0, 1);
     const c = b.summon(u, u.mob.id, u.x + Math.cos(a) * u.radius, u.y + Math.sin(a) * u.radius * 0.7, 1, { gen: u.gen + 1, fx: 'split' });
     if (!c) break;
-    c.maxHp = c.hp = Math.min(u.maxHp, u.maxHp * 0.36 * mul);
-    c.atk = Math.min(u.atk, u.atk * 0.55 * mul);
+    c.maxHp = c.hp = u.maxHp * hpRatio;
+    c.atk = u.atk * atkRatio;
     c.radius = Math.max(8, u.radius * 0.66);
     c.size = u.size * 0.64;
     c.speed = u.speed * 1.15;

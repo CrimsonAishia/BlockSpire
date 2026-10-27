@@ -356,6 +356,19 @@ export class Battle {
         this.emit({ k: 'text', x: owner.x, y: owner.y, z: owner.gz + owner.z + owner.size, s: '沉海护送!', color: '#3fc6d6' });
       }
     }
+    if (this.has(owner.team, 'combo_construct_sentries') && owner.mob.families.includes('construct')) {
+      const tm = this.sides[owner.team].timers;
+      if (!tm.construct_sentries_cd || this.t >= tm.construct_sentries_cd) {
+        tm.construct_sentries_cd = this.t + 8.0;
+        for (const a of this.live[owner.team]) {
+          if (a.alive && !a.isSummon && a.mob.id === 'pumpkin_turret') {
+            a.atkSpd *= 1.25;
+            this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.25; });
+          }
+        }
+        this.emit({ k: 'text', x: owner.x, y: owner.y, z: owner.gz + owner.z + owner.size, s: '构装哨阵!', color: '#e67e22' });
+      }
+    }
     this.live[u.team].push(u);
     this.emit({ k: 'spawn', u, fx: opts.fx ?? 'poof' });
     return u;
@@ -1004,6 +1017,7 @@ export class Battle {
 
   moveSpeedOf(u: Unit): number {
     let s = u.speed * u.moveSpd * this.buff(u.team, 'move');
+    if (u.speedT > 0) s *= u.speedMul;
     if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
       s *= 1.15;
     }
@@ -2120,11 +2134,16 @@ export class Battle {
     }
 
     if (this.has(team, 'combo_rampart_banner')) {
+      const hasCaptain = live.some((u) => u.alive && u.mob.id === 'rampart_captain');
+      const hasPartner = live.some((u) => u.alive && (u.mob.id === 'mountaineer' || u.mob.id === 'windcaller' || u.mob.id === 'armored_mountaineer'));
       const bannerEngaged = tm.rampart_banner_engaged || live.some((u) => u.alive && u.target);
-      if (bannerEngaged) {
+      if (hasCaptain && hasPartner && bannerEngaged) {
         tm.rampart_banner_engaged = 1;
         every('rampart_banner', 8.0, 0.5, () => {
-          const conditionIds = new Set(['rampart_captain', 'royal_guard', 'pillager', 'vindicator']);
+          const capAlive = live.some((u) => u.alive && u.mob.id === 'rampart_captain');
+          const partAlive = live.some((u) => u.alive && (u.mob.id === 'mountaineer' || u.mob.id === 'windcaller' || u.mob.id === 'armored_mountaineer'));
+          if (!capAlive || !partAlive) return;
+          const conditionIds = new Set(['rampart_captain', 'mountaineer', 'windcaller', 'armored_mountaineer']);
           for (const u of live) {
             if (u.alive && !u.structure && conditionIds.has(u.mob.id)) {
               u.moveSpd *= 1.20;
@@ -2405,12 +2424,15 @@ export class Battle {
           this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '幼尸奇袭!', color: '#2ed573' });
         }
       }
-      if (this.has(src.team, 'combo_caravan') && t.boss && t.channeling && (src.mob.id === 'trader_llama' || src.mob.id === 'vindicator')) {
+      const isLlama = src.mob.id === 'llama';
+      const isCaravanPartner = src.mob.id === 'rampart_captain' || src.mob.id === 'armored_mountaineer';
+      if (this.has(src.team, 'combo_caravan') && t.boss && t.channeling && (isLlama || isCaravanPartner)) {
         const tm = this.sides[src.team].timers;
         if (!tm.caravan_cd || this.t >= tm.caravan_cd) {
           t.ref.caravanHits = t.ref.caravanHits || {};
-          t.ref.caravanHits[src.mob.id] = this.t;
-          if (t.ref.caravanHits['trader_llama'] && t.ref.caravanHits['vindicator'] && Math.abs(t.ref.caravanHits['trader_llama'] - t.ref.caravanHits['vindicator']) <= 3.0) {
+          if (isLlama) t.ref.caravanHits.llama = this.t;
+          if (isCaravanPartner) t.ref.caravanHits.partner = this.t;
+          if (t.ref.caravanHits.llama !== undefined && t.ref.caravanHits.partner !== undefined && Math.abs(t.ref.caravanHits.llama - t.ref.caravanHits.partner) <= 3.0) {
             tm.caravan_cd = this.t + 7.0;
             t.ref.caravanHits = {};
             this.addPosture(t, 30);
@@ -2418,16 +2440,21 @@ export class Battle {
           }
         }
       }
-      if (this.has(src.team, 'combo_bastion_lines') && src.isRanged && (src.mob.id === 'piglin' || src.mob.id === 'pillager')) {
+      if (this.has(src.team, 'combo_bastion_lines') && src.mob.id === 'piglin_hunter') {
         const tm = this.sides[src.team].timers;
         if (!tm.bastion_lines_cd || this.t >= tm.bastion_lines_cd) {
-          tm.bastion_lines_cd = this.t + 6.0;
+          const meleeNeeds = new Set(['piglin_swordsman', 'armored_piglin']);
+          let primed = false;
           for (const a of this.live[src.team]) {
-            if (a.alive && !a.structure && !a.isRanged && (a.mob.id === 'piglin_brute' || a.mob.id === 'piglin_swordsman' || a.mob.id === 'royal_guard' || a.mob.id === 'vindicator')) {
+            if (a.alive && !a.structure && meleeNeeds.has(a.mob.id) && (!a.target || a.target === t)) {
               a.ref.ignoreArmor35 = true;
+              primed = true;
             }
           }
-          this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '堡垒破甲!', color: '#e67e22' });
+          if (primed) {
+            tm.bastion_lines_cd = this.t + 6.0;
+            this.emit({ k: 'text', x: src.x, y: src.y, z: src.gz + src.z + src.size, s: '堡垒破甲!', color: '#e67e22' });
+          }
         }
       }
       if (this.has(src.team, 'combo_bird_scouts') && src.isRanged && t.boss && t.channeling && (t.glowT > 0 || t.ab.focused > 0 || (t.ref.scouted && this.t < t.ref.scouted))) {
@@ -2656,7 +2683,7 @@ export class Battle {
           if (!tm.construct_sentries_cd || this.t >= tm.construct_sentries_cd) {
             tm.construct_sentries_cd = this.t + 8.0;
             for (const a of this.live[t.team]) {
-              if (a.alive && !a.structure && (a.mob.id === 'dispenser' || a.mob.id === 'copper_golem' || a.mob.id === 'snow_golem' || a.mob.id === 'iron_golem')) {
+              if (a.alive && !a.isSummon && a.mob.id === 'pumpkin_turret') {
                 a.atkSpd *= 1.25;
                 this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.25; });
               }
@@ -3054,6 +3081,7 @@ export class Battle {
     }
     if (u.tauntT > 0) u.tauntT -= dt;
     if (u.hasteT > 0) u.hasteT -= dt;
+    if (u.speedT > 0) u.speedT -= dt;
     if (u.auraT > 0) u.auraT -= dt;
     u.tickShields(dt);
     if (u.huntMarkT > 0) u.huntMarkT -= dt;

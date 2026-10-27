@@ -74,7 +74,7 @@ export const FAMILIES: Record<Family, FamilyDef> = {
   slime: {
     id: 'slime', name: '史莱姆', color: '#7ed957', glyph: '◼',
     tiers: [
-      { n: 2, desc: '分裂体数量 +1（属性系数为 46.8% 生命与 71.5% 攻击）。' },
+      { n: 2, desc: '分裂体数量 +1（基础子体继承约 47% 生命与 72% 攻击）。' },
       { n: 3, desc: '原始史莱姆最大生命 +20%；第一代分裂生成的子体获得自身最大生命 15% 护盾（4 秒），分裂着地时将周围近战弹开。' },
     ],
   },

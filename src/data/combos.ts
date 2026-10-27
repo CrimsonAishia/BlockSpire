@@ -66,7 +66,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'slime_party', name: '弹跳派对', color: '#7ed957',
     needs: [['slime', 'magma_cube', 'sulfur_cube'], ['slime', 'magma_cube', 'sulfur_cube']],
-    desc: '两种以上的史莱姆类同时出战：分裂出的子体继承 80% 生命与攻击（最多分裂两代）。',
+    desc: '出战两种史莱姆时，分裂子体每代继承 47% 生命与 72% 攻击；出战三种史莱姆时，第一代继承 60% 生命与 75% 攻击，第二代继承 45% 生命与 55% 攻击（最多分裂两代）。',
   },
   {
     id: 'wolf_armor', name: '狼铠同盟', color: '#e0b25b',
@@ -122,7 +122,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'rampart_banner', name: '城垛战旗', color: '#c1b487',
     needs: [['rampart_captain'], ['mountaineer', 'windcaller', 'armored_mountaineer']],
-    desc: '队长与近战伙伴同时存活时，首次接敌后双方移速 +20%、攻速 +10%（持续 5 秒，每 8 秒一次）。',
+    desc: '城垛队长与斧兵/风袭/重装卫同时存活时，首次接敌后双方均获得移速 +20%、攻速 +10%（持续 5 秒，每 8 秒一次）。',
   },
   {
     id: 'void_hunt', name: '虚空围猎', color: '#c06bff',
@@ -162,7 +162,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'caravan', name: '驮队护航', color: '#eccc68',
     needs: [['llama'], ['rampart_captain', 'armored_mountaineer']],
-    desc: '羊驼与重斧伙伴在 3 秒内先后命中蓄势首领时，合计削减 30 点破势（全队 7 秒冷却）。',
+    desc: '羊驼与队长/重装卫在 3 秒内先后命中蓄势首领时，额外削减其 30 点破势（全队 7 秒冷却）。',
   },
   {
     id: 'deep_glimmer', name: '暗潮映光', color: '#1e90ff',
@@ -172,7 +172,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'bastion_lines', name: '堡垒双线', color: '#db8c63',
     needs: [['piglin_swordsman', 'armored_piglin'], ['piglin_hunter']],
-    desc: '近战锁定的目标被贯穿弩矢命中后，近战下一轮攻击忽略 35% 护甲（全队 6 秒冷却）。',
+    desc: '猪灵剑士或披甲猪灵锁定的目标被猪灵弩手命中后，下一次普攻忽略目标 35% 护甲（全队 6 秒冷却）。',
   },
   {
     id: 'ghost_flame', name: '幽火引航', color: '#ff6b81',
@@ -192,7 +192,7 @@ export const COMBOS: ComboDef[] = [
   {
     id: 'construct_sentries', name: '构装哨阵', color: '#e67e22',
     needs: [['pumpkin_turret'], ['mob_spawner', 'iron_golem', 'snow_golem']],
-    desc: '召唤成功或构造体护盾吸收伤害后，南瓜炮台获得攻速 +25%（持续 4 秒，全队 8 秒冷却）。',
+    desc: '构造体伙伴（铁傀儡/雪傀儡护盾吸收伤害，或刷怪笼召唤）触发技能后，杰克南瓜灯攻速 +25%（持续 4 秒，全队 8 秒冷却）。',
   },
   {
     id: 'vine_colony', name: '藤巢接力', color: '#2ed573',

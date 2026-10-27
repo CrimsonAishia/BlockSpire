@@ -124,6 +124,9 @@ export class Unit {
   /** Short attack-speed boost from allies (袭击号角, 幽匿歌谣...): seconds left and multiplier. */
   hasteT = 0;
   hasteMul = 1;
+  /** Short movement-speed boost from allies (雪狐, 海豚...): seconds left and multiplier. */
+  speedT = 0;
+  speedMul = 1;
   /** Next attack deals double damage (沙漠游骑). */
   empower = false;
   /** Damage-taken multiplier set by the unit's own behaviour (armadillo rolled up, creaking heart). */

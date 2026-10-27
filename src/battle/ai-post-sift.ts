@@ -1,6 +1,7 @@
 import type { Battle } from './sim.ts';
 import { ARENA_D, ARENA_W, type Unit } from './unit.ts';
 import { chargeMove, cool, dist, foesOf, fire, resetCd, startCharge, type Behavior } from './ai.ts';
+import { mobDef, starPower } from '../data/mobs.ts';
 
 const clampX = (u: Unit, x: number) => Math.max(u.radius, Math.min(ARENA_W - u.radius, x));
 const clampY = (y: number) => Math.max(10, Math.min(ARENA_D - 10, y));
@@ -135,8 +136,8 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
                 member.ref.foxEngaged = true;
                 member.atkTimer = Math.max(0, member.atkTimer - member.cd * 0.40);
               }
-              member.hasteT = Math.max(member.hasteT, 4.0);
-              member.hasteMul = Math.max(member.hasteMul, hasteBonus);
+              member.speedT = Math.max(member.speedT, 4.0);
+              member.speedMul = Math.max(member.speedMul, hasteBonus);
               member.ref.terrainSlowResist = 0.5;
               b.addTimedAction(4.0, () => {
                 delete member.ref.terrainSlowResist;
@@ -184,14 +185,21 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           const targets = foes.slice(0, 2);
           u.ab.markCd = cd;
           const factor = u.star >= 3 ? 0.15 : (u.star === 2 ? 0.12 : 0.10);
-          const allyCards: number[] = [];
+          const otherCards = new Map<number, number>();
           for (const a of alliesOf(u, b)) {
-            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card && !allyCards.includes(a.card)) {
-              allyCards.push(a.card);
-              if (allyCards.length >= 2) break;
+            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card) {
+              const dps = a.dps || (a.atk / Math.max(0.2, a.cd));
+              otherCards.set(a.card, (otherCards.get(a.card) ?? 0) + dps);
             }
           }
+          const allyCards = Array.from(otherCards.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([c]) => c);
           for (const target of targets) {
+            if (target.channeling && target.channelT > 0) {
+              target.channelT += 0.4;
+            }
             target.atkTimer += 0.4;
             target.ref.scouted = b.t + 5.0;
             target.ref.ravenMarked = {
@@ -301,7 +309,8 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           for (const a of backAllies) {
             if (targetCards.size < 2) targetCards.add(a.card);
           }
-          const shieldPerCard = (u.maxHp * shieldPct) / targetCards.size;
+          const wholeCardHp = u.mob.hp * starPower(u.mob, u.star);
+          const shieldPerCard = (wholeCardHp * shieldPct) / targetCards.size;
           for (const cardId of targetCards) {
             const members = backAllies.filter((a) => a.card === cardId);
             for (const m of members) {
@@ -331,15 +340,24 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
         if (foes.length > 0) {
           u.ab.signalCd = 6;
+          foes.sort((a, c) => {
+            const scoreC = (c.boss ? 30 : 0) + (c.channeling ? 25 : 0) + (c.threat || (c.atk / Math.max(0.2, c.cd)));
+            const scoreA = (a.boss ? 30 : 0) + (a.channeling ? 25 : 0) + (a.threat || (a.atk / Math.max(0.2, a.cd)));
+            return scoreC - scoreA;
+          });
           const target = foes[0];
           const factor = u.star >= 3 ? 0.35 : (u.star === 2 ? 0.30 : 0.25);
-          const boundCards: number[] = [];
+          const otherCards = new Map<number, number>();
           for (const a of alliesOf(u, b)) {
-            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card && !boundCards.includes(a.card)) {
-              boundCards.push(a.card);
-              if (boundCards.length >= 2) break;
+            if (a.alive && !a.structure && !a.isSummon && a.card !== u.card) {
+              const dps = a.dps || (a.atk / Math.max(0.2, a.cd));
+              otherCards.set(a.card, (otherCards.get(a.card) ?? 0) + dps);
             }
           }
+          const boundCards = Array.from(otherCards.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([c]) => c);
           target.ab.focused = 5;
           target.ref.parrotMarked = {
             factor,
@@ -518,19 +536,11 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   // 17. 发光鱿鱼 (glow_squid)
   glow_squid: {
     tick(u, b, dt) {
-      if (u.ab.inkCd) u.ab.inkCd = Math.max(0, u.ab.inkCd - dt);
+      if (!isCardLead(u, b)) return;
       const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
       if (cool(u, 'inkCd', dt, 2)) {
         const allies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon);
-        const seenCards = new Set<number>();
-        const targetAllies: Unit[] = [];
-        for (const a of allies) {
-          if (!seenCards.has(a.card) && seenCards.size < 2) {
-            seenCards.add(a.card);
-            targetAllies.push(a);
-          }
-        }
-        const threatUnit = [u, ...targetAllies].find((a) =>
+        const threatUnit = [u, ...allies].find((a) =>
           foesOf(u, b).some((f) => f.alive && (dist(a, f) <= 60 || (f.boss && f.channeling && dist(a, f) <= 120)))
         );
         if (threatUnit) {
@@ -554,10 +564,11 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
       }
     },
     onDamaged(u, _src, _o, b) {
-      if (cool(u, 'inkCd', 0, 0)) {
+      const lead = cardAllies(u, b)[0] || u;
+      if (cool(lead, 'inkCd', 0, 0)) {
         const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
         const dur = u.star >= 3 ? 4.0 : (u.star === 2 ? 3.5 : 3.0);
-        u.ab.inkCd = cd;
+        lead.ab.inkCd = cd;
         b.emit({ k: 'boom', x: u.x, y: u.y, r: 50, color: '#1e90ff', big: false });
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + 30, s: '荧光盲墨!', color: '#1e90ff' });
         b.aoe(u.x, u.y, 60, u.team, (f) => {
@@ -594,15 +605,17 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           }
           u.ab.healCd = cd;
           const pct = u.star >= 3 ? 0.16 : (u.star === 2 ? 0.12 : 0.10);
-          const maxSourceHeal = u.maxHp * 0.35;
+          const wholeCardHp = u.mob.hp * starPower(u.mob, u.star);
+          const maxSourceHeal = wholeCardHp * 0.35;
           let firstCard = true;
           for (const lead of cardLeads) {
             const members = alliesOf(u, b).filter((a) => a.alive && a.card === lead.card);
             const totalTargetH = members.reduce((sum, m) => sum + m.maxHp, 0);
             const cardHealBudget = Math.min(maxSourceHeal, totalTargetH * pct);
-            const perMember = cardHealBudget / members.length;
+            const totalMissing = members.reduce((sum, m) => sum + Math.max(0, m.maxHp - m.hp), 0);
             for (const m of members) {
-              b.heal(m, perMember, u);
+              const share = totalMissing > 0 ? Math.max(0, m.maxHp - m.hp) / totalMissing : 1 / members.length;
+              b.heal(m, cardHealBudget * share, u);
               if (firstCard) {
                 if (m.poisonT > 0) m.poisonT = 0;
                 else if (m.burnT > 0) m.burnT = 0;
@@ -654,8 +667,8 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           const advanceRatio = u.star >= 3 ? 0.50 : (u.star === 2 ? 0.40 : 0.30);
           for (const target of cardTargets) {
             for (const member of alliesOf(u, b).filter((a) => a.alive && a.card === target.card)) {
-              member.hasteT = Math.max(member.hasteT, 4.0);
-              member.hasteMul = Math.max(member.hasteMul, hasteBonus);
+              member.speedT = Math.max(member.speedT, 4.0);
+              member.speedMul = Math.max(member.speedMul, hasteBonus);
               member.ref.dolphinEscort = { advanceRatio, roundUsed: false, expireAt: b.t + 4.0 };
             }
             b.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.size, s: '破浪护送!', color: '#70a1ff' });
@@ -758,7 +771,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
   rampart_captain: {
     tick(u, b, dt) {
       if (cool(u, 'axeCd', dt, 2)) {
-        const target = u.target && u.target.alive ? u.target : foesOf(u, b).find((f) => f.alive && dist(u, f) <= 50);
+        const target = (u.target && u.target.alive && dist(u, u.target) <= 50) ? u.target : foesOf(u, b).find((f) => f.alive && dist(u, f) <= 50);
         if (target) {
           u.ab.axeCd = 7;
           b.damage(u, target, u.atk * (u.star >= 3 ? 2.1 : 1.6), 'phys');
@@ -994,7 +1007,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           u.ab.spawnCount = (u.ab.spawnCount ?? 0) + 1;
           const spawned = b.summon(u, 'zombie', u.x + (u.team === 0 ? 25 : -25), u.y, u.star >= 3 ? 0.25 : 0.18, { lifespan: 10, fx: 'summon' });
           if (spawned) {
-            spawned.atk = Math.round(u.atk * (u.star >= 3 ? 0.25 : 0.18));
+            spawned.atk = Math.round(mobDef('zombie').atk * starPower(u.mob, u.star) * 0.8);
             b.emit({ k: 'boom', x: spawned.x, y: spawned.y, r: 25, color: '#70a1ff', big: false });
           }
         } else {
