@@ -74,20 +74,26 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
   const floorReached = (s.act - 1) * 14 + (s.nodeId ? s.map.nodes[s.nodeId].row + 1 : 0);
   const sift = won && s.stats.bossesWon >= 4;
 
+  const inActFloor = ((floorReached - 1) % 14) + 1;
+  const ACT_NUMS = ['', '一', '二', '三', '四', '五', '六', '七'];
+  const ACT_NAMES = ['', '主世界', '下界', '末地', '筛界', '遗迹远征', '圣殿远征', '破碎堡垒'];
+
   return (
     <div class={`screen end-screen ${won ? 'won' : 'lost'}`} style={{ backgroundImage: `url(${url.bg(won ? 'arena_end' : 'title')})` }}>
       <div class="end-shade" />
       <div class="end-inner">
-        <div class="end-title title-shadow">{!won ? '你死了！' : sift ? '筛界征服者！' : '屠龙者！'}</div>
+        <div class="end-title title-shadow">{!won ? '你死了！' : s.act >= 7 ? '终焉征服者！' : sift ? '筛界征服者！' : '屠龙者！'}</div>
         {s.daily && <div class="end-daily">每日挑战 · {s.daily}</div>}
         <div class="end-sub">
           {!won
-            ? `倒在了第${['', '一', '二', '三', '四'][s.act]}幕 · 第 ${floorReached} 层。`
+            ? `倒在了第${ACT_NUMS[s.act] ?? s.act}幕 · ${ACT_NAMES[s.act] ?? ''} · 第 ${inActFloor} 层（累计第 ${floorReached} 层）。`
             : sift
               ? '幽匿巨像倒下了。你的怪物军团征服了全部四个维度。'
-              : s.act >= 4
-                ? `末影龙已被你击败；你在筛界走到了第 ${floorReached - 42} 层。`
-                : '末影龙倒下了。你的怪物军团征服了三个维度。'}
+              : s.act === 4
+                ? `末影龙已被你击败；你在筛界走到了第 ${inActFloor} 层。`
+                : s.act >= 5
+                  ? `末影龙已被你击败；你在第${ACT_NUMS[s.act] ?? s.act}幕 · ${ACT_NAMES[s.act] ?? ''}走到了第 ${inActFloor} 层。`
+                  : '末影龙倒下了。你的怪物军团征服了三个维度。'}
         </div>
         <div class="end-grid">
           <div class="panel end-stats">

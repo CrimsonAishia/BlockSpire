@@ -73,9 +73,12 @@ function clock(ms: number) {
 }
 
 function progressText(e: Pick<BoardEntry, 'won' | 'act' | 'floor'>) {
-  if (e.act >= 4) return `筛界 · 第 ${e.floor - 42} 层`;
-  if (e.won) return '屠龙通关';
-  return `第${['', '一', '二', '三'][e.act]}幕 · 第 ${e.floor} 层`;
+  const ACT_NAMES = ['', '主世界', '下界', '末地', '筛界', '遗迹远征', '圣殿远征', '破碎堡垒'];
+  const ACT_NUMS = ['', '一', '二', '三', '四', '五', '六', '七'];
+  if (e.won) return e.act >= 4 ? '凯旋通关' : '屠龙通关';
+  const inActFloor = e.floor > 14 ? ((e.floor - 1) % 14) + 1 : e.floor;
+  const actName = ACT_NAMES[e.act] ?? `第${e.act}幕`;
+  return `第${ACT_NUMS[e.act] ?? e.act}幕 · ${actName} · 第 ${inActFloor} 层`;
 }
 
 export function Leaderboard() {

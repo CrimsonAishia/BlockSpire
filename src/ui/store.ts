@@ -85,18 +85,33 @@ export interface MyProgressInfo {
   won?: boolean;
   over?: boolean;
   detailText?: string;
+  updatedAt?: number;
+  time?: number;
 }
 
 export const myCurrentProgress = signal<MyProgressInfo>({
   status: 'online',
   statusLabel: '在线',
   detailText: '主界面 · 准备就绪',
+  updatedAt: Date.now(),
+  time: Date.now(),
 });
+
+const ACT_TITLES: Record<number, string> = {
+  1: '第一幕',
+  2: '第二幕',
+  3: '第三幕',
+  4: '筛界',
+  5: '遗迹远征',
+  6: '圣殿远征',
+  7: '破碎堡垒',
+};
 
 export function syncProgress(r: RunState | null) {
   const me = selfProfile.value;
   const username = me?.username || profile.value.nickname || '史蒂夫';
   const avatar = me?.avatar || r?.commander || 'steve';
+  const now = Date.now();
 
   if (!r) {
     const payload: MyProgressInfo = {
@@ -107,6 +122,8 @@ export function syncProgress(r: RunState | null) {
       username,
       name: username,
       commander: 'steve',
+      updatedAt: now,
+      time: now,
     };
     myCurrentProgress.value = payload;
     void syncGameProgressToHost(payload);
@@ -126,16 +143,40 @@ export function syncProgress(r: RunState | null) {
       case 'rest': floorNote = '营火休息'; break;
       case 'treasure': floorNote = '宝箱遗迹'; break;
       case 'event': floorNote = '未知事件'; break;
-      case 'boss':
-        floorNote = act === 1 ? '首领战' : act === 2 ? '决战凋灵' : act === 3 ? '决战末影龙' : '凋灵风暴';
+      case 'boss': {
+        const bossNotes: Record<number, string> = {
+          1: '首领战',
+          2: '决战凋灵',
+          3: '决战末影龙',
+          4: '幽匿巨像',
+          5: '遗迹首领战',
+          6: '圣殿首领战',
+          7: '决战复仇之心',
+        };
+        floorNote = bossNotes[act] || '首领战';
         break;
+      }
     }
   } else {
     const visitedCount = r.visited?.length ?? 0;
     floor = Math.max(1, Math.min(14, visitedCount + 1));
     const firstQueue = r.queue?.[0];
     if (firstQueue?.type === 'battle') {
-      floorNote = firstQueue.kind === 'boss' ? (act === 3 ? '决战末影龙' : '首领战') : firstQueue.kind === 'elite' ? '精英战' : '普通战斗';
+      const bossNotes: Record<number, string> = {
+        1: '首领战',
+        2: '决战凋灵',
+        3: '决战末影龙',
+        4: '幽匿巨像',
+        5: '遗迹首领战',
+        6: '圣殿首领战',
+        7: '决战复仇之心',
+      };
+      floorNote =
+        firstQueue.kind === 'boss'
+          ? (bossNotes[act] || '首领战')
+          : firstQueue.kind === 'elite'
+          ? '精英战'
+          : '普通战斗';
     } else if (firstQueue?.type === 'shop') {
       floorNote = '商店营地';
     } else if (firstQueue?.type === 'rest') {
@@ -143,9 +184,9 @@ export function syncProgress(r: RunState | null) {
     }
   }
 
-  const actName = act >= 4 ? '筛界' : `第${['', '一', '二', '三'][act] || act}幕`;
+  const actName = ACT_TITLES[act] || `第${act}幕`;
   const status = r.over ? 'online' : 'in_run';
-  const statusLabel = r.over ? (r.won ? '已通关' : '已阵亡') : (act >= 4 ? '筛界中' : '爬塔中');
+  const statusLabel = r.over ? (r.won ? '已通关' : '已阵亡') : (act === 4 ? '筛界中' : act >= 5 ? '远征中' : '爬塔中');
 
   const payload: MyProgressInfo = {
     status,
@@ -165,6 +206,8 @@ export function syncProgress(r: RunState | null) {
     won: r.won,
     over: r.over,
     detailText: `${actName} · 第 ${floor} 层${floorNote ? ` (${floorNote})` : ''}${r.omen ? ` 不祥 ${r.omen}` : ''}`,
+    updatedAt: now,
+    time: now,
   };
 
   myCurrentProgress.value = payload;

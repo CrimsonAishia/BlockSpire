@@ -15,16 +15,26 @@ export interface SimpleFriend {
   isCommander?: boolean;
   status: FriendStatus | string;
   statusLabel?: string;
-  act?: number; // 1: 第一幕, 2: 第二幕, 3: 第三幕, 4+: 筛界无尽
+  act?: number; // 1: 第一幕, 2: 第二幕, 3: 第三幕, 4: 筛界, 5+: 远征
   floor?: number; // 第几小关 / 层
   floorNote?: string; // 如：决战末影龙、精英战、商店营地
   omen?: number; // 不祥之兆等级
   detailText?: string;
+  updatedAt?: number | string;
   extra?: Record<string, any>;
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
-const ACT_NAMES = ['', '第一幕', '第二幕', '第三幕', '第四幕'];
+const ACT_NAMES = ['', '第一幕', '第二幕', '第三幕', '第四幕', '第五幕', '第六幕', '第七幕'];
+export const ACT_DISPLAY_NAMES: Record<number, string> = {
+  1: '第一幕',
+  2: '第二幕',
+  3: '第三幕',
+  4: '筛界',
+  5: '遗迹远征',
+  6: '圣殿远征',
+  7: '破碎堡垒',
+};
 
 // 动态好友列表信号
 export const friendsList = signal<SimpleFriend[]>([]);
@@ -63,23 +73,18 @@ export function resolveFriendProgress(f: SimpleFriend) {
   let floor: number | undefined =
     typeof rawFloor === 'number' ? rawFloor : typeof rawFloor === 'string' ? parseInt(rawFloor, 10) : undefined;
 
-  // 自动从累计层数推导幕数与当前幕层数
+  // 自动从累计层数推导幕数与当前幕层数（每幕 14 层）
   if (floor !== undefined && floor > 0) {
     if (act === undefined) {
-      if (floor <= 14) act = 1;
-      else if (floor <= 28) act = 2;
-      else if (floor <= 42) act = 3;
-      else act = 4;
+      act = Math.floor((floor - 1) / 14) + 1;
     }
     // 归一化为当前幕内的层数 (1..14)
-    if (act <= 3 && floor > 14) {
+    if (floor > 14) {
       floor = ((floor - 1) % 14) + 1;
-    } else if (act >= 4 && floor > 42) {
-      floor = floor - 42;
     }
   }
 
-  // 3. 状态归一化
+  // 3. 状态归一化（以客户端/宿主上报状态为准）
   const rawStatus = String(f.status || extra.status || '').toLowerCase();
   let status: FriendStatus = 'offline';
   if (['in_run', 'playing', 'run', 'gaming', 'spire', 'battle', 'game'].includes(rawStatus)) {
@@ -96,20 +101,29 @@ export function resolveFriendProgress(f: SimpleFriend) {
 
   // 4. 首领关自动补充关卡特征说明
   if (act && floor === 14 && !floorNote) {
-    floorNote = act === 1 ? '首领战' : act === 2 ? '决战凋灵' : act === 3 ? '决战末影龙' : '凋灵风暴';
+    const bossNotes: Record<number, string> = {
+      1: '首领战',
+      2: '决战凋灵',
+      3: '决战末影龙',
+      4: '幽匿巨像',
+      5: '遗迹首领战',
+      6: '圣殿首领战',
+      7: '决战复仇之心',
+    };
+    floorNote = bossNotes[act] || '首领战';
   }
 
   // 5. 状态标签
   let statusLabel = f.statusLabel || extra.statusLabel;
   if (!statusLabel) {
-    if (status === 'in_run') statusLabel = act && act >= 4 ? '筛界中' : '爬塔中';
+    if (status === 'in_run') statusLabel = act === 4 ? '筛界中' : act && act >= 5 ? '远征中' : '爬塔中';
     else if (status === 'classic') statusLabel = '竞技场';
     else if (status === 'online') statusLabel = '在线';
     else statusLabel = '离线';
   }
 
   const hasRunProgress = !!(act && floor && floor > 0);
-  const actName = act ? (act >= 4 ? '筛界' : ACT_NAMES[act] ?? `第${act}幕`) : '';
+  const actName = act ? (ACT_DISPLAY_NAMES[act] ?? ACT_NAMES[act] ?? `第${act}幕`) : '';
 
   return {
     name,
@@ -203,7 +217,7 @@ export function FriendsDrawer() {
       ? `#${String(me.uid).slice(-4)}`
       : '#我';
   const myAct = myProgress.act;
-  const myActName = myAct ? (myAct >= 4 ? '筛界' : ACT_NAMES[myAct] ?? `第${myAct}幕`) : '';
+  const myActName = myAct ? (ACT_DISPLAY_NAMES[myAct] ?? ACT_NAMES[myAct] ?? `第${myAct}幕`) : '';
   const myHasRunProgress = !!(myProgress.status === 'in_run' && myProgress.floor && myProgress.floor > 0);
 
   const onlineCount = useMemo(
@@ -214,18 +228,35 @@ export function FriendsDrawer() {
     [sourceFriends],
   );
 
+  // 1、在线默认在上面；2、固定按名字排序
   const displayedFriends = useMemo(() => {
-    return sourceFriends.filter((f) => {
-      const p = resolveFriendProgress(f);
-      if (filter === 'online' && p.status === 'offline') return false;
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        return (
-          p.name.toLowerCase().includes(q) || p.tag.toLowerCase().includes(q)
-        );
+    const list = sourceFriends
+      .map((f) => ({ raw: f, p: resolveFriendProgress(f) }))
+      .filter(({ p }) => {
+        if (filter === 'online' && p.status === 'offline') return false;
+        if (search.trim()) {
+          const q = search.trim().toLowerCase();
+          return (
+            p.name.toLowerCase().includes(q) || p.tag.toLowerCase().includes(q)
+          );
+        }
+        return true;
+      });
+
+    list.sort((a, b) => {
+      const aOnline = a.p.status !== 'offline';
+      const bOnline = b.p.status !== 'offline';
+      // 2. 在线的默认在上面
+      if (aOnline !== bOnline) {
+        return aOnline ? -1 : 1;
       }
-      return true;
+      // 1. 固定按名字排序（汉字拼音/字母数字升序）
+      const nameCmp = a.p.name.localeCompare(b.p.name, 'zh-Hans-CN', { numeric: true });
+      if (nameCmp !== 0) return nameCmp;
+      return String(a.raw.id || '').localeCompare(String(b.raw.id || ''));
     });
+
+    return list.map((item) => item.raw);
   }, [sourceFriends, filter, search]);
 
   const COMMANDER_SET = new Set(['steve', 'alex', 'villager', 'witch']);

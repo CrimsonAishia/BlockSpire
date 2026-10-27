@@ -32,7 +32,17 @@ const COL_W = 128;
 const SIDE_L = 318;
 const SIDE_R = 348;
 const EDGE = 104;
-const ACT_TEX = ['', 'dirt', 'netherrack', 'endstone', 'sift'];
+const ACT_TEX = ['', 'dirt', 'netherrack', 'endstone', 'sift', 'dirt', 'netherrack', 'endstone'];
+const ACT_NUMS = ['', '一', '二', '三', '四', '五', '六', '七'];
+const ACT_DEFAULT_NAMES = ['', '主世界', '下界', '末地', '筛界', '遗迹远征', '圣殿远征', '破碎堡垒'];
+const THEME_NAMES: Record<string, string> = {
+  lonely_fortress: '孤独堡垒',
+  overgrown_temple: '蔓生神殿',
+  abyssal_monument: '深渊纪念碑',
+  nether_fortress: '下界堡垒',
+  gale_sanctum: '疾风圣殿',
+  broken_citadel: '破碎堡垒',
+};
 
 export interface StrokePoint {
   x: number;
@@ -462,7 +472,7 @@ export function MapView({ s }: { s: RunState; v?: number }) {
 
       <div class="map-side left">
         <div class="panel">
-          <div class="panel-title">第{['', '一', '二', '三', '四'][s.act]}幕 · {['', '主世界', '下界', '末地', '筛界'][s.act]}</div>
+          <div class="panel-title">第{ACT_NUMS[s.act] ?? s.act}幕 · {(s.actTheme ? THEME_NAMES[s.actTheme] : null) ?? ACT_DEFAULT_NAMES[s.act] ?? `第${s.act}幕`}</div>
           <div class="boss-preview">
             <img src={url.mob(bossMob.id)} />
             <div>
