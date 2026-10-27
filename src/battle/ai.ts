@@ -8,6 +8,7 @@ import { TAC, bestLine, callout, countFoes, isBackliner, pushValue, safeDir } fr
 import { MODERN } from './ai-modern.ts';
 import { DUNGEONS_BEHAVIORS } from './ai-dungeons.ts';
 import { POST_SIFT_BEHAVIORS } from './ai-post-sift.ts';
+import { EXPANSION_BEHAVIORS } from './ai-expansion.ts';
 
 export interface DamageOpts {
   proj?: boolean;
@@ -324,6 +325,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
   ...MODERN,
   ...DUNGEONS_BEHAVIORS,
   ...POST_SIFT_BEHAVIORS,
+  ...EXPANSION_BEHAVIORS,
   default: {},
   vex: {},
 

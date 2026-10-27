@@ -220,7 +220,7 @@ export class Battle {
         this.hasSoulMechanic[team] = true;
       }
       for (const cp of cfg.sides[team].cards) {
-        if (cp.mob === 'soul_wisp') this.hasSoulMechanic[team] = true;
+        if (cp.mob === 'soul_wisp' || cp.mob === 'soul_wizard') this.hasSoulMechanic[team] = true;
       }
     }
     // Each battle gets its own copy: explosions reshape it, and retries must start pristine.

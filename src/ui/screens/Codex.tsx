@@ -28,6 +28,16 @@ const EXPEDITION_MOB_IDS = new Set<string>([
   'piglin_hunter', 'piglin_swordsman', 'fungus_thrower', 'baby_ghast', 'armored_piglin',
   'rampart_captain', 'skeleton_horseman', 'llama', 'armored_mountaineer',
   'blastling', 'snareling', 'endersent', 'soul_wizard', 'tower_wraith', 'mob_spawner', 'enderling',
+  // 地下城扩展（群落与异种新卡 + 高稀有度卡）
+  'baby_drowned', 'rabbit_scout', 'woolly_cow', 'baby_turtle',
+  'mossy_skeleton', 'poison_anemone', 'quick_growing_kelp', 'enchanted_blue_sheep',
+  'enchanted_red_sheep', 'enchanted_green_sheep', 'vex_raider', 'zombified_piglin',
+  'zombified_hunter', 'wither_archer', 'wave_whisperer', 'armored_pillager',
+  'armored_vindicator', 'armored_drowned', 'icy_creeper',
+  'tower_guard', 'arch_illager', 'poison_tower_wraith',
+  'mooshroom_monstrosity', 'heart_of_ender',
+  'frostbound_wraith', 'wildfire_sentinel', 'abyssal_guardian', 'nameless_sovereign',
+  'redstone_colossus', 'verdant_abomination', 'tempest_warden', 'void_sovereign',
   // V3.3 & V3.4 远征首领
   'wretched_wraith', 'jungle_abomination', 'ancient_guardian', 'wildfire',
   'nameless_one', 'redstone_monstrosity', 'corrupted_cauldron', 'tempest_golem',

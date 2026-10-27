@@ -2898,5 +2898,1130 @@
     "w": 1280,
     "h": 720,
     "ar": 1.7778
+  },
+  "sprites/frostbound_wraith": {
+    "w": 1152,
+    "h": 704,
+    "ar": 1.6364
+  },
+  "sprites/frostbound_wraith_lite": {
+    "w": 864,
+    "h": 352,
+    "ar": 2.4545
+  },
+  "mobs/frostbound_wraith": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/wildfire_sentinel": {
+    "w": 840,
+    "h": 704,
+    "ar": 1.1932
+  },
+  "sprites/wildfire_sentinel_lite": {
+    "w": 630,
+    "h": 352,
+    "ar": 1.7898
+  },
+  "mobs/wildfire_sentinel": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/abyssal_guardian": {
+    "w": 1932,
+    "h": 704,
+    "ar": 2.7443
+  },
+  "sprites/abyssal_guardian_lite": {
+    "w": 1449,
+    "h": 352,
+    "ar": 4.1165
+  },
+  "mobs/abyssal_guardian": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/nameless_sovereign": {
+    "w": 1136,
+    "h": 704,
+    "ar": 1.6136
+  },
+  "sprites/nameless_sovereign_lite": {
+    "w": 852,
+    "h": 352,
+    "ar": 2.4205
+  },
+  "mobs/nameless_sovereign": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/redstone_colossus": {
+    "w": 1608,
+    "h": 704,
+    "ar": 2.2841
+  },
+  "sprites/redstone_colossus_lite": {
+    "w": 1206,
+    "h": 352,
+    "ar": 3.4261
+  },
+  "mobs/redstone_colossus": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/verdant_abomination": {
+    "w": 1416,
+    "h": 704,
+    "ar": 2.0114
+  },
+  "sprites/verdant_abomination_lite": {
+    "w": 1062,
+    "h": 352,
+    "ar": 3.017
+  },
+  "mobs/verdant_abomination": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/tempest_warden": {
+    "w": 1940,
+    "h": 704,
+    "ar": 2.7557
+  },
+  "sprites/tempest_warden_lite": {
+    "w": 1455,
+    "h": 352,
+    "ar": 4.1335
+  },
+  "mobs/tempest_warden": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/void_sovereign": {
+    "w": 772,
+    "h": 704,
+    "ar": 1.0966
+  },
+  "sprites/void_sovereign_lite": {
+    "w": 579,
+    "h": 352,
+    "ar": 1.6449
+  },
+  "mobs/void_sovereign": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/royal_bone_retainer": {
+    "w": 1648,
+    "h": 704,
+    "ar": 2.3409
+  },
+  "sprites/royal_bone_retainer_lite": {
+    "w": 1236,
+    "h": 352,
+    "ar": 3.5114
+  },
+  "mobs/royal_bone_retainer": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/abomination_root": {
+    "w": 280,
+    "h": 704,
+    "ar": 0.3977
+  },
+  "sprites/abomination_root_lite": {
+    "w": 210,
+    "h": 352,
+    "ar": 0.5966
+  },
+  "mobs/abomination_root": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "effects/frostbound_wraith_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/frostbound_wraith_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/frostbound_wraith_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/frostbound_wraith_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/frostbound_wraith_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wildfire_sentinel_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/abyssal_guardian_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/abyssal_guardian_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/abyssal_guardian_beam": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/abyssal_guardian_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/abyssal_guardian_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/nameless_sovereign_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/nameless_sovereign_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/nameless_sovereign_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/nameless_sovereign_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/nameless_sovereign_summon": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/redstone_colossus_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/redstone_colossus_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/redstone_colossus_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/redstone_colossus_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/verdant_abomination_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/verdant_abomination_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/verdant_abomination_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/verdant_abomination_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/verdant_abomination_summon": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tempest_warden_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tempest_warden_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tempest_warden_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tempest_warden_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tempest_warden_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_trail": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_beam": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/void_sovereign_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "sprites/baby_drowned": {
+    "w": 1340,
+    "h": 704,
+    "ar": 1.9034
+  },
+  "sprites/baby_drowned_lite": {
+    "w": 1005,
+    "h": 352,
+    "ar": 2.8551
+  },
+  "mobs/baby_drowned": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/rabbit_scout": {
+    "w": 1548,
+    "h": 704,
+    "ar": 2.1989
+  },
+  "sprites/rabbit_scout_lite": {
+    "w": 1161,
+    "h": 352,
+    "ar": 3.2983
+  },
+  "mobs/rabbit_scout": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/woolly_cow": {
+    "w": 1224,
+    "h": 704,
+    "ar": 1.7386
+  },
+  "sprites/woolly_cow_lite": {
+    "w": 918,
+    "h": 352,
+    "ar": 2.608
+  },
+  "mobs/woolly_cow": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/baby_turtle": {
+    "w": 2140,
+    "h": 704,
+    "ar": 3.0398
+  },
+  "sprites/baby_turtle_lite": {
+    "w": 1605,
+    "h": 352,
+    "ar": 4.5597
+  },
+  "mobs/baby_turtle": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/mossy_skeleton": {
+    "w": 1168,
+    "h": 704,
+    "ar": 1.6591
+  },
+  "sprites/mossy_skeleton_lite": {
+    "w": 876,
+    "h": 352,
+    "ar": 2.4886
+  },
+  "mobs/mossy_skeleton": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/poison_anemone": {
+    "w": 844,
+    "h": 704,
+    "ar": 1.1989
+  },
+  "sprites/poison_anemone_lite": {
+    "w": 633,
+    "h": 352,
+    "ar": 1.7983
+  },
+  "mobs/poison_anemone": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/quick_growing_kelp": {
+    "w": 524,
+    "h": 704,
+    "ar": 0.7443
+  },
+  "sprites/quick_growing_kelp_lite": {
+    "w": 393,
+    "h": 352,
+    "ar": 1.1165
+  },
+  "mobs/quick_growing_kelp": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/enchanted_blue_sheep": {
+    "w": 1216,
+    "h": 704,
+    "ar": 1.7273
+  },
+  "sprites/enchanted_blue_sheep_lite": {
+    "w": 912,
+    "h": 352,
+    "ar": 2.5909
+  },
+  "mobs/enchanted_blue_sheep": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/enchanted_red_sheep": {
+    "w": 1216,
+    "h": 704,
+    "ar": 1.7273
+  },
+  "sprites/enchanted_red_sheep_lite": {
+    "w": 912,
+    "h": 352,
+    "ar": 2.5909
+  },
+  "mobs/enchanted_red_sheep": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/enchanted_green_sheep": {
+    "w": 1216,
+    "h": 704,
+    "ar": 1.7273
+  },
+  "sprites/enchanted_green_sheep_lite": {
+    "w": 912,
+    "h": 352,
+    "ar": 2.5909
+  },
+  "mobs/enchanted_green_sheep": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/vex_raider": {
+    "w": 1552,
+    "h": 704,
+    "ar": 2.2045
+  },
+  "sprites/vex_raider_lite": {
+    "w": 1164,
+    "h": 352,
+    "ar": 3.3068
+  },
+  "mobs/vex_raider": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/zombified_piglin": {
+    "w": 1304,
+    "h": 704,
+    "ar": 1.8523
+  },
+  "sprites/zombified_piglin_lite": {
+    "w": 978,
+    "h": 352,
+    "ar": 2.7784
+  },
+  "mobs/zombified_piglin": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/zombified_hunter": {
+    "w": 1164,
+    "h": 704,
+    "ar": 1.6534
+  },
+  "sprites/zombified_hunter_lite": {
+    "w": 873,
+    "h": 352,
+    "ar": 2.4801
+  },
+  "mobs/zombified_hunter": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/wither_archer": {
+    "w": 1088,
+    "h": 704,
+    "ar": 1.5455
+  },
+  "sprites/wither_archer_lite": {
+    "w": 816,
+    "h": 352,
+    "ar": 2.3182
+  },
+  "mobs/wither_archer": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/wave_whisperer": {
+    "w": 1544,
+    "h": 704,
+    "ar": 2.1932
+  },
+  "sprites/wave_whisperer_lite": {
+    "w": 1158,
+    "h": 352,
+    "ar": 3.2898
+  },
+  "mobs/wave_whisperer": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/armored_pillager": {
+    "w": 1320,
+    "h": 704,
+    "ar": 1.875
+  },
+  "sprites/armored_pillager_lite": {
+    "w": 990,
+    "h": 352,
+    "ar": 2.8125
+  },
+  "mobs/armored_pillager": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/armored_vindicator": {
+    "w": 1396,
+    "h": 704,
+    "ar": 1.983
+  },
+  "sprites/armored_vindicator_lite": {
+    "w": 1047,
+    "h": 352,
+    "ar": 2.9744
+  },
+  "mobs/armored_vindicator": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/armored_drowned": {
+    "w": 1384,
+    "h": 704,
+    "ar": 1.9659
+  },
+  "sprites/armored_drowned_lite": {
+    "w": 1038,
+    "h": 352,
+    "ar": 2.9489
+  },
+  "mobs/armored_drowned": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/icy_creeper": {
+    "w": 1384,
+    "h": 704,
+    "ar": 1.9659
+  },
+  "sprites/icy_creeper_lite": {
+    "w": 1038,
+    "h": 352,
+    "ar": 2.9489
+  },
+  "mobs/icy_creeper": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/tower_guard": {
+    "w": 1584,
+    "h": 704,
+    "ar": 2.25
+  },
+  "sprites/tower_guard_lite": {
+    "w": 1188,
+    "h": 352,
+    "ar": 3.375
+  },
+  "mobs/tower_guard": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/arch_illager": {
+    "w": 552,
+    "h": 704,
+    "ar": 0.7841
+  },
+  "sprites/arch_illager_lite": {
+    "w": 414,
+    "h": 352,
+    "ar": 1.1761
+  },
+  "mobs/arch_illager": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/poison_tower_wraith": {
+    "w": 1224,
+    "h": 704,
+    "ar": 1.7386
+  },
+  "sprites/poison_tower_wraith_lite": {
+    "w": 918,
+    "h": 352,
+    "ar": 2.608
+  },
+  "mobs/poison_tower_wraith": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/mooshroom_monstrosity": {
+    "w": 1588,
+    "h": 704,
+    "ar": 2.2557
+  },
+  "sprites/mooshroom_monstrosity_lite": {
+    "w": 1191,
+    "h": 352,
+    "ar": 3.3835
+  },
+  "mobs/mooshroom_monstrosity": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "sprites/heart_of_ender": {
+    "w": 576,
+    "h": 704,
+    "ar": 0.8182
+  },
+  "sprites/heart_of_ender_lite": {
+    "w": 432,
+    "h": 352,
+    "ar": 1.2273
+  },
+  "mobs/heart_of_ender": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "effects/baby_drowned_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/baby_drowned_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/rabbit_scout_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/rabbit_scout_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/woolly_cow_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/woolly_cow_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/baby_turtle_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/baby_turtle_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mossy_skeleton_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mossy_skeleton_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mossy_skeleton_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_anemone_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_anemone_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_anemone_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_anemone_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/quick_growing_kelp_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/quick_growing_kelp_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/quick_growing_kelp_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_blue_sheep_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_blue_sheep_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_blue_sheep_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_red_sheep_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_red_sheep_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_green_sheep_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/enchanted_green_sheep_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/vex_raider_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/vex_raider_trail": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/vex_raider_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/zombified_piglin_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/zombified_piglin_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/zombified_hunter_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/zombified_hunter_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wither_archer_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wither_archer_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wither_archer_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wave_whisperer_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wave_whisperer_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wave_whisperer_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/wave_whisperer_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_pillager_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_pillager_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_pillager_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_vindicator_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_vindicator_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_drowned_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/armored_drowned_shield": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/icy_creeper_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/icy_creeper_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/icy_creeper_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/icy_creeper_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tower_guard_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tower_guard_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tower_guard_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/arch_illager_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/arch_illager_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/arch_illager_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/arch_illager_summon": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_tower_wraith_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_tower_wraith_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_tower_wraith_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_tower_wraith_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/poison_tower_wraith_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mooshroom_monstrosity_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mooshroom_monstrosity_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mooshroom_monstrosity_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/mooshroom_monstrosity_persistent": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/heart_of_ender_windup": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/heart_of_ender_warning": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/heart_of_ender_projectile": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/heart_of_ender_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/heart_of_ender_beam": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "mobs/frostbound_wraith_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/wildfire_sentinel_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/abyssal_guardian_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/nameless_sovereign_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/redstone_colossus_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/verdant_abomination_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/tempest_warden_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/void_sovereign_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/arch_illager_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/mooshroom_monstrosity_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
+  },
+  "mobs/heart_of_ender_card": {
+    "w": 512,
+    "h": 512,
+    "ar": 1
   }
 }
