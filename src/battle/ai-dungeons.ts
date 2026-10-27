@@ -892,29 +892,99 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
   // 22. 风暴傀儡 (tempest_golem)
   tempest_golem: {
     init(u, b) {
-      b.summon(u, 'tempest_pillar', u.x, u.y - 60, 1, { fx: 'summon' });
-      b.summon(u, 'tempest_pillar', u.x, u.y + 60, 1, { fx: 'summon' });
+      u.ab.tempest_lightning = 5;
+      u.ab.swordCd = 3;
+      u.ref.tempestPillars = [];
+      u.ref.swordSide = 0;
+      for (const dy of [-60, 60]) {
+        const pillar = b.summon(u, 'tempest_pillar', u.x, Math.max(10, Math.min(ARENA_D - 10, u.y + dy)), 1, { fx: 'summon' });
+        if (pillar) {
+          pillar.ref.nodeOwner = u;
+          u.ref.tempestPillars.push(pillar);
+        }
+      }
+    },
+    target(u, b) {
+      const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
+      if (foes.length === 0) return null;
+      return foes.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), foes[0]);
     },
     tick(u, b, dt) {
-      const pillars = alliesOf(u, b).filter((a) => a.alive && a.mob.id === 'tempest_pillar');
-      u.takenMul = Math.max(0.7, 1 - pillars.length * 0.1);
-      if (u.channeling) return;
-      if (cool(u, 'tempest_lightning', dt, 8)) {
+      const pillars = (u.ref.tempestPillars || []).filter((a: Unit) => a.alive);
+      u.takenMul = Math.max(0.8, 1 - pillars.length * 0.1);
+
+      if (!u.channeling && cool(u, 'swordCd', dt, 5)) {
+        u.ref.swordSide = (u.ref.swordSide || 0) ^ 1;
+        const isLeft = u.ref.swordSide === 0;
+        b.emit({ k: 'zone', x: u.x, y: u.y + (isLeft ? -35 : 35), r: 100, color: '#70a1ff', t: 1.0 });
+        b.addTimedAction(1.0, () => {
+          if (u.alive && !u.channeling) {
+            b.emit({ k: 'boom', x: u.x, y: u.y + (isLeft ? -35 : 35), r: 100, color: '#70a1ff', big: true });
+            b.emit({ k: 'sfx', id: 'slash' });
+            for (const f of foesOf(u, b)) {
+              if (!f.alive || f.structure) continue;
+              const inSide = isLeft ? f.y <= u.y + 15 : f.y >= u.y - 15;
+              if (inSide && dist(u, f) <= 100) {
+                b.damage(u, f, b.atkOf(u) * 0.8, 'phys');
+                b.knock(f, u.x, u.y, 40);
+              }
+            }
+          }
+        });
+      }
+
+      if (cool(u, 'tempest_lightning', dt, 5)) {
         const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-        if (foes.length > 0) {
-          u.ab.tempest_lightning = 8;
-          u.channeling = true;
-          u.channelT = 2.4;
-          u.posture = 0;
-          const t = foes[0];
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '风暴天雷蓄势中...', color: '#70a1ff' });
-          b.addTimedAction(2.4, () => {
-            if (!u.alive || u.stunT > 0 || !u.channeling || !t.alive) return;
-            b.emit({ k: 'text', x: t.x, y: t.y, z: 30, s: '风暴神雷爆发!', color: '#70a1ff' });
-            b.lightning(u, t.x, t.y, b.atkOf(u) * 1.6, 50);
+        const distinctCards = new Map<number, Unit>();
+        for (const f of foes) {
+          if (!distinctCards.has(f.card)) distinctCards.set(f.card, f);
+          if (distinctCards.size >= 2) break;
+        }
+        const targets = Array.from(distinctCards.values());
+        let pts = targets.map((t) => ({ x: t.x, y: t.y }));
+        if (pts.length < 2 && foes.length > 0) {
+          pts = foes.slice(0, 2).map((t) => ({ x: t.x, y: t.y }));
+        }
+        if (pts.length > 0) {
+          const currentCast = b.startCast(u, '风暴神雷', 2.4, 1.0, {
+            onRelease: (cast) => {
+              b.emit({ k: 'shake', a: 8 });
+              b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '风暴神雷爆发!', color: '#70a1ff' });
+              b.emit({ k: 'sfx', id: 'lightning' });
+              const hit = new Set<number>();
+              for (const pt of pts) {
+                b.lightning(u, pt.x, pt.y, b.atkOf(u) * 1.3, 48);
+                for (const f of foesOf(u, b)) {
+                  if (!f.alive || f.structure || hit.has(f.id)) continue;
+                  if (Math.hypot(f.x - pt.x, f.y - pt.y) <= 48 + f.radius) {
+                    hit.add(f.id);
+                    b.damage(u, f, b.atkOf(u) * 1.3, 'magic');
+                  }
+                }
+              }
+            },
+            onFinish: () => {
+              u.ab.tempest_lightning = 10;
+            },
+            onCancel: (reason) => {
+              u.ab.tempest_lightning = 10;
+            },
           });
-        } else {
-          u.ab.tempest_lightning = 1.0;
+          if (currentCast) {
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '风暴神雷蓄势中...', color: '#70a1ff' });
+            if (u.ref.tempestPillars) {
+              for (const p of u.ref.tempestPillars) {
+                if (p.alive) p.ref.castId = currentCast.id;
+              }
+            }
+            b.addTimedAction(1.2, () => {
+              if (u.alive && u.cast?.id === currentCast.id) {
+                for (const pt of pts) {
+                  b.emit({ k: 'zone', x: pt.x, y: pt.y, r: 48, color: '#70a1ff', t: 1.2 });
+                }
+              }
+            });
+          }
         }
       }
     },
@@ -922,60 +992,135 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
 
   // 23. 复仇之心 (vengeful_heart)
   vengeful_heart: {
+    init(u, b) {
+      u.ab.eyeBeamCd = 5;
+      u.ab.voidPoolCd = 4;
+      u.ref.phaseQueue = [];
+      u.ref.passed65 = false;
+      u.ref.passed30 = false;
+      u.ref.lastPhaseTime = -999;
+      u.ref.voidPuddles = [];
+    },
     attack(u, t, b) {
       b.shoot(u, t, 'chin_spike', b.atkOf(u), { special: 'magic' });
     },
     tick(u, b, dt) {
-      if (u.channeling) return;
-      const cd = u.hp / u.maxHp < 0.5 ? 7 : 9;
-      if (cool(u, 'void_strike', dt, cd) && !u.ref.charge) {
-        const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-        if (foes.length > 0) {
-          u.ab.void_strike = cd;
-          u.channeling = true;
-          u.channelT = 2.4;
-          u.posture = 0;
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空泯灭蓄势中...', color: '#9b59b6' });
-          b.addTimedAction(2.4, () => {
-            if (!u.alive || u.stunT > 0 || !u.channeling) return;
-            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空泯灭爆发!', color: '#9b59b6' });
-            for (let i = 0; i < Math.min(2, foes.length); i++) {
-              const f = foes[i];
-              if (f.alive) {
-                b.addZone({ x: f.x, y: f.y, r: 45, dur: 4, dps: b.atkOf(u) * 0.3, kind: 'goo', team: u.team, src: u });
-              }
-            }
-          });
-        } else {
-          u.ab.void_strike = 1.0;
-        }
-      }
-      // 阶段转换与冲撞：生命低于 65% 或 30% 时各冲撞突进一次
       const hpFrac = u.hp / u.maxHp;
+      const phase = hpFrac <= 0.30 ? 3 : hpFrac <= 0.65 ? 2 : 1;
+      const beamCd = phase === 3 ? 9 : phase === 2 ? 10 : 11;
+      const poolCd = phase === 3 ? 9 : 10;
+
       if (hpFrac <= 0.65 && !u.ref.charge65) {
         u.ref.charge65 = true;
-        const target = foesOf(u, b).find((f) => f.alive && !f.structure);
-        if (target) {
-          startCharge(u, target, 40);
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '虚空冲撞!', color: '#9b59b6' });
-          b.emit({ k: 'sfx', id: 'ram' });
-        }
+        u.ref.phaseQueue.push(65);
       }
       if (hpFrac <= 0.30 && !u.ref.charge30) {
         u.ref.charge30 = true;
+        u.ref.phaseQueue.push(30);
+      }
+
+      if (!u.ref.charge && u.ref.phaseQueue.length > 0 && b.t - (u.ref.lastPhaseTime ?? -999) >= 2.0) {
+        const nextPhase = u.ref.phaseQueue.shift()!;
+        u.ref.lastPhaseTime = b.t;
+        if (u.cast) {
+          b.cancelCast(u, 'phase_transition');
+        }
         const target = foesOf(u, b).find((f) => f.alive && !f.structure);
         if (target) {
           startCharge(u, target, 40);
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '终焉冲撞!', color: '#ff4757' });
+          b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: target.x, y: target.y }, color: '#9b59b6', t: 1.2 });
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: nextPhase === 65 ? '虚空冲撞!' : '终焉冲撞!', color: '#9b59b6' });
           b.emit({ k: 'sfx', id: 'ram' });
+        }
+      }
+
+      if (phase >= 2 && !u.channeling && !u.ref.charge && cool(u, 'voidPoolCd', dt, poolCd)) {
+        u.ab.voidPoolCd = poolCd;
+        const target = foesOf(u, b).find((f) => f.alive && !f.structure);
+        if (target) {
+          const px = target.x;
+          const py = target.y;
+          b.emit({ k: 'zone', x: px, y: py, r: 45, color: '#8e44ad', t: 1.2 });
+          b.addTimedAction(1.2, () => {
+            if (u.alive) {
+              u.ref.voidPuddles = (u.ref.voidPuddles || []).filter((zid: number) => b.zones.some((z) => z.id === zid));
+              if (u.ref.voidPuddles.length >= 2) {
+                const oldest = u.ref.voidPuddles.shift();
+                b.zones = b.zones.filter((z) => z.id !== oldest);
+              }
+              const zone = b.addZone({
+                x: px,
+                y: py,
+                r: 45,
+                dur: 4,
+                team: u.team,
+                dps: b.atkOf(u) * 0.12,
+                kind: 'goo',
+                src: u,
+              });
+              u.ref.voidPuddles.push(zone.id);
+            }
+          });
+        }
+      }
+
+      if (!u.ref.charge && u.ref.phaseQueue.length === 0 && cool(u, 'eyeBeamCd', dt, 5)) {
+        const startAngle = u.facing === 1 ? -Math.PI * 0.5 : Math.PI * 0.5;
+        const rotDir = u.facing === 1 ? 1 : -1;
+        const currentCast = b.startCast(u, '旋转眼束', 2.4, 1.2, {
+          onRelease: (cast) => {
+            b.emit({ k: 'shake', a: 8 });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '旋转眼束释放!', color: '#9b59b6' });
+            b.emit({ k: 'sfx', id: 'laser' });
+            const targetDamage = new Map<number, number>();
+            const maxPerTarget = b.atkOf(u) * 1.8;
+            const steps = 10;
+            for (let step = 0; step < steps; step++) {
+              b.addTimedAction((step * 3.0) / steps, () => {
+                if (!u.alive) return;
+                const angle = startAngle + rotDir * (Math.PI * (step / steps));
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+                b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + cosA * 550, y: u.y + sinA * 550 }, color: '#9b59b6', t: 0.3 });
+                for (const f of foesOf(u, b)) {
+                  if (!f.alive || f.structure) continue;
+                  const currentDealt = targetDamage.get(f.id) ?? 0;
+                  if (currentDealt >= maxPerTarget) continue;
+                  const rx = f.x - u.x;
+                  const ry = f.y - u.y;
+                  const along = rx * cosA + ry * sinA;
+                  if (along < 0 || along > 580) continue;
+                  const perp = Math.abs(rx * sinA - ry * cosA);
+                  if (perp <= 22 + f.radius) {
+                    const toDeal = Math.min(maxPerTarget - currentDealt, maxPerTarget / (steps * 0.4));
+                    targetDamage.set(f.id, currentDealt + toDeal);
+                    b.damage(u, f, toDeal, 'magic');
+                  }
+                }
+              });
+            }
+          },
+          onFinish: () => {
+            u.ab.eyeBeamCd = beamCd;
+          },
+          onCancel: (reason) => {
+            u.ab.eyeBeamCd = beamCd;
+          },
+        });
+        if (currentCast) {
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '旋转眼束蓄势中...', color: '#9b59b6' });
+          b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + Math.cos(startAngle) * 450, y: u.y + Math.sin(startAngle) * 450 }, color: '#8e44ad', t: 2.4 });
         }
       }
     },
     move(u, b, dt) {
       if (u.ref.charge) {
-        return chargeMove(u, b, dt, { mul: 1.5, knock: 45, stun: 0.3, all: true, speed: 220 });
+        return chargeMove(u, b, dt, { mul: 1.2, knock: 45, stun: 0.3, all: true, speed: 240 });
       }
       return false;
+    },
+    onDeath(u, b) {
+      u.ref.phaseQueue = [];
     },
   },
 

@@ -13,6 +13,28 @@ export const IMM_SLOW = 16;
 export const IMM_STUN = 32;
 export const IMM_HUNGER = 64;
 
+export type CastPhase = 'idle' | 'windup' | 'release' | 'recovery' | 'break';
+export type CastCancelReason = 'break' | 'death' | 'phase_transition' | 'target_lost';
+
+export interface CastState {
+  id: number;
+  name: string;
+  phase: CastPhase;
+  startTime: number;
+  windupDuration: number;
+  endTime: number;
+  recoveryDuration: number;
+  posture: number;
+  target?: Unit | null;
+  targetPos?: { x: number; y: number };
+  settled: boolean;
+  cancelReason?: CastCancelReason;
+  onRelease?: (cast: CastState) => void;
+  onFinish?: (cast: CastState) => void;
+  onCancel?: (reason: CastCancelReason) => void;
+  data?: Record<string, any>;
+}
+
 /** Per-unit static effect bundle computed by setup from enchants/relics/synergies. */
 export interface UnitFx {
   lifesteal: number;
@@ -223,6 +245,8 @@ export class Unit {
   postureMax = 100;
   channeling = false;
   channelT = 0;
+  cast: CastState | null = null;
+  castSeq = 1;
   gen = 0;
   alpha = 1;
   fx: UnitFx;
@@ -436,7 +460,8 @@ export type BEvent =
   | { k: 'text'; x: number; y: number; z: number; s: string; color: string; tac?: boolean }
   | { k: 'shake'; a: number }
   | { k: 'sfx'; id: string; v?: number }
-  | { k: 'beam'; a: Unit; b: Unit; color: string; t: number }
+  | { k: 'beam'; a: Unit | { x: number; y: number; z?: number; gz?: number }; b: Unit | { x: number; y: number; z?: number; gz?: number }; color: string; t: number }
+  | { k: 'zone'; x: number; y: number; r: number; color: string; t: number }
   | { k: 'phase'; s: string }
   | { k: 'debris'; x: number; y: number; z: number; s: number; f: number; block: boolean }
   | { k: 'stuck'; x: number; y: number; z: number; kind: string; dx: number; dy: number }

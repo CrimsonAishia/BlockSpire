@@ -720,6 +720,14 @@ export class Arena3D {
           if (!u.isSummon && (u.maxHp >= 300 || u.boss)) this.hitStop(u.boss ? 0.25 : 0.08);
           break;
         }
+        case 'zone': {
+          const x = tx(e.x);
+          const z = tz(e.y);
+          const y = this.groundY(e.x, e.y) + 0.1;
+          const r = e.r / BLOCK;
+          this.ring(x, y, z, r, e.color, e.t);
+          break;
+        }
         case 'boom': {
           const x = tx(e.x);
           const z = tz(e.y);
@@ -1009,12 +1017,16 @@ export class Arena3D {
     m.scale.set(w, w, len);
   }
 
-  private chainBeam(a: Unit, b: Unit, color: string, t: number) {
+  private chainBeam(a: Unit | { x: number; y: number; z?: number; gz?: number }, b: Unit | { x: number; y: number; z?: number; gz?: number }, color: string, t: number) {
     const m = this.beamMesh(this.color(color).getHex());
     this.fx.push({ kind: 'beam', t: 0, dur: t, objs: [m], data: { a, b } });
   }
 
-  private unitPos(u: Unit, alpha: number, out: THREE.Vector3, h = 0.5) {
+  private unitPos(u: Unit | { x: number; y: number; z?: number; gz?: number }, alpha: number, out: THREE.Vector3, h = 0.5) {
+    if (!('id' in u)) {
+      out.set(tx(u.x), ty((u.gz ?? 0) + (u.z ?? 20)), tz(u.y));
+      return out;
+    }
     const v = this.views.get(u.id);
     const x = u.px + (u.x - u.px) * alpha;
     const y = u.py + (u.y - u.py) * alpha;

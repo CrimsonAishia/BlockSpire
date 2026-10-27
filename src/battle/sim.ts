@@ -18,7 +18,7 @@ import {
 import {
   ARENA_D, ARENA_W, IMM_BURN, IMM_HUNGER, IMM_KB, IMM_POISON, IMM_SLOW, IMM_STUN, IMM_WITHER, MELEE_REACH_Z,
   NUM_CRIT, NUM_DODGE, NUM_DOT, NUM_HEAL, NUM_LIFESTEAL, NUM_MAGIC, NUM_PHYS, NUM_TRUE, Unit, baseFx, resetIds,
-  type BEvent, type Delayed, type Proj, type UnitFx, type Zone,
+  type BEvent, type CastCancelReason, type CastState, type Delayed, type Proj, type UnitFx, type Zone,
 } from './unit.ts';
 
 export const DT = 1 / 30;
@@ -780,6 +780,10 @@ export class Battle {
     u.animHit = Math.max(-1, u.animHit - dt);
     this.tickStatus(u, dt);
     if (!u.alive) return;
+    if (u.cast) {
+      this.updateCast(u, dt);
+      if (!u.alive) return;
+    }
     if (u.lifespan > 0 && u.age > u.lifespan) {
       u.hp = 0;
       this.kill(u, null, true);
@@ -855,8 +859,54 @@ export class Battle {
     }
     b.tick?.(u, this, dt);
     if (!u.alive) return;
+    if (u.cast && (u.cast.phase === 'windup' || u.cast.phase === 'recovery')) {
+      u.moving = false;
+      return;
+    }
     if (b.move?.(u, this, dt)) return;
     this.defaultAct(u, dt, b);
+  }
+
+  private updateCast(u: Unit, dt: number) {
+    const c = u.cast;
+    if (!c) return;
+    if (c.phase === 'windup') {
+      u.channeling = true;
+      u.channelT = Math.max(0, c.endTime - this.t);
+      u.moving = false;
+      if (this.t >= c.endTime) {
+        c.settled = true;
+        c.phase = 'release';
+        u.channeling = false;
+        u.channelT = 0;
+        u.posture = 0;
+        try {
+          c.onRelease?.(c);
+        } catch (e) {
+          console.error('Error in cast onRelease:', e);
+        }
+        if (u.cast === c) {
+          c.phase = 'recovery';
+          c.endTime = this.t + c.recoveryDuration;
+        }
+      }
+    } else if (c.phase === 'recovery') {
+      u.channeling = false;
+      u.channelT = 0;
+      u.moving = false;
+      if (this.t >= c.endTime) {
+        c.phase = 'idle';
+        try {
+          c.onFinish?.(c);
+        } catch (e) {
+          console.error('Error in cast onFinish:', e);
+        }
+        if (u.cast === c) {
+          u.cast = null;
+        }
+        u.atkTimer = Math.max(u.atkTimer, 0.4);
+      }
+    }
   }
 
   /** Effective attack-speed multiplier including statuses and side effects. */
@@ -1073,6 +1123,10 @@ export class Battle {
   }
 
   private defaultAct(u: Unit, dt: number, b: Behavior) {
+    if (u.channeling || (u.cast && (u.cast.phase === 'windup' || u.cast.phase === 'recovery'))) {
+      u.moving = false;
+      return;
+    }
     u.atkTimer -= dt * this.atkSpeedOf(u);
     if (u.atkTimer < 0) u.atkTimer = 0;
     const smart = this.smart[u.team];
@@ -1639,8 +1693,10 @@ export class Battle {
 
   // ───────────────────────── Zones & delayed hits ─────────────────────────
 
-  addZone(z: Omit<Zone, 't' | 'tick' | 'id'>) {
-    this.zones.push({ ...z, t: 0, tick: 0, id: this.nid++ });
+  addZone(z: Omit<Zone, 't' | 'tick' | 'id'>): Zone {
+    const zone: Zone = { ...z, t: 0, tick: 0, id: this.nid++ };
+    this.zones.push(zone);
+    return zone;
   }
 
   addDelayed(d: Delayed) {
@@ -2489,7 +2545,8 @@ export class Battle {
     // 熊猫拦截 (panda): 拦下一段直伤（拦截额≤来源H的30%，减伤40/45/55%），随后12%H盾
     if (kind !== 'dot' && !o.isPandaIntercept && !t.structure && t.ref.pandaGuardian) {
       const panda = t.ref.pandaGuardian;
-      if (panda && panda.alive && (!panda.ab.rollCd || panda.ab.rollCd <= 0)) {
+      if (panda && panda.alive && (!panda.ab.rollCd || panda.ab.rollCd <= 0) && (panda.ab.rollCount ?? 0) < 2) {
+        panda.ab.rollCount = (panda.ab.rollCount ?? 0) + 1;
         panda.ab.rollCd = panda.star >= 3 ? 7 : 8;
         panda.x = Math.max(panda.radius, Math.min(ARENA_W - panda.radius, t.x + (panda.team === 0 ? 15 : -15)));
         panda.y = Math.max(10, Math.min(ARENA_D - 10, t.y));
@@ -2507,6 +2564,12 @@ export class Battle {
     }
     // 城垛队长 (rampart_captain): 投射物减伤 35%
     if (o.proj && t.mob.id === 'rampart_captain') d *= t.star >= 3 ? 0.50 : 0.65;
+    // 悬浮烈焰 (wildfire): 存活盾提供每面 6% 普通投射物减伤，最多 24%
+    if (o.proj && !o.fire && t.mob.id === 'wildfire' && t.ref.wildfireShields) {
+      const liveShields = (t.ref.wildfireShields as Unit[]).filter((s) => s.alive).length;
+      const reduction = Math.min(0.24, liveShields * 0.06);
+      if (reduction > 0) d *= (1 - reduction);
+    }
     // 披甲猪灵 (armored_piglin): 普通攻防减伤 10%
     if (t.mob.id === 'armored_piglin' && (o.melee || o.proj)) d *= 0.90;
     // 哞菇 (mooshroom): 蓄力期间减伤 20%
@@ -2745,8 +2808,8 @@ export class Battle {
     const hpDamage = Math.max(0, Math.min(t.hp, d));
     t.hp -= d;
     if (src) t.ref.lastHitBy = src;
-    if (t.boss && t.channeling && d > 0 && t.maxHp > 0) {
-      this.addPosture(t, (d / t.maxHp) * 2500);
+    if (t.boss && t.channeling && kind !== 'dot' && hpDamage > 0 && t.maxHp > 0) {
+      this.addPosture(t, (hpDamage / t.maxHp) * 1000);
     }
     // Hurt flash with a short cooldown so constantly-hit units don't stay tinted.
     if (t.animHit <= -0.3) t.animHit = 0.12;
@@ -2911,6 +2974,22 @@ export class Battle {
     t.hp = 0;
     t.deadT = 0;
     t.target = null;
+    if (t.cast) {
+      this.cancelCast(t, 'death');
+    }
+    if (t.boss && t.ref.bossNodes) {
+      const nodes = t.ref.bossNodes as Unit[];
+      for (const n of nodes) {
+        if (n.alive) this.kill(n, killer, true);
+      }
+      t.ref.bossNodes = [];
+    }
+    if (t.ref.nodeOwner) {
+      const owner = t.ref.nodeOwner as Unit;
+      if (owner && owner.alive && owner.boss && owner.channeling && owner.cast && (!t.ref.castId || owner.cast.id === t.ref.castId)) {
+        this.addPosture(owner, 50);
+      }
+    }
     if (!t.isSummon && !t.structure) this.lost[t.team]++;
     const card = this.cards[t.card];
     card.alive--;
@@ -3051,9 +3130,11 @@ export class Battle {
 
   private tickStatus(u: Unit, dt: number) {
     if (u.channeling) {
-      u.channelT -= dt;
-      if (u.channelT <= 0) {
-        u.channeling = false;
+      if (!u.cast) {
+        u.channelT -= dt;
+        if (u.channelT <= 0) {
+          u.channeling = false;
+        }
       }
     }
     if (u.ab.focused > 0) u.ab.focused = Math.max(0, u.ab.focused - dt);
@@ -3255,17 +3336,107 @@ export class Battle {
     t.stunT = Math.max(t.stunT, dur);
   }
 
+  startCast(
+    u: Unit,
+    name: string,
+    windupDuration: number,
+    recoveryDuration: number,
+    opts: {
+      target?: Unit | null;
+      targetPos?: { x: number; y: number };
+      onRelease?: (cast: CastState) => void;
+      onFinish?: (cast: CastState) => void;
+      onCancel?: (reason: CastCancelReason) => void;
+      data?: Record<string, any>;
+    } = {}
+  ): CastState | null {
+    if (!u.alive || u.stunT > 0 || u.channeling || u.cast) return null;
+    const castId = u.castSeq++;
+    const cast: CastState = {
+      id: castId,
+      name,
+      phase: 'windup',
+      startTime: this.t,
+      windupDuration,
+      endTime: this.t + windupDuration,
+      recoveryDuration,
+      posture: 0,
+      target: opts.target,
+      targetPos: opts.targetPos,
+      settled: false,
+      onRelease: opts.onRelease,
+      onFinish: opts.onFinish,
+      onCancel: opts.onCancel,
+      data: opts.data,
+    };
+    u.cast = cast;
+    u.channeling = true;
+    u.channelT = windupDuration;
+    u.posture = 0;
+    u.moving = false;
+    return cast;
+  }
+
+  extendCast(u: Unit, dur: number) {
+    if (!u.cast || u.cast.phase !== 'windup') {
+      if (u.channeling) u.channelT += dur;
+      return;
+    }
+    u.cast.endTime += dur;
+    u.channelT = Math.max(0, u.cast.endTime - this.t);
+  }
+
+  cancelCast(u: Unit, reason: CastCancelReason = 'target_lost') {
+    if (!u.cast) {
+      u.channeling = false;
+      u.channelT = 0;
+      u.posture = 0;
+      return;
+    }
+    const c = u.cast;
+    u.cast = null;
+    u.channeling = false;
+    u.channelT = 0;
+    u.posture = 0;
+    c.phase = 'idle';
+    c.cancelReason = reason;
+    try {
+      c.onCancel?.(reason);
+    } catch (e) {
+      console.error('Error in onCancel', e);
+    }
+  }
+
+  breakPosture(t: Unit) {
+    if (!t.boss) return;
+    t.posture = 0;
+    t.channeling = false;
+    t.channelT = 0;
+    const stunDur = t.cast ? 1.5 : 2.5;
+    t.stunT = Math.max(t.stunT, stunDur);
+    if (t.cast) {
+      const c = t.cast;
+      t.cast = null;
+      c.phase = 'break';
+      c.cancelReason = 'break';
+      c.settled = true;
+      try {
+        c.onCancel?.('break');
+      } catch (e) {
+        console.error('Error onCancel cast', e);
+      }
+    }
+    this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '破势达成！', color: '#ffc93c' });
+    this.emit({ k: 'sfx', id: 'anvil_land' });
+  }
+
   addPosture(t: Unit, amt: number) {
-    if (!t.boss || !t.channeling) return;
+    if (!t.boss || !t.channeling || (t.cast && t.cast.phase !== 'windup')) return;
     this.checkRavenInterrupt(t);
     t.posture = Math.min(100, t.posture + amt);
+    if (t.cast) t.cast.posture = t.posture;
     if (t.posture >= 100) {
-      t.channeling = false;
-      t.channelT = 0;
-      t.stunT = Math.max(t.stunT, 2.5);
-      t.posture = 0;
-      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '破势达成！', color: '#ffc93c' });
-      this.emit({ k: 'sfx', id: 'anvil_land' });
+      this.breakPosture(t);
     }
   }
 

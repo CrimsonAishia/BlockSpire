@@ -106,7 +106,10 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
       }
       for (const t of cardTargets) {
         t.ref.terrainSlowResist = 0.5;
+        const spdBonus = 0.35;
+        t.moveSpd += spdBonus;
         b.addTimedAction(6.0, () => {
+          t.moveSpd -= spdBonus;
           delete t.ref.terrainSlowResist;
         });
       }
@@ -199,7 +202,8 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
             .map(([c]) => c);
           for (const target of targets) {
             if (target.channeling && target.channelT > 0) {
-              target.channelT += 0.4;
+              if (target.cast) b.extendCast(target, 0.4);
+              else target.channelT += 0.4;
             }
             target.atkTimer += 0.4;
             target.ref.scouted = b.t + 5.0;
@@ -428,6 +432,18 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         if (backAllies.length > 0) {
           u.ref.pandaBoundAlly = backAllies[0];
           backAllies[0].ref.pandaGuardian = u;
+        }
+      }
+      if (u.ref.pandaBoundAlly && u.ref.pandaBoundAlly.alive && u.ref.pandaBoundAlly.hp < u.ref.pandaBoundAlly.maxHp * 0.5) {
+        if ((!u.ab.rollCd || u.ab.rollCd <= 0) && (u.ab.rollCount ?? 0) < 2) {
+          u.ab.rollCount = (u.ab.rollCount ?? 0) + 1;
+          u.ab.rollCd = u.star >= 3 ? 7 : 8;
+          u.x = Math.max(u.radius, Math.min(ARENA_W - u.radius, u.ref.pandaBoundAlly.x + (u.team === 0 ? 15 : -15)));
+          u.y = Math.max(10, Math.min(ARENA_D - 10, u.ref.pandaBoundAlly.y));
+          b.emit({ k: 'tele', x: u.x, y: u.y, x2: u.x, y2: u.y, z: u.gz });
+          const shieldAmt = Math.min(u.maxHp * 0.30, u.ref.pandaBoundAlly.maxHp * 0.12);
+          u.ref.pandaBoundAlly.addSynergyShield('panda_shield', shieldAmt, 3.0);
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 10, s: '翻滚救援!', color: '#eccc68' });
         }
       }
     },
@@ -1039,73 +1055,327 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
 
   // Boss 1: 卑劣幽魂 (wretched_wraith)
   wretched_wraith: {
+    init(u, b) {
+      u.ab.iceBarrageCd = 4;
+      u.ref.wraithAnchors = [];
+      u.ref.reinforcementsDone = false;
+    },
+    attack(u, t, b) {
+      fire(u, t, b, 'ice_ball', b.atkOf(u));
+      b.slow(t, 0.3, 0.2, 2.0);
+    },
     tick(u, b, dt) {
-      if (u.channeling) return;
-      if (cool(u, 'iceBarrageCd', dt, 2)) {
-        u.ab.iceBarrageCd = 8;
-        u.channeling = true;
-        u.channelT = 2.4;
-        u.posture = 0;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '寒冰列阵蓄势中...', color: '#70a1ff' });
-        b.addTimedAction(2.4, () => {
-          if (!u.alive || u.stunT > 0 || !u.channeling) return;
-          b.emit({ k: 'shake', a: 5 });
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '寒冰列阵释放!', color: '#70a1ff' });
-          const foes = foesOf(u, b).filter((f) => f.alive);
-          for (const f of foes.slice(0, 3)) {
-            fire(u, f, b, 'ice_ball', u.atk * 1.2);
-            b.slow(f, 0.3, 0.2, 3.0);
-          }
+      if (cool(u, 'iceBarrageCd', dt, 4)) {
+        const cd = u.hp / u.maxHp <= 0.5 ? 8 : 9;
+        const round = (u.ab.barrageRound ?? 0) + 1;
+        u.ab.barrageRound = round;
+        const currentCast = b.startCast(u, '寒冰列阵', 2.4, 1.0, {
+          onRelease: (cast) => {
+            b.emit({ k: 'shake', a: 6 });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '寒冰列阵释放!', color: '#70a1ff' });
+            if (u.ref.wraithAnchors) {
+              for (const anc of u.ref.wraithAnchors) {
+                if (anc.alive && anc.ref.castId === cast.id) {
+                  b.emit({ k: 'debris', x: anc.x, y: anc.y, z: 0, s: 0, f: 0, block: false });
+                  b.kill(anc, null, true);
+                }
+              }
+            }
+            const angles = [-0.22, 0, 0.22];
+            const baseAngle = u.facing === 1 ? 0 : Math.PI;
+            for (let wave = 0; wave < 3; wave++) {
+              b.addTimedAction(wave * 0.6, () => {
+                if (!u.alive) return;
+                b.emit({ k: 'sfx', id: 'shoot' });
+                const waveHit = new Set<number>();
+                for (const offset of angles) {
+                  const ang = baseAngle + offset;
+                  const cosA = Math.cos(ang);
+                  const sinA = Math.sin(ang);
+                  b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + cosA * 450, y: u.y + sinA * 450 }, color: '#70a1ff', t: 0.3 });
+                  for (const f of foesOf(u, b)) {
+                    if (!f.alive || waveHit.has(f.id)) continue;
+                    const rx = f.x - u.x;
+                    const ry = f.y - u.y;
+                    const along = rx * cosA + ry * sinA;
+                    if (along < 0 || along > 480) continue;
+                    const perp = Math.abs(rx * sinA - ry * cosA);
+                    if (perp <= 24 + f.radius) {
+                      waveHit.add(f.id);
+                      b.damage(u, f, b.atkOf(u) * 0.55, 'magic');
+                      b.slow(f, 0.3, 0.2, 2.0);
+                    }
+                  }
+                }
+              });
+            }
+          },
+          onFinish: () => {
+            u.ab.iceBarrageCd = cd;
+            if (u.hp / u.maxHp <= 0.5 && (!u.ab.teleCd || u.ab.teleCd <= 0)) {
+              u.ab.teleCd = 12;
+              const backX = u.team === 0 ? ARENA_W * 0.2 : ARENA_W * 0.8;
+              const newY = Math.max(80, Math.min(ARENA_D - 80, u.y + (b.rng.next() > 0.5 ? 90 : -90)));
+              b.emit({ k: 'tele', x: u.x, y: u.y, x2: backX, y2: newY, z: u.gz });
+              u.x = backX;
+              u.y = newY;
+            }
+          },
+          onCancel: (reason) => {
+            u.ab.iceBarrageCd = cd;
+            if (u.ref.wraithAnchors) {
+              for (const anc of u.ref.wraithAnchors) {
+                if (anc.alive && anc.ref.castId === currentCast?.id) {
+                  b.kill(anc, null, true);
+                }
+              }
+            }
+          },
         });
+        if (currentCast) {
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '寒冰列阵蓄势中...', color: '#70a1ff' });
+          if (round <= 2) {
+            u.ref.wraithAnchors = u.ref.wraithAnchors || [];
+            for (const dy of [-55, 55]) {
+              const ax = clampX(u, u.x + (u.team === 0 ? -30 : 30));
+              const ay = clampY(u.y + dy);
+              const anchor = b.summon(u, 'ice_anchor', ax, ay, 1, { fx: 'summon' });
+              if (anchor) {
+                anchor.ref.nodeOwner = u;
+                anchor.ref.castId = currentCast.id;
+                u.ref.wraithAnchors.push(anchor);
+              }
+            }
+          }
+          b.addTimedAction(1.2, () => {
+            if (u.alive && u.cast?.id === currentCast.id) {
+              const baseAngle = u.facing === 1 ? 0 : Math.PI;
+              for (const offset of [-0.22, 0, 0.22]) {
+                const ang = baseAngle + offset;
+                b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + Math.cos(ang) * 450, y: u.y + Math.sin(ang) * 450 }, color: '#a0e7e5', t: 1.2 });
+              }
+            }
+          });
+        }
+      }
+      if (u.ab.teleCd) u.ab.teleCd = Math.max(0, u.ab.teleCd - dt);
+      if (!u.ref.reinforcementsDone && u.hp / u.maxHp <= 0.5) {
+        u.ref.reinforcementsDone = true;
+        b.summon(u, 'iceologer', u.x, clampY(u.y - 45), 1, { fx: 'summon' });
+        b.summon(u, 'iceologer', u.x, clampY(u.y + 45), 1, { fx: 'summon' });
       }
     },
   },
 
   // Boss 2: 丛林巨兽 (jungle_abomination)
   jungle_abomination: {
+    init(u, b) {
+      u.ab.abomSlamCd = 4;
+      u.ref.abomPuddles = [];
+      u.ref.abomNests = [];
+    },
     tick(u, b, dt) {
-      if (u.channeling) return;
-      if (cool(u, 'abomSlamCd', dt, 2)) {
-        u.ab.abomSlamCd = 9;
-        u.channeling = true;
-        u.channelT = 2.4;
-        u.posture = 0;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '剧毒重砸蓄势中...', color: '#2ed573' });
-        b.addTimedAction(2.4, () => {
-          if (!u.alive || u.stunT > 0 || !u.channeling) return;
-          b.emit({ k: 'shake', a: 8 });
-          b.emit({ k: 'boom', x: u.x, y: u.y, r: 70, color: '#2ed573', big: true });
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '剧毒重砸释放!', color: '#2ed573' });
-          b.aoe(u.x, u.y, 80, u.team, (f) => {
-            b.damage(u, f, u.atk * 1.5, 'phys');
-            b.poison(f, u.atk * 0.2, 4, 1, u);
-          });
+      if (cool(u, 'abomSlamCd', dt, 4)) {
+        const round = (u.ab.slamRound ?? 0) + 1;
+        u.ab.slamRound = round;
+        const currentCast = b.startCast(u, '剧毒重砸', 2.4, 1.0, {
+          onRelease: (cast) => {
+            b.emit({ k: 'shake', a: 8 });
+            b.emit({ k: 'boom', x: u.x, y: u.y, r: 100, color: '#2ed573', big: true });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '剧毒重砸释放!', color: '#2ed573' });
+            if (u.ref.abomNests) {
+              for (const n of u.ref.abomNests) {
+                if (n.alive && n.ref.castId === cast.id) b.kill(n, null, true);
+              }
+            }
+            b.aoe(u.x, u.y, 100, u.team, (f) => {
+              b.damage(u, f, b.atkOf(u) * 1.4, 'phys');
+            });
+            u.ref.abomPuddles = (u.ref.abomPuddles || []).filter((zid: number) => b.zones.some((z) => z.id === zid));
+            if (u.ref.abomPuddles.length >= 2) {
+              const oldestId = u.ref.abomPuddles.shift();
+              b.zones = b.zones.filter((z) => z.id !== oldestId);
+            }
+            const zone = b.addZone({
+              x: u.x,
+              y: u.y,
+              r: 65,
+              dur: 4,
+              team: u.team,
+              dps: b.atkOf(u) * 0.12,
+              kind: 'goo',
+              src: u,
+            });
+            u.ref.abomPuddles.push(zone.id);
+
+            if (u.hp / u.maxHp <= 0.5) {
+              for (const dy of [-40, 40]) {
+                const lineY = clampY(u.y + dy);
+                b.emit({ k: 'beam', a: { x: u.x, y: lineY }, b: { x: u.x + (u.facing === 1 ? 300 : -300), y: lineY }, color: '#2ed573', t: 0.4 });
+                for (const f of foesOf(u, b)) {
+                  if (f.alive && Math.abs(f.y - lineY) <= 25 && Math.abs(f.x - u.x) <= 320) {
+                    b.damage(u, f, b.atkOf(u) * 0.4, 'phys');
+                  }
+                }
+              }
+            }
+          },
+          onFinish: () => {
+            u.ab.abomSlamCd = 10;
+          },
+          onCancel: (reason) => {
+            u.ab.abomSlamCd = 10;
+            if (u.ref.abomNests) {
+              for (const n of u.ref.abomNests) {
+                if (n.alive && n.ref.castId === currentCast?.id) b.kill(n, null, true);
+              }
+            }
+          },
         });
+        if (currentCast) {
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '剧毒重砸蓄势中...', color: '#2ed573' });
+          b.emit({ k: 'zone', x: u.x, y: u.y, r: 100, color: '#2ed573', t: 2.4 });
+          if (round <= 3) {
+            u.ref.abomNests = u.ref.abomNests || [];
+            const offsets = [[110, -55], [110, 55]];
+            for (const [dx, dy] of offsets) {
+              const nx = clampX(u, u.x + (u.facing === 1 ? dx : -dx));
+              const ny = clampY(u.y + dy);
+              const nest = b.summon(u, 'root_nest', nx, ny, 1, { fx: 'summon' });
+              if (nest) {
+                nest.ref.nodeOwner = u;
+                nest.ref.castId = currentCast.id;
+                u.ref.abomNests.push(nest);
+              }
+            }
+          }
+          if (u.hp / u.maxHp <= 0.5) {
+            b.addTimedAction(1.2, () => {
+              if (u.alive && u.cast?.id === currentCast.id) {
+                for (const dy of [-40, 40]) {
+                  const lineY = clampY(u.y + dy);
+                  b.emit({ k: 'beam', a: { x: u.x, y: lineY }, b: { x: u.x + (u.facing === 1 ? 300 : -300), y: lineY }, color: '#26de81', t: 1.2 });
+                }
+              }
+            });
+          }
+        }
       }
     },
   },
 
   // Boss 3: 远古守护者 (ancient_guardian)
   ancient_guardian: {
+    init(u, b) {
+      u.ab.laserCd = 4;
+      u.ref.mines = [];
+      u.ref.spikesOpen = false;
+      u.ref.spikeTimer = 0;
+    },
     tick(u, b, dt) {
-      if (u.channeling) return;
-      if (cool(u, 'laserCd', dt, 2)) {
-        const target = foesOf(u, b).find((f) => f.alive);
-        if (target) {
-          u.ab.laserCd = 9;
-          u.channeling = true;
-          u.channelT = 2.4;
-          u.posture = 0;
-          b.emit({ k: 'beam', a: u, b: target, color: '#ffa502', t: 2.4 });
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '深渊光束锁定中...', color: '#ffa502' });
-          b.addTimedAction(2.4, () => {
-            if (!u.alive || u.stunT > 0 || !u.channeling || !target.alive) return;
-            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '深渊光束爆发!', color: '#ffa502' });
+      if (u.ref.spikeTimer > 0) {
+        u.ref.spikeTimer -= dt;
+        if (u.ref.spikeTimer <= 0) u.ref.spikesOpen = false;
+      }
+      if (cool(u, 'laserCd', dt, 4)) {
+        const round = (u.ab.laserRound ?? 0) + 1;
+        u.ab.laserRound = round;
+        const target = foesOf(u, b).find((f) => f.alive && !f.structure);
+        let lockedX = target ? target.x : u.x + (u.facing === 1 ? 400 : -400);
+        let lockedY = target ? target.y : u.y;
+        const currentCast = b.startCast(u, '深渊激光', 2.4, 1.0, {
+          target,
+          onRelease: (cast) => {
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '深渊激光爆发!', color: '#ffa502' });
             b.emit({ k: 'sfx', id: 'laser' });
-            b.damage(u, target, u.atk * 2.0, 'magic');
+            const dx = lockedX - u.x;
+            const dy = lockedY - u.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const nx = dx / len;
+            const ny = dy / len;
+            b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + nx * 800, y: u.y + ny * 800 }, color: '#ffa502', t: 0.6 });
+            const hit = new Set<number>();
+            for (const f of foesOf(u, b)) {
+              if (!f.alive || hit.has(f.id)) continue;
+              const rx = f.x - u.x;
+              const ry = f.y - u.y;
+              const along = rx * nx + ry * ny;
+              if (along < 0 || along > 850) continue;
+              const perp = Math.abs(rx * ny - ry * nx);
+              if (perp <= 26 + f.radius) {
+                hit.add(f.id);
+                b.damage(u, f, b.atkOf(u) * 1.8, 'magic');
+              }
+            }
+            if (u.ref.mines) {
+              for (const m of u.ref.mines) {
+                if (m.alive && m.ref.castId === cast.id) {
+                  b.emit({ k: 'boom', x: m.x, y: m.y, r: 40, color: '#1e90ff', big: true });
+                  b.aoe(m.x, m.y, 40, u.team, (f) => {
+                    b.damage(u, f, b.atkOf(u) * 0.45, 'magic');
+                  });
+                  b.addZone({ x: m.x, y: m.y, r: 40, dur: 3, dps: b.atkOf(u) * 0.1, kind: 'goo', team: u.team, src: u });
+                  b.kill(m, null, true);
+                }
+              }
+            }
+            u.ref.spikesOpen = true;
+            u.ref.spikeTimer = 3.0;
+          },
+          onFinish: () => {
+            u.ab.laserCd = 10;
+          },
+          onCancel: (reason) => {
+            u.ab.laserCd = 10;
+            u.ref.spikesOpen = false;
+            u.ref.spikeTimer = 0;
+            if (u.ref.mines) {
+              for (const m of u.ref.mines) {
+                if (m.alive && m.ref.castId === currentCast?.id) {
+                  b.kill(m, null, true);
+                }
+              }
+            }
+          },
+        });
+        if (currentCast) {
+          u.ref.spikesOpen = false;
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '深渊激光锁定中...', color: '#ffa502' });
+          if (round <= 3) {
+            u.ref.mines = u.ref.mines || [];
+            for (const dy of [-60, 60]) {
+              const mx = clampX(u, u.x + (u.team === 0 ? 80 : -80));
+              const my = clampY(u.y + dy);
+              const mine = b.summon(u, 'sea_mine', mx, my, 1, { fx: 'summon' });
+              if (mine) {
+                mine.ref.nodeOwner = u;
+                mine.ref.castId = currentCast.id;
+                u.ref.mines.push(mine);
+              }
+            }
+          }
+          b.addTimedAction(1.2, () => {
+            if (u.alive && u.cast?.id === currentCast.id) {
+              const frontFoe = foesOf(u, b).find((f) => f.alive && !f.structure);
+              if (frontFoe) {
+                lockedX = frontFoe.x;
+                lockedY = frontFoe.y;
+              }
+              b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: lockedX, y: lockedY }, color: '#ffa502', t: 1.2 });
+            }
           });
-        } else {
-          u.ab.laserCd = 0;
+        }
+      }
+    },
+    afterDamaged(u, src, d, b) {
+      if (u.ref.spikesOpen && !u.channeling && u.stunT <= 0 && src && src.alive && !src.structure) {
+        const now = b.t;
+        const lastReflect = (u.ref.reflectMap = u.ref.reflectMap || new Map<number, number>());
+        const lastTime = lastReflect.get(src.card) ?? -999;
+        if (now - lastTime >= 1.0) {
+          lastReflect.set(src.card, now);
+          b.damage(u, src, b.atkOf(u) * 0.15, 'phys', { noThorns: true });
+          b.emit({ k: 'hit', x: src.x, y: src.y, z: src.gz, big: false, color: '#ffa502' });
         }
       }
     },
@@ -1113,23 +1383,104 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
 
   // Boss 4: 悬浮烈焰 (wildfire)
   wildfire: {
+    init(u, b) {
+      u.ab.fireWallCd = 4;
+      u.ab.ringCd = 2;
+      u.ref.wildfireShields = [];
+      u.ref.shieldResupplied = false;
+      for (let i = 0; i < 4; i++) {
+        const ang = (i * Math.PI) / 2;
+        const sx = clampX(u, u.x + Math.cos(ang) * 45);
+        const sy = clampY(u.y + Math.sin(ang) * 45);
+        const shield = b.summon(u, 'wildfire_shield', sx, sy, 1, { fx: 'summon' });
+        if (shield) {
+          shield.ref.nodeOwner = u;
+          u.ref.wildfireShields.push(shield);
+        }
+      }
+    },
     tick(u, b, dt) {
-      if (u.channeling) return;
-      if (cool(u, 'fireWallCd', dt, 2)) {
-        u.ab.fireWallCd = 8;
-        u.channeling = true;
-        u.channelT = 2.4;
-        u.posture = 0;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '熔炉火壁蓄势中...', color: '#ff4757' });
-        b.addTimedAction(2.4, () => {
-          if (!u.alive || u.stunT > 0 || !u.channeling) return;
-          b.emit({ k: 'boom', x: u.x, y: u.y, r: 60, color: '#ff4757', big: true });
-          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '熔炉火壁释放!', color: '#ff4757' });
-          b.aoe(u.x, u.y, 70, u.team, (f) => {
-            b.damage(u, f, u.atk * 1.3, 'magic');
-            b.burn(f, u.atk * 0.25, 3, u);
+      if (!u.ref.shieldResupplied && u.hp / u.maxHp <= 0.5) {
+        u.ref.shieldResupplied = true;
+        u.ref.wildfireShields = (u.ref.wildfireShields || []).filter((s: Unit) => s.alive);
+        const needed = Math.max(0, 4 - u.ref.wildfireShields.length);
+        for (let i = 0; i < needed; i++) {
+          const ang = (i * Math.PI) / 2;
+          const sx = clampX(u, u.x + Math.cos(ang) * 45);
+          const sy = clampY(u.y + Math.sin(ang) * 45);
+          const shield = b.summon(u, 'wildfire_shield', sx, sy, 1, { fx: 'summon' });
+          if (shield) {
+            shield.ref.nodeOwner = u;
+            u.ref.wildfireShields.push(shield);
+          }
+        }
+      }
+      if (!u.channeling && cool(u, 'ringCd', dt, 7)) {
+        const nearFoe = foesOf(u, b).find((f) => f.alive && !f.structure && dist(u, f) <= 90);
+        if (nearFoe) {
+          u.ab.ringCd = 7;
+          b.emit({ k: 'zone', x: u.x, y: u.y, r: 90, color: '#ff4757', t: 1.0 });
+          b.addTimedAction(1.0, () => {
+            if (u.alive && !u.channeling) {
+              b.emit({ k: 'boom', x: u.x, y: u.y, r: 90, color: '#ff4757', big: true });
+              b.aoe(u.x, u.y, 90, u.team, (f) => {
+                b.damage(u, f, b.atkOf(u) * 0.6, 'magic');
+              });
+            }
           });
+        }
+      }
+      if (cool(u, 'fireWallCd', dt, 4)) {
+        const currentCast = b.startCast(u, '熔炉火壁', 2.4, 1.0, {
+          onRelease: (cast) => {
+            b.emit({ k: 'shake', a: 6 });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '熔炉火壁释放!', color: '#ff4757' });
+            const hit = new Set<number>();
+            const baseAngle = u.facing === 1 ? 0 : Math.PI;
+            for (const offset of [-0.25, 0, 0.25]) {
+              const ang = baseAngle + offset;
+              const cosA = Math.cos(ang);
+              const sinA = Math.sin(ang);
+              b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + cosA * 500, y: u.y + sinA * 500 }, color: '#ff4757', t: 0.5 });
+              for (const f of foesOf(u, b)) {
+                if (!f.alive || hit.has(f.id)) continue;
+                const rx = f.x - u.x;
+                const ry = f.y - u.y;
+                const along = rx * cosA + ry * sinA;
+                if (along < 0 || along > 520) continue;
+                const perp = Math.abs(rx * sinA - ry * cosA);
+                if (perp <= 30 + f.radius) {
+                  hit.add(f.id);
+                  b.damage(u, f, b.atkOf(u) * 0.9, 'magic');
+                  b.burn(f, b.atkOf(u) * 0.1, 3, u);
+                }
+              }
+            }
+          },
+          onFinish: () => {
+            u.ab.fireWallCd = 9;
+          },
+          onCancel: (reason) => {
+            u.ab.fireWallCd = 9;
+          },
         });
+        if (currentCast) {
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '熔炉火壁蓄势中...', color: '#ff4757' });
+          if (u.ref.wildfireShields) {
+            for (const s of u.ref.wildfireShields) {
+              if (s.alive) s.ref.castId = currentCast.id;
+            }
+          }
+          b.addTimedAction(1.2, () => {
+            if (u.alive && u.cast?.id === currentCast.id) {
+              const baseAngle = u.facing === 1 ? 0 : Math.PI;
+              for (const offset of [-0.25, 0, 0.25]) {
+                const ang = baseAngle + offset;
+                b.emit({ k: 'beam', a: { x: u.x, y: u.y }, b: { x: u.x + Math.cos(ang) * 500, y: u.y + Math.sin(ang) * 500 }, color: '#ff6b81', t: 1.2 });
+              }
+            }
+          });
+        }
       }
     },
   },

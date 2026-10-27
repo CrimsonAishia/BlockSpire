@@ -200,7 +200,7 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a6_gale_vanguard', '疾风重骑', 6, 'battle', 0, [['rampart_captain', 2, 'front'], ['skeleton_horseman', 2, 'back'], ['llama', 2, 'mid']]),
   E('a6_storm_peak', '绝壁斧兵', 6, 'battle', 1, [['armored_mountaineer', 2, 'front'], ['mountaineer', 2, 'front'], ['goat', 2, 'mid']]),
   E('a6_wind_barrage', '狂岚祭司', 6, 'battle', 2, [['squall_golem', 2, 'front'], ['windcaller', 2, 'back'], ['breeze', 1, 'mid']]),
-  E('a6e_storm_sanctum', '圣殿战团', 6, 'elite', undefined, [['tempest_golem', 1, 'mid'], ['rampart_captain', 2, 'front'], ['windcaller', 2, 'back']]),
+  E('a6e_storm_sanctum', '圣殿战团', 6, 'elite', undefined, [['squall_golem', 2, 'front'], ['rampart_captain', 2, 'front'], ['windcaller', 2, 'back']]),
 
   E('a6b_wildfire', '首领 · 悬浮烈焰', 6, 'boss', undefined, [['wildfire', 1, 'mid'], ['piglin_brute', 2, 'front'], ['blaze', 2, 'back']], '四面烈焰护盾旋转的烈焰领主。'),
   E('a6b_tempest', '首领 · 风暴傀儡', 6, 'boss', undefined, [['tempest_golem', 1, 'mid'], ['squall_golem', 2, 'front'], ['windcaller', 2, 'back']], '耸立在疾风峡谷之巅的风暴守卫。'),
