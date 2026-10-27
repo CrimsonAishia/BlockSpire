@@ -392,6 +392,17 @@
   min-height: 0;
   overflow-y: auto;
 }
+.stage.compact .lb-head,
+.stage.compact .lb-row {
+  grid-template-columns: 50px 1fr 44px 72px 130px 240px 80px;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 15px;
+}
+.stage.compact .lb-team img {
+  width: 32px;
+  height: 32px;
+}
 
 /* Arena screens: scroll, smaller headings and mode art; the main buttons stay at the bottom. */
 .stage.compact .classic-screen {
