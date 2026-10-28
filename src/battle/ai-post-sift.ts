@@ -298,44 +298,6 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
     },
   },
 
-  // 9. 速生藤蔓 (quick_vine)
-  quick_vine: {
-    tick(u, b, dt) {
-      if (!isCardLead(u, b)) return;
-      const cd = u.star >= 3 ? 6 : (u.star === 2 ? 7 : 8);
-      if (cool(u, 'wallCd', dt, 2)) {
-        const backAllies = alliesOf(u, b).filter((a) => a.alive && !a.structure && !a.isSummon && a.mob.defaultRow === 'back');
-        const threatened = backAllies.find((a) => foesOf(u, b).some((f) => f.alive && !f.isRanged && dist(a, f) <= 80));
-        if (threatened) {
-          u.ab.wallCd = cd;
-          const shieldPct = u.star >= 3 ? 0.50 : (u.star === 2 ? 0.45 : 0.40);
-          const dur = u.star >= 3 ? 4.0 : (u.star === 2 ? 3.5 : 3.0);
-          const targetCards = new Set<number>([threatened.card]);
-          for (const a of backAllies) {
-            if (targetCards.size < 2) targetCards.add(a.card);
-          }
-          const wholeCardHp = u.mob.hp * starPower(u.mob, u.star);
-          const shieldPerCard = (wholeCardHp * shieldPct) / targetCards.size;
-          for (const cardId of targetCards) {
-            const members = backAllies.filter((a) => a.card === cardId);
-            for (const m of members) {
-              m.addSynergyShield('vine_wall', shieldPerCard / members.length, dur);
-            }
-          }
-          b.aoe(threatened.x, threatened.y, 50, u.team, (f) => {
-            if (!f.boss) {
-              b.knock(f, threatened.x, threatened.y, 35);
-              if (u.star >= 3) f.stunT = Math.max(f.stunT, 0.5);
-            }
-          });
-          b.emit({ k: 'boom', x: threatened.x, y: threatened.y, r: 40, color: '#2ed573', big: false });
-          b.emit({ k: 'text', x: threatened.x, y: threatened.y, z: threatened.gz + 40, s: '根墙生起!', color: '#2ed573' });
-        } else {
-          u.ab.wallCd = 0;
-        }
-      }
-    },
-  },
 
   // 10. 红蓝鹦鹉 (parrot)
   parrot: {
@@ -449,32 +411,6 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
     },
   },
 
-  // 13. 巨兽藤蔓 (abomination_vine)
-  abomination_vine: {
-    tick(u, b, dt) {
-      if (cool(u, 'burrowCd', dt, 2)) {
-        const foes = foesOf(u, b).filter((f) => f.alive && dist(u, f) <= 80).slice(0, 2);
-        if (foes.length > 0) {
-          u.ab.burrowCd = 6;
-          for (const f of foes) {
-            let mul = 1.8;
-            if (b.has(u.team, 'combo_vine_colony') && (f.stunT > 0 || f.slowT > 0 || f.ref.charge || f.animAtk > 0)) {
-              const tm = b.sides[u.team].timers;
-              if (!tm.vine_colony_cd || b.t >= tm.vine_colony_cd) {
-                tm.vine_colony_cd = b.t + 7.0;
-                mul = 2.25;
-                b.emit({ k: 'text', x: f.x, y: f.y, z: f.gz + 40, s: '藤巢重击 225%!', color: '#2ed573' });
-              }
-            }
-            b.damage(u, f, u.atk * mul, 'phys');
-            b.emit({ k: 'boom', x: f.x, y: f.y, r: 25, color: '#2ed573', big: false });
-          }
-        } else {
-          u.ab.burrowCd = 0;
-        }
-      }
-    },
-  },
 
   // 14. 沉没骷髅 (sunken_skeleton)
   sunken_skeleton: {

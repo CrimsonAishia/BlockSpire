@@ -18,10 +18,10 @@ export const CRATES: CrateDef[] = [
   {
     id: 'origin', name: '「起源」补给箱', desc: '主世界最常见的补给，什么都有一点。', theme: [], act: 1, color: '#7fbf4d',
     pool: {
-      blue: ['zombie', 'skeleton', 'spider', 'slime', 'wolf', 'snow_golem', 'armadillo', 'baby_zombie', 'bat', 'jungle_zombie', 'tropical_slime', 'rabbit_scout'],
-      purple: ['creeper', 'witch', 'pillager', 'husk', 'polar_bear', 'cave_spider', 'frostbite', 'sniffer', 'snow_fox', 'chicken_jockey', 'dolphin', 'piglin_hunter', 'llama'],
-      pink: ['enderman', 'blaze', 'hoglin', 'guardian', 'shulker', 'sulfur_cube', 'panda', 'parrot', 'gold_axolotl', 'turtle'],
-      red: ['iron_golem', 'ravager', 'breeze', 'creaking', 'endersent'],
+      blue: ['zombie', 'skeleton', 'spider', 'slime', 'wolf', 'snow_golem'],
+      purple: ['creeper', 'witch', 'pillager', 'husk', 'polar_bear', 'cave_spider'],
+      pink: ['enderman', 'guardian', 'panda', 'turtle'],
+      red: ['iron_golem', 'ravager'],
       gold: ['warden', 'giant'],
     },
   },
@@ -59,7 +59,7 @@ export const CRATES: CrateDef[] = [
     id: 'ocean', name: '「深海遗迹」补给箱', desc: '海晶石打造的宝箱。偏向水生与构造体。', theme: ['aquatic', 'construct'], act: 1, color: '#3fc6d6',
     pool: {
       blue: ['zombie', 'slime', 'snow_golem', 'bogged', 'tropical_slime', 'pufferfish', 'baby_drowned', 'baby_turtle'],
-      purple: ['drowned', 'witch', 'stray', 'sunken_skeleton', 'glow_squid', 'dolphin', 'poison_anemone', 'quick_growing_kelp'],
+      purple: ['drowned', 'witch', 'stray', 'sunken_skeleton', 'glow_squid', 'dolphin'],
       pink: ['guardian', 'shulker', 'blaze', 'gold_axolotl', 'turtle', 'wave_whisperer', 'armored_drowned'],
       red: ['elder_guardian', 'iron_golem', 'abyssal_guardian'],
       gold: ['warden'],
@@ -89,7 +89,7 @@ export const CRATES: CrateDef[] = [
     id: 'ominous', name: '「不祥宝库」', desc: '试炼密室最深处的宝库。没有军规级。', theme: [], act: 1, color: '#ffc93c',
     pool: {
       blue: [],
-      purple: ['witch', 'vindicator', 'pillager', 'polar_bear', 'phantom', 'drowned', 'frostbite', 'parched', 'snow_fox', 'pumpkin_turret', 'chicken_jockey', 'quick_vine', 'ocelot', 'sunken_skeleton', 'dolphin', 'piglin_hunter', 'fungus_thrower', 'armored_piglin', 'armored_mountaineer', 'blastling', 'snareling', 'enderling', 'vex_raider', 'zombified_piglin'],
+      purple: ['witch', 'vindicator', 'pillager', 'polar_bear', 'phantom', 'drowned', 'frostbite', 'parched', 'snow_fox', 'pumpkin_turret', 'chicken_jockey', 'ocelot', 'sunken_skeleton', 'dolphin', 'piglin_hunter', 'fungus_thrower', 'armored_piglin', 'armored_mountaineer', 'blastling', 'snareling', 'enderling', 'vex_raider', 'zombified_piglin'],
       pink: ['enderman', 'blaze', 'evoker', 'piglin_brute', 'shulker', 'wither_skeleton', 'guardian', 'camel_husk', 'sulfur_cube', 'parrot', 'panda', 'gold_axolotl', 'turtle', 'baby_ghast', 'rampart_captain', 'soul_wizard', 'tower_wraith', 'icy_creeper'],
       red: ['iron_golem', 'ravager', 'elder_guardian', 'breeze', 'illusioner', 'creaking', 'endersent', 'frostbound_wraith', 'tower_guard'],
       gold: ['warden', 'wither', 'giant'],
@@ -130,7 +130,7 @@ export const CRATES: CrateDef[] = [
     id: 'verdant', name: '「藤蔓秘藏」补给箱', desc: '缠绕着巨型藤蔓的深林宝箱。偏向野兽与节肢。', theme: ['beast', 'arthropod'], act: 1, color: '#4fa85b', expedition: true,
     pool: {
       blue: ['wolf', 'bee', 'spider'],
-      purple: ['whisperer', 'poison_quill_vine', 'cave_spider', 'mossy_skeleton', 'enchanted_green_sheep'],
+      purple: ['whisperer', 'cave_spider', 'mossy_skeleton', 'enchanted_green_sheep'],
       pink: ['leaper', 'hoglin'],
       red: ['creaking', 'iron_golem'],
       gold: ['giant'],
@@ -181,7 +181,7 @@ export const CRATES: CrateDef[] = [
     id: 'overgrown_temple', name: '「藤木秘藏」补给箱', desc: '蔓生神殿的密林宝箱。偏向持续剧毒与近战接力。', theme: ['undead', 'beast'], act: 1, color: '#7cb67d', expedition: true,
     pool: {
       blue: ['jungle_zombie', 'spider', 'slime', 'wolf'],
-      purple: ['chicken_jockey', 'mooshroom', 'quick_vine', 'whisperer', 'ocelot', 'mossy_skeleton', 'enchanted_red_sheep'],
+      purple: ['chicken_jockey', 'mooshroom', 'whisperer', 'ocelot', 'mossy_skeleton', 'enchanted_red_sheep'],
       pink: ['parrot', 'panda', 'leaper', 'hoglin'],
       red: ['ravager', 'creaking', 'iron_golem'],
       gold: ['giant', 'warden', 'verdant_abomination', 'mooshroom_monstrosity'],
@@ -191,7 +191,7 @@ export const CRATES: CrateDef[] = [
     id: 'abyssal_monument', name: '「海晶军需」补给箱', desc: '深渊纪念碑的水底军需箱。偏向抗压续航与减速控制。', theme: ['aquatic', 'beast'], act: 1, color: '#65bfbb', expedition: true,
     pool: {
       blue: ['tropical_slime', 'pufferfish', 'zombie', 'snow_golem', 'baby_drowned', 'baby_turtle'],
-      purple: ['sunken_skeleton', 'glow_squid', 'dolphin', 'drowned', 'poison_anemone', 'quick_growing_kelp'],
+      purple: ['sunken_skeleton', 'glow_squid', 'dolphin', 'drowned'],
       pink: ['gold_axolotl', 'turtle', 'guardian', 'wave_whisperer', 'armored_drowned'],
       red: ['elder_guardian', 'drowned_necromancer', 'abyssal_guardian'],
       gold: ['giant', 'warden'],

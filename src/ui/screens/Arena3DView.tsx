@@ -71,6 +71,8 @@ interface HudCard {
   spawned: number;
   dmg: number;
   star: number;
+  hp: number;
+  maxHp: number;
 }
 
 interface Hud {
@@ -87,11 +89,28 @@ function snapshot(b: Battle, max: [number, number]): Hud {
   const hp: [number, number] = [0, 0];
   for (const u of b.units) if (u.alive && !u.structure) hp[u.team] += u.hp;
   const boss = b.units.find((u) => u.boss && !u.isSummon);
+  const cardHp: number[] = new Array(b.cards.length).fill(0);
+  const cardMax: number[] = new Array(b.cards.length).fill(0);
+  for (const u of b.units) {
+    if (u.card !== undefined && u.card >= 0 && u.card < b.cards.length) {
+      if (u.alive) cardHp[u.card] += u.hp;
+      cardMax[u.card] += u.maxHp;
+    }
+  }
   return {
     t: b.t,
     hp,
     max,
-    cards: b.cards.map((c) => ({ mob: c.mob, team: c.team, alive: c.alive, spawned: c.spawned, dmg: c.dmg, star: c.star })),
+    cards: b.cards.map((c, i) => ({
+      mob: c.mob,
+      team: c.team,
+      alive: c.alive,
+      spawned: c.spawned,
+      dmg: c.dmg,
+      star: c.star,
+      hp: cardHp[i] ?? 0,
+      maxHp: cardMax[i] || (c.spawned > 0 ? c.spawned : 1),
+    })),
     boss: boss ? { name: boss.mob.name, hp: boss.alive ? boss.hp : 0, max: boss.maxHp, shield: !!boss.ref.witherArmor } : undefined,
     sudden: b.t >= b.suddenAt,
     skillLeft: b.skillLeft[0],
@@ -1025,16 +1044,21 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
 
 function Chip({ c }: { c: HudCard }) {
   const m = mobDef(c.mob);
+  const hpRatio = c.maxHp > 0 ? Math.max(0, Math.min(1, c.hp / c.maxHp)) : (c.spawned > 0 ? c.alive / c.spawned : 0);
+  const hpPct = Math.round(hpRatio * 100);
+  const isBlue = c.team === 0;
+
   return (
-    <div class={`chip r-${m.rarity} ${c.alive <= 0 ? 'dead' : ''}`}>
+    <div class={`chip r-${m.rarity} ${c.alive <= 0 ? 'dead' : ''}`} title={`${m.name} (★${c.star}): ${Math.round(c.hp)}/${Math.round(c.maxHp)}`}>
+      <div class={`chip-bg-bar ${isBlue ? 'blue' : 'red'}`} style={{ width: `${c.alive <= 0 ? 0 : hpPct}%` }} />
       <img src={url.mob(c.mob)} />
       <div class="chip-info">
-        <div class="chip-name" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span>{m.name}</span>
+        <div class="chip-row">
+          <span class="chip-name">{m.name}</span>
           <Stars star={c.star} size="sm" />
         </div>
-        <div class="chip-stat">
-          <span>
+        <div class="chip-row chip-sub">
+          <span class="chip-count">
             {c.alive}/{c.spawned}
           </span>
           <span class="chip-dmg">⚔ {Math.round(c.dmg)}</span>

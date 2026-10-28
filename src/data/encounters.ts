@@ -149,8 +149,8 @@ export const ENCOUNTERS: EncounterDef[] = [
 
   // ───── V3.3 遗迹远征遭遇模板 ─────
   E('a1_forest_scout', '林桥斥候', 1, 'battle', 0, [['skeleton', 1, 'back'], ['spider', 1, 'front']]),
-  E('a1_forest_blast', '深林跃袭', 1, 'battle', 2, [['leaper', 1, 'mid'], ['poison_quill_vine', 1, 'back'], ['wolf', 1, 'front']]),
-  E('a1e_forest_royal', '藤蔓卫队', 1, 'elite', undefined, [['skeleton_vanguard', 1, 'front'], ['whisperer', 1, 'mid'], ['poison_quill_vine', 1, 'back']]),
+  E('a1_forest_blast', '深林跃袭', 1, 'battle', 2, [['leaper', 1, 'mid'], ['mossy_skeleton', 1, 'back'], ['wolf', 1, 'front']]),
+  E('a1e_forest_royal', '藤蔓卫队', 1, 'elite', undefined, [['skeleton_vanguard', 1, 'front'], ['whisperer', 1, 'mid'], ['mossy_skeleton', 1, 'back']]),
   E('a1_tomb_patrol', '王墓巡逻', 1, 'battle', 0, [['husk', 1, 'front'], ['skeleton', 1, 'back']]),
   E('a1_tomb_ritual', '魂火祭仪', 1, 'battle', 2, [['skeleton_vanguard', 1, 'front'], ['soul_wisp', 1, 'back'], ['zombie', 1, 'mid']]),
   E('a1e_tomb_priest', '墓穴祭司', 1, 'elite', undefined, [['necromancer', 1, 'back'], ['skeleton_vanguard', 1, 'front']]),
@@ -179,8 +179,8 @@ export const ENCOUNTERS: EncounterDef[] = [
 
   E('a5_jungle_horde', '蔓生群落', 5, 'battle', 0, [['jungle_zombie', 2, 'front'], ['chicken_jockey', 2, 'front'], ['spider', 2, 'mid']]),
   E('a5_beast_pack', '密林兽径', 5, 'battle', 1, [['mooshroom', 2, 'front'], ['ocelot', 2, 'mid'], ['parrot', 2, 'back']]),
-  E('a5_creeper_nest', '毒刺藤谷', 5, 'battle', 2, [['panda', 2, 'front'], ['quick_vine', 2, 'mid'], ['poison_quill_vine', 2, 'back']]),
-  E('a5e_abomination_vines', '巨兽盘踞', 5, 'elite', undefined, [['abomination_vine', 2, 'front'], ['whisperer', 2, 'mid'], ['leaper', 2, 'mid']]),
+  E('a5_creeper_nest', '毒刺密谷', 5, 'battle', 2, [['panda', 2, 'front'], ['ocelot', 2, 'mid'], ['mossy_skeleton', 2, 'back']]),
+  E('a5e_abomination_vines', '巨兽盘踞', 5, 'elite', undefined, [['panda', 2, 'front'], ['whisperer', 2, 'mid'], ['leaper', 2, 'mid']]),
 
   E('a5_abyssal_tide', '深渊涌浪', 5, 'battle', 0, [['tropical_slime', 2, 'front'], ['sunken_skeleton', 2, 'back'], ['drowned', 2, 'front']]),
   E('a5_coral_patrol', '珊瑚暗哨', 5, 'battle', 1, [['pufferfish', 2, 'front'], ['dolphin', 2, 'front'], ['glow_squid', 2, 'back']]),
@@ -188,7 +188,7 @@ export const ENCOUNTERS: EncounterDef[] = [
   E('a5e_elder_depth', '海晶深潜卫', 5, 'elite', undefined, [['elder_guardian', 1, 'back'], ['drowned_necromancer', 2, 'back'], ['turtle', 2, 'front']]),
 
   E('a5b_wraith', '首领 · 卑劣幽魂', 5, 'boss', undefined, [['wretched_wraith', 1, 'back'], ['polar_bear', 1, 'front'], ['iceologer', 1, 'back'], ['icy_creeper', 1, 'mid']], '霜冻峡湾深处的远古亡魂，极地近卫与严冬法阵层层护驾。'),
-  E('a5b_abomination', '首领 · 丛林巨兽', 5, 'boss', undefined, [['jungle_abomination', 1, 'front'], ['panda', 1, 'front'], ['whisperer', 1, 'mid'], ['quick_vine', 1, 'mid']], '蔓生神殿由腐木与藤蔓纠缠而成的庞然巨物，密林兽群拱卫身旁。'),
+  E('a5b_abomination', '首领 · 丛林巨兽', 5, 'boss', undefined, [['jungle_abomination', 1, 'front'], ['panda', 1, 'front'], ['whisperer', 1, 'mid'], ['ocelot', 1, 'mid']], '蔓生神殿由腐木与藤蔓纠缠而成的庞然巨物，密林兽群拱卫身旁。'),
   E('a5b_guardian', '首领 · 远古守护者', 5, 'boss', undefined, [['ancient_guardian', 1, 'mid'], ['turtle', 1, 'front'], ['guardian', 1, 'back'], ['wave_whisperer', 1, 'mid']], '沉睡于深渊核心的远古海灵，深海卫队严密死守。'),
 
   // ───── 第六幕 · 遗迹远征 (下界堡垒 / 疾风圣殿) ─────

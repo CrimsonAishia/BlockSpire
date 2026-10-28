@@ -1252,7 +1252,7 @@ export class Battle {
     const smart = this.smart[u.team];
     if (smart && TAC.dodge && (dodgeStep(this, u, dt) || retreatStep(this, u, dt) || kiteStep(this, u, dt))) return;
     const targetOutOfReach = u.speed <= 0 && !!u.target && Math.hypot(u.target.x - u.x, u.target.y - u.y) > this.reach(u, u.target);
-    if (!u.target || !u.target.alive || u.retarget <= 0 || u.target.invisT > 0 || !this.canReach(u, u.target) || targetOutOfReach) {
+    if (!u.target || !u.target.alive || u.target.team === u.team || u.retarget <= 0 || u.target.invisT > 0 || !this.canReach(u, u.target) || targetOutOfReach) {
       const specialized = b.target ? b.target(u, this) : undefined;
       u.target = specialized !== undefined ? specialized : (u.speed <= 0 ? this.findTarget(u, (e) => Math.hypot(e.x - u.x, e.y - u.y) <= this.reach(u, e)) : this.findTarget(u));
       u.retarget = 0.35 + this.rng.next() * 0.2;
@@ -1283,8 +1283,8 @@ export class Battle {
       }
     }
     const t = u.target;
-    if (!t) {
-      // Nothing reachable: drift toward the enemy side.
+    if (!t || t.team === u.team) {
+      // Nothing reachable or target is an ally: drift toward the enemy side.
       u.moving = false;
       return;
     }
@@ -1368,6 +1368,7 @@ export class Battle {
   }
 
   private attackNow(u: Unit, t: Unit, b: Behavior) {
+    if (!t || !t.alive || t.team === u.team) return;
     u.moving = false;
     u.atkTimer = u.cd;
     u.animAtk = 0.22;
@@ -1398,6 +1399,7 @@ export class Battle {
 
   /** Default melee hit or projectile shot. */
   basicAttack(u: Unit, t: Unit, mul = 1) {
+    if (!t.alive || t.team === u.team) return;
     if (u.proj) {
       this.shoot(u, t, u.proj, this.atkOf(u) * mul);
       if (u.fx.multishot > 0) {
@@ -1409,6 +1411,7 @@ export class Battle {
   }
 
   meleeHit(u: Unit, t: Unit, amount: number, opts: { noSweep?: boolean } = {}) {
+    if (!t.alive || t.team === u.team) return;
     let amt = amount;
     if (u.firstHit) {
       u.firstHit = false;
@@ -1930,6 +1933,7 @@ export class Battle {
   }
 
   private projHit(p: Proj, t: Unit) {
+    if (p.team === t.team) return;
     const src = p.src;
     // Projectile dodges / reflections happen in damage() via onDamaged, signalled by `proj`.
     const dealt = this.damage(src, t, p.dmg, p.dk, { proj: true, fire: p.fire, projRef: p });
@@ -2793,6 +2797,7 @@ export class Battle {
     o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean; isPandaIntercept?: boolean } = {},
   ): number {
     if (!t.alive || amount <= 0 || t.ghost) return 0;
+    if (src && src.team === t.team) return 0;
     if (t.phaseImmunityTimer > 0) {
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【转阶段霸体】', color: '#ff7675' });
       return 0;
@@ -3319,7 +3324,7 @@ export class Battle {
             this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '暗潮映光!', color: '#00cec9' });
           }
         }
-        if (this.has(t.team, 'combo_thorn_wall') && t.mob.id === 'quick_vine') {
+        if (this.has(t.team, 'combo_thorn_wall') && (t.mob.id === 'armadillo' || t.mob.id === 'sniffer')) {
           const tm = this.sides[t.team].timers;
           if (!tm.thorn_wall_cd || this.t >= tm.thorn_wall_cd) {
             tm.thorn_wall_cd = this.t + 8.0;
@@ -3329,7 +3334,7 @@ export class Battle {
                 this.addTimedAction(4.0, () => { if (a.alive) a.atkSpd /= 1.20; });
               }
             }
-            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '藤墙毒刺!', color: '#26de81' });
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '甲盾掩护!', color: '#26de81' });
           }
         }
       }
@@ -3900,7 +3905,7 @@ export class Battle {
   }
 
   burn(t: Unit, dps: number, dur: number, src: Unit | null) {
-    if (t.immune & IMM_BURN || !t.alive || this.sides[t.team].fireImmune) return;
+    if (t.immune & IMM_BURN || !t.alive || this.sides[t.team].fireImmune || (src && src.team === t.team)) return;
     if (src) {
       dps *= src.fx.burnMul;
       dur += src.fx.burnMul > 1.5 ? 1 : 0;
@@ -3912,7 +3917,7 @@ export class Battle {
   }
 
   poison(t: Unit, dps: number, dur: number, maxStacks: number, src: Unit | null) {
-    if (t.immune & IMM_POISON || !t.alive) return;
+    if (t.immune & IMM_POISON || !t.alive || (src && src.team === t.team)) return;
     if (src) dps *= src.fx.poisonMul;
     t.poisonDps = Math.max(t.poisonT > 0 ? t.poisonDps : 0, dps);
     t.poisonStacks = Math.min(Math.max(maxStacks, 1), t.poisonStacks + 1);
@@ -3921,7 +3926,7 @@ export class Battle {
   }
 
   wither(t: Unit, dps: number, dur: number, src: Unit | null) {
-    if (t.immune & IMM_WITHER || !t.alive) return;
+    if (t.immune & IMM_WITHER || !t.alive || (src && src.team === t.team)) return;
     t.witherDps = Math.max(t.witherT > 0 ? t.witherDps : 0, dps);
     t.witherT = Math.max(t.witherT, dur);
     t.ref.witherSrc = src;
@@ -3932,7 +3937,7 @@ export class Battle {
    * (blazes, magma cubes...) take three times the damage.
    */
   freeze(t: Unit, dps: number, dur: number, src: Unit | null) {
-    if (!t.alive || COLD_MOBS.has(t.mob.id) || t.boss && t.mob.id === 'wither_boss') return;
+    if (!t.alive || COLD_MOBS.has(t.mob.id) || (t.boss && t.mob.id === 'wither_boss') || (src && src.team === t.team)) return;
     if (FIRE_BODY.has(t.mob.id)) dps *= 3;
     if (src && this.has(src.team, 'combo_frost')) dur *= 1.5;
     if (src && this.has(src.team, 'blue_ice')) dur += 1;
@@ -3943,7 +3948,7 @@ export class Battle {
   }
 
   slow(t: Unit, move: number, atk: number, dur: number, srcTeam?: 0 | 1) {
-    if (t.immune & IMM_SLOW) return;
+    if (t.immune & IMM_SLOW || (srcTeam !== undefined && srcTeam === t.team)) return;
     const actualDur = this.has(t.team, 'reinforced_mail') ? dur * 0.5 : dur;
     t.slowMove = Math.max(t.slowT > 0 ? t.slowMove : 0, move);
     t.slowAtk = Math.max(t.slowT > 0 ? t.slowAtk : 0, atk);

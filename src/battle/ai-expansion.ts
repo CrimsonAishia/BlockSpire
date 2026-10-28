@@ -463,47 +463,6 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
     },
   },
 
-  // 14. 剧毒海葵 (poison_anemone)
-  poison_anemone: {
-    move() {
-      return true; // 固定站位
-    },
-    onHit(u, t, dealt, b) {
-      if (dealt <= 0) return;
-      const cRef = getCardRef(u, b);
-      if (!cRef) return;
-      cRef.hits = (cRef.hits ?? 0) + 1;
-      const req = u.star >= 3 ? 3 : 4;
-      if (cRef.hits % req === 0) {
-        b.poison(t, b.atkOf(u) * 0.25, 2.0, 1, u);
-        b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size, s: '海葵刺毒!', color: '#16a085' });
-      }
-    },
-  },
-
-  // 15. 速生海带 (quick_growing_kelp)
-  quick_growing_kelp: {
-    attack() {},
-    move() {
-      return true;
-    },
-    tick(u, b, dt) {
-      if (!isCardLead(u, b)) return;
-      if (coolCard(u, 'kelp_wall', dt, 3.0, b)) {
-        resetCardCd(u, 'kelp_wall', 9.0, b);
-        const backAllies = alliesOf(u, b).filter((a) => a.alive && a.row === 'back');
-        if (backAllies.length === 0) return;
-        const foes = foesOf(u, b).filter((f) => f.alive && !f.structure && !f.isRanged);
-        if (foes.length === 0) return;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '海带栅墙!', color: '#1abc9c' });
-        const target = backAllies[0];
-        const hpRatio = u.star >= 3 ? 0.28 : 0.22;
-        const kx = clampX(target, target.x + (u.team === 0 ? 35 : -35));
-        const ky = clampY(target.y);
-        b.summon(u, 'kelp_wall', kx, ky, hpRatio, { lifespan: 3, fx: 'summon' });
-      }
-    },
-  },
 
   // 16. 蓝色附魔绵羊 (enchanted_blue_sheep)
   enchanted_blue_sheep: {
@@ -993,10 +952,4 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
   // 灾厄精锐卫从 (arch_reinforcement)
   arch_reinforcement: {},
 
-  // 海带根墙 (kelp_wall)
-  kelp_wall: {
-    move() {
-      return true;
-    },
-  },
 };

@@ -71,36 +71,6 @@ function resetCardCd(u: Unit, key: string, cd: number, b: Battle): number {
   return finalCd;
 }
 
-function vineBurrowToFoe(u: Unit, b: Battle) {
-  const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-  if (foes.length === 0) return;
-  const e = foes.reduce((best, f) => (dist(u, f) < dist(u, best) ? f : best), foes[0]);
-  const homeX = u.team === 0 ? -1 : 1;
-  const angle = (b.rng.range(-1, 1) * Math.PI) / 3;
-  const d = b.rng.range(70, 100);
-  const nx = clampX(u, e.x + homeX * Math.cos(angle) * d);
-  const ny = clampY(e.y + Math.sin(angle) * d);
-
-  b.emit({ k: 'boom', x: u.x, y: u.y, r: 25, color: '#2ed573', big: false });
-  b.emit({ k: 'tele', x: u.x, y: u.y, x2: nx, y2: ny, z: u.gz });
-  b.emit({ k: 'sfx', id: 'teleport' });
-
-  u.x = u.px = nx;
-  u.y = u.py = ny;
-  b.teleported(u);
-  u.target = e;
-  u.facing = e.x > u.x ? 1 : -1;
-  u.retarget = 1.0;
-
-  b.emit({ k: 'text', x: nx, y: ny, z: u.gz + u.z + u.size, s: '藤蔓破土!', color: '#2ed573' });
-  b.emit({ k: 'boom', x: nx, y: ny, r: 35, color: '#2ed573', big: false });
-
-  if (u.star >= 3) {
-    b.aoe(nx, ny, 80, u.team, (foe) => {
-      b.slow(foe, 0.25, 0.15, 2.0);
-    });
-  }
-}
 
 export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
   // 1. 骷髅先锋 (skeleton_vanguard)
@@ -636,7 +606,16 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           u.y = ty;
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '跃入奇袭!', color: '#ffa502' });
           b.emit({ k: 'boom', x: u.x, y: u.y, r: 40, color: '#ffa502', big: false });
-          b.damage(u, t, b.atkOf(u) * 1.2, 'phys', { melee: true });
+          let mul = 1.2;
+          if (b.has(u.team, 'combo_vine_colony') && (t.poisonT > 0 || t.stunT > 0 || t.slowT > 0 || t.ref.charge || t.animAtk > 0)) {
+            const tm = b.sides[u.team].timers;
+            if (!tm.vine_colony_cd || b.t >= tm.vine_colony_cd) {
+              tm.vine_colony_cd = b.t + 7.0;
+              mul = 1.5;
+              b.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + 40, s: '密林奇袭 +25%!', color: '#2ed573' });
+            }
+          }
+          b.damage(u, t, b.atkOf(u) * mul, 'phys', { melee: true });
           if (u.star >= 3) {
             u.takenMul *= 0.80;
             b.addTimedAction(2.0, () => {
@@ -644,43 +623,6 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
             });
           }
         });
-      }
-    },
-  },
-
-  // 15. 毒刺藤 (poison_quill_vine)
-  poison_quill_vine: {
-    init(u, b) {
-      u.ab.burrowT = 0.3 + b.rng.range(0, 0.25);
-    },
-    tick(u, b, dt) {
-      if (u.ab.burrowT !== undefined && u.ab.burrowT > 0) {
-        u.ab.burrowT -= dt;
-        if (u.ab.burrowT <= 0) {
-          u.ab.burrowT = 0;
-          vineBurrowToFoe(u, b);
-        }
-      }
-
-      const foes = foesOf(u, b).filter((f) => f.alive && !f.structure);
-      if (foes.length > 0) {
-        const inReach = foes.some((f) => dist(u, f) <= b.rangeOf(u));
-        if (!inReach && cool(u, 'vine_reburrow', dt, 3)) {
-          vineBurrowToFoe(u, b);
-        }
-      }
-
-      const t = u.target && u.target.alive ? u.target : foes[0];
-      if (t && Math.abs(t.x - u.x) > 2) {
-        u.facing = t.x > u.x ? 1 : -1;
-      }
-    },
-    onHit(u, t, dealt, b) {
-      if (dealt <= 0) return;
-      const dur = u.star >= 3 ? 4.5 : 3;
-      b.poison(t, b.atkOf(u) * 0.35, dur, 1, u);
-      if (cool(u, 'vine_poison_text', 0.1, 2)) {
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '剧毒喷吐!', color: '#2ed573' });
       }
     },
   },

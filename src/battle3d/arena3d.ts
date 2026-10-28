@@ -1317,7 +1317,7 @@ export class Arena3D {
         v.h = h;
         // Mirror toward the facing direction as seen from the camera; turning folds through 0.
         const yawC = Math.atan2(camPos.x - x, camPos.z - z);
-        const baseFacing = u.mob.id === 'poison_quill_vine' ? -1 : 1;
+        const baseFacing = 1;
         const want = u.facing * baseFacing * Math.cos(yawC) >= 0 ? 1 : -1;
         if (v.flipCur === undefined) v.flipCur = want;
         v.flipCur += Math.sign(want - v.flipCur) * Math.min(Math.abs(want - v.flipCur), dt * 13);

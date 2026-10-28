@@ -66,7 +66,6 @@ export const MOB_COST: Record<string, [number, number, number]> = {
   geomancer: [3, 5, 9],
   whisperer: [3, 5, 9],
   mountaineer: [3, 5, 9],
-  poison_quill_vine: [3, 5, 9],
   enchanter: [4, 7, 12],
   royal_guard: [4, 7, 12],
   wraith: [4, 7, 12],

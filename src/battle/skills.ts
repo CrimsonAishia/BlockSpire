@@ -159,12 +159,22 @@ export function tame(b: Battle, team: 0 | 1, u: Unit): boolean {
   u.ref.beam = null;
   u.ref.charge = null;
   u.ref.tamed = 1;
-  for (const p of b.projs) if (p.src === u) p.team = team;
+  for (const p of b.projs) {
+    if (p.src === u) p.team = team;
+    if (p.target === u && p.team === team) p.alive = false;
+  }
+  for (const ally of b.live[team]) {
+    if (ally.target === u) {
+      ally.target = null;
+      ally.retarget = 0;
+    }
+  }
   if (b.has(team, 'wheat')) {
     u.hp = u.maxHp;
     u.atk *= 1.3;
   } else u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.3);
-  u.burnT = u.poisonT = u.witherT = 0;
+  u.burnT = u.poisonT = u.witherT = u.freezeT = u.slowT = 0;
+  u.stunT = u.airT = u.levT = 0;
   b.live[team].push(u);
   b.tamed.push(u);
   b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 8, s: '驯服!', color: '#ff9a4d' });

@@ -19,19 +19,19 @@ const EXPEDITION_MOB_IDS = new Set<string>([
   // V3.3 远征生物
   'skeleton_vanguard', 'redstone_golem', 'soul_wisp', 'enchanter', 'geomancer',
   'royal_guard', 'wraith', 'necromancer', 'iceologer', 'whisperer', 'windcaller',
-  'key_golem', 'mountaineer', 'leaper', 'poison_quill_vine', 'squall_golem',
+  'key_golem', 'mountaineer', 'leaper', 'squall_golem',
   'drowned_necromancer', 'redstone_cube',
   // V3.4 地下城远征生物
   'baby_zombie', 'bat', 'snow_fox', 'pumpkin_turret', 'raven',
-  'jungle_zombie', 'chicken_jockey', 'mooshroom', 'quick_vine', 'parrot',
-  'ocelot', 'panda', 'abomination_vine',
+  'jungle_zombie', 'chicken_jockey', 'mooshroom', 'parrot',
+  'ocelot', 'panda',
   'sunken_skeleton', 'tropical_slime', 'pufferfish', 'glow_squid', 'gold_axolotl', 'turtle', 'dolphin',
   'piglin_hunter', 'piglin_swordsman', 'fungus_thrower', 'baby_ghast', 'armored_piglin',
   'rampart_captain', 'skeleton_horseman', 'llama', 'armored_mountaineer',
   'blastling', 'snareling', 'endersent', 'soul_wizard', 'tower_wraith', 'mob_spawner', 'enderling',
   // 地下城扩展（群落与异种新卡 + 高稀有度卡）
   'baby_drowned', 'rabbit_scout', 'woolly_cow', 'baby_turtle',
-  'mossy_skeleton', 'poison_anemone', 'quick_growing_kelp', 'enchanted_blue_sheep',
+  'mossy_skeleton', 'enchanted_blue_sheep',
   'enchanted_red_sheep', 'enchanted_green_sheep', 'vex_raider', 'zombified_piglin',
   'zombified_hunter', 'wither_archer', 'wave_whisperer', 'armored_pillager',
   'armored_vindicator', 'armored_drowned', 'icy_creeper',

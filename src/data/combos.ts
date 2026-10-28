@@ -106,7 +106,7 @@ export const COMBOS: ComboDef[] = [
   },
   {
     id: 'jungle_venom', name: '丛林毒阵', color: '#2ed573',
-    needs: [['jungle_zombie'], ['whisperer', 'poison_quill_vine', 'cave_spider', 'spider']],
+    needs: [['jungle_zombie'], ['whisperer', 'cave_spider', 'spider']],
     desc: '丛林僵尸与毒性伙伴攻击中毒敌人时，直接伤害 +15%（不对同一持续伤害重复结算）。',
   },
   {
@@ -146,18 +146,18 @@ export const COMBOS: ComboDef[] = [
   },
   {
     id: 'forest_watch', name: '林地守望', color: '#4fa85b',
-    needs: [['mooshroom', 'jungle_zombie'], ['quick_vine', 'panda']],
+    needs: [['mooshroom', 'jungle_zombie'], ['armadillo', 'panda']],
     desc: '保护技能成功吸收或抵御伤害后，厚实近战下一轮攻击附加 60% 额外伤害（全队 6 秒冷却）。',
   },
   {
     id: 'canopy_hunt', name: '林梢追猎', color: '#10ac84',
-    needs: [['ocelot'], ['jungle_zombie', 'poison_quill_vine']],
+    needs: [['ocelot'], ['jungle_zombie', 'whisperer']],
     desc: '豹猫命中中毒目标使其减速 25% 持续 2 秒（若目标为蓄势首领转为 15 破势，全队 6 秒冷却）。',
   },
   {
-    id: 'thorn_wall', name: '藤墙毒刺', color: '#2ed573',
-    needs: [['quick_vine'], ['sunken_skeleton', 'piglin_hunter', 'skeleton']],
-    desc: '根墙阻挡或吸收近战伤害后，射手伙伴获得攻速 +20%（持续 4 秒，全队 8 秒冷却）。',
+    id: 'thorn_wall', name: '甲盾掩护', color: '#2ed573',
+    needs: [['armadillo', 'sniffer'], ['sunken_skeleton', 'piglin_hunter', 'skeleton']],
+    desc: '掩护伙伴抵御或吸收伤害后，射手伙伴获得攻速 +20%（持续 4 秒，全队 8 秒冷却）。',
   },
   {
     id: 'caravan', name: '驮队护航', color: '#eccc68',
@@ -195,9 +195,9 @@ export const COMBOS: ComboDef[] = [
     desc: '构造体伙伴（铁傀儡/雪傀儡护盾吸收伤害，或刷怪笼召唤）触发技能后，杰克南瓜灯攻速 +25%（持续 4 秒，全队 8 秒冷却）。',
   },
   {
-    id: 'vine_colony', name: '藤巢接力', color: '#2ed573',
-    needs: [['abomination_vine'], ['quick_vine', 'jungle_zombie']],
-    desc: '伏击藤蔓命中被阻截的敌人时，本次伤害提升 25%（全队 7 秒冷却）。',
+    id: 'vine_colony', name: '密林奇袭', color: '#2ed573',
+    needs: [['leaper'], ['whisperer', 'jungle_zombie']],
+    desc: '跳跃者突袭命中被缠绕或受毒害的敌人时，本次伤害提升 25%（全队 7 秒冷却）。',
   },
   {
     id: 'fungus_legion', name: '菌火协射', color: '#a55eea',

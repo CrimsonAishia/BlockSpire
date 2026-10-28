@@ -283,22 +283,6 @@ export const MOBS: MobDef[] = [
     flavor: '在潮湿雨林中长满苔藓的骷髅，骨箭上浸润着雨林的天然剧毒。',
   },
   {
-    id: 'poison_anemone', name: '剧毒海葵', rarity: 'purple', families: ['aquatic', 'beast'], role: 'ranged',
-    hp: 220, atk: 22, cd: 1.6, range: 225, speed: 0, armor: 0.05, radius: 17, size: 58,
-    count: [2, 3, 4], ai: 'poison_anemone', projectile: 'chin_spike', defaultRow: 'back',
-    skill: { name: '海葵刺束', desc: '固定驻守喷射毒刺。队伍每命中 4 次刺击附加剧毒（每秒造成 25% 伤害，持续 2 秒）。连续 4 秒没有目标时可重新在更近处扎根。' },
-    star3: '附毒门槛降低为每累计命中 3 次。',
-    flavor: '深海礁岩上的活体毒葵，刺毛虽短，却能让靠近的海底生物浑身麻痹。',
-  },
-  {
-    id: 'quick_growing_kelp', name: '速生海带', rarity: 'purple', families: ['aquatic', 'beast'], role: 'support',
-    hp: 240, atk: 0, cd: 1.0, range: 0, speed: 0, armor: 0.08, radius: 16, size: 60,
-    count: [2, 2, 3], ai: 'quick_growing_kelp', defaultRow: 'mid',
-    skill: { name: '海带栅墙', desc: '不进行普通攻击。开战 3 秒后及每 9 秒在受敌逼近的后排友军前方催生一段海带栅墙（拥有相当于自身 22% 生命的耐久，持续 3 秒）阻截敌方近战。' },
-    star3: '海带栅墙的生命耐久提升至自身生命的 28%。',
-    flavor: '在海底飞速抽条缠绕的厚韧海带，编织成水流中的坚实篱笆。',
-  },
-  {
     id: 'enchanted_blue_sheep', name: '蓝色附魔绵羊', rarity: 'purple', families: ['beast'], role: 'support',
     hp: 170, atk: 10, cd: 1.2, range: 10, speed: 46, armor: 0.03, radius: 17, size: 52,
     count: [2, 3, 4], ai: 'enchanted_blue_sheep', defaultRow: 'mid',
@@ -910,14 +894,6 @@ export const MOBS: MobDef[] = [
     flavor: '隐藏在树冠中的敏捷掠食者，擅长飞扑敌方后排。',
   },
   {
-    id: 'poison_quill_vine', name: '毒刺藤', rarity: 'purple', families: ['beast', 'arthropod'], role: 'ranged',
-    hp: 240, atk: 28, cd: 1.3, range: 240, speed: 0, armor: 0.05, radius: 16, size: 62,
-    count: [2, 3, 4], ai: 'poison_quill_vine', projectile: 'quill', defaultRow: 'mid',
-    skill: { name: '剧毒喷吐', desc: '开战潜地破土出现在敌人附近；毒刺附带剧毒，每秒造成 35% 攻击力魔法伤害持续 3 秒；周围无敌人时再次潜地突袭。' },
-    star3: '剧毒持续时间延长至 4.5 秒，破土而出时使周围敌人减速 25% 持续 2 秒。',
-    flavor: '潜伏于地下的致命毒藤，能破土突袭并喷射剧毒刺棘。',
-  },
-  {
     id: 'squall_golem', name: '疾风傀儡', rarity: 'pink', families: ['construct'], role: 'melee',
     hp: 360, atk: 33, cd: 1.8, range: 16, speed: 34, armor: 0.12, radius: 23, size: 78, mass: 5,
     count: [2, 2, 3], ai: 'squall_golem', defaultRow: 'front',
@@ -1011,14 +987,6 @@ export const MOBS: MobDef[] = [
     flavor: '长满红蘑菇的厚重牛兽，低头冲刺时如同滚动的山岩。',
   },
   {
-    id: 'quick_vine', name: '速生藤蔓', rarity: 'purple', families: ['beast'], role: 'support',
-    hp: 200, atk: 0, cd: 1.0, range: 0, speed: 38, armor: 0.08, radius: 15, size: 50,
-    count: [2, 2, 3], ai: 'quick_vine', defaultRow: 'mid',
-    skill: { name: '根墙壁障', desc: '【战术防线】每 8 秒在受近战威胁的后排身前升起坚韧根墙，击退近身敌人并提供总计相当于藤蔓整卡生命 40% 的护盾（持续 3 秒，在受保护队伍间分配）。' },
-    star3: '冷却缩短至 6 秒，根墙持续时间延长至 4 秒，护盾总量提升至藤蔓整卡生命的 50% 且击退附带 0.5 秒眩晕。',
-    flavor: '神殿石缝中疯长的坚硬根茎，瞬间筑起阻绝敌人的植物路障。',
-  },
-  {
     id: 'parrot', name: '红蓝鹦鹉', rarity: 'pink', families: ['beast'], role: 'support', flying: true, alt: 24,
     hp: 160, atk: 0, cd: 1.0, range: 0, speed: 56, armor: 0, radius: 12, size: 40,
     count: [2, 2, 3], ai: 'parrot', defaultRow: 'back',
@@ -1041,14 +1009,6 @@ export const MOBS: MobDef[] = [
     skill: { name: '翻滚护航', desc: '【战术支援】守护后排队友；每 8 秒翻滚至被攻击的后排身前，替其拦截一段直接伤害并减免 40% 该伤害（拦截上限为自身生命的 30%），随后为后排提供 12% 最大生命护盾，持续 3 秒。' },
     star3: '冷却缩短至 7 秒，拦截伤害减免比例提升至 55%。',
     flavor: '憨态可掬的庞大身躯，关键时刻能以不可思议的敏捷滚向战友挡下致命一击。',
-  },
-  {
-    id: 'abomination_vine', name: '巨兽藤蔓', rarity: 'pink', families: ['beast'], role: 'melee',
-    hp: 360, atk: 24, cd: 1.4, range: 15, speed: 0, armor: 0.12, radius: 18, size: 64,
-    count: [2, 2, 3], ai: 'abomination_vine', defaultRow: 'front',
-    skill: { name: '裂地伏击', desc: '【埋伏近战】扎根于前沿；每 6 秒短暂地裂预警后破土挥击，对最多两名敌人造成 180% 伤害。' },
-    star3: '伸击额外将命中敌人向内拉拽 1 格并减速 30% 2 秒。',
-    flavor: '丛林巨兽的伴生触须，从地底猛然破土重砸毫无防备的敌人。',
   },
 
   // ── 深渊纪念碑 ──
@@ -1387,12 +1347,6 @@ export const MOBS: MobDef[] = [
     hp: 136, atk: 10, cd: 1.8, range: 230, speed: 36, armor: 0.05, radius: 14, size: 60,
     count: [1, 1, 1], ai: 'arch_reinforcement', defaultRow: 'back', hidden: true,
     skill: { name: '奉命射击', desc: '支援灾厄之王进行远程射击。' }, star3: '', flavor: '听从灾厄之王号角调遣的精锐弩手。',
-  },
-  {
-    id: 'kelp_wall', name: '海带根墙', rarity: 'blue', families: ['aquatic'], role: 'support', sprite: 'quick_vine',
-    hp: 160, atk: 0, cd: 1.0, range: 0, speed: 0, armor: 0.1, radius: 14, size: 52,
-    count: [1, 1, 1], ai: 'geomancer_pillar', defaultRow: 'front', hidden: true, structure: true,
-    skill: { name: '海带屏障', desc: '在后排前方阻隔敌方接近。' }, star3: '', flavor: '速生海带扎紧的柔韧屏障。',
   },
 ];
 
