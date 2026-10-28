@@ -1180,9 +1180,17 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         u.ab.slamRound = round;
         const currentCast = b.startCast(u, '剧毒重砸', 2.4, 1.0, {
           onRelease: (cast) => {
+            const leapTgt = foesOf(u, b).find((f) => f.alive && !f.structure);
+            if (leapTgt && dist(u, leapTgt) > 60) {
+              const jumpX = clampX(u, leapTgt.x + (u.team === 0 ? -40 : 40));
+              const jumpY = clampY(leapTgt.y);
+              b.emit({ k: 'tele', x: u.x, y: u.y, x2: jumpX, y2: jumpY, z: u.gz });
+              u.x = jumpX;
+              u.y = jumpY;
+            }
             b.emit({ k: 'shake', a: 8 });
             b.emit({ k: 'boom', x: u.x, y: u.y, r: 100, color: '#2ed573', big: true });
-            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '剧毒重砸释放!', color: '#2ed573' });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size, s: '丛林跃袭 · 剧毒重砸!', color: '#2ed573' });
             if (u.ref.abomNests) {
               for (const n of u.ref.abomNests) {
                 if (n.alive && n.ref.castId === cast.id) b.kill(n, null, true);
@@ -1190,6 +1198,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
             }
             b.aoe(u.x, u.y, 100, u.team, (f) => {
               b.damage(u, f, b.atkOf(u) * 1.4, 'phys');
+              b.knock(f, u.x, u.y, 120);
             });
             u.ref.abomPuddles = (u.ref.abomPuddles || []).filter((zid: number) => b.zones.some((z) => z.id === zid));
             if (u.ref.abomPuddles.length >= 2) {

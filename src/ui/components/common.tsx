@@ -9,6 +9,7 @@ import { COMMANDER_MAP, ITEM_KIND_NAME, enchantName, enchantText, ITEM_TIER_INFO
 import { MOB_TACTIC, RARITY_INFO, ROLE_INFO, ROLE_TACTIC, mobDef, starStatMul, unitCount } from '../../data/mobs.ts';
 import { KeywordBox, RichText } from './rich.tsx';
 import { CHARGE_RULE, combosOf, countersOf } from '../../data/combos.ts';
+import { sigilOfMob, sigilRoman, sigilTierName, sigilDesc } from '../../data/sigils.ts';
 
 // ───────────────────────── Button ─────────────────────────
 
@@ -320,14 +321,97 @@ export function Emerald({ n, size = 22 }: { n?: number; size?: number }) {
   );
 }
 
-export function Stars({ star, max = 3 }: { star: number; max?: number }) {
+export function StarIcon({ type }: { type: 'mastery' | 'normal' | 'off' }) {
+  if (type === 'mastery') {
+    return (
+      <svg class="star-svg mastery" viewBox="0 0 24 24" width="1em" height="1em" fill="none">
+        <defs>
+          <linearGradient id="starMasteryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ff7675" />
+            <stop offset="35%" stop-color="#fd79a8" />
+            <stop offset="70%" stop-color="#a29bfe" />
+            <stop offset="100%" stop-color="#74b9ff" />
+          </linearGradient>
+          <radialGradient id="starMasteryCore" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="55%" stop-color="#ffeaa7" />
+            <stop offset="100%" stop-color="#e056fd" />
+          </radialGradient>
+        </defs>
+        {/* Radiant major 4-point diamond rays */}
+        <polygon points="12,1 14.8,9.2 23,12 14.8,14.8 12,23 9.2,14.8 1,12 9.2,9.2" fill="url(#starMasteryGrad)" />
+        {/* Diagonal facets giving 8-point celestial diamond star */}
+        <polygon points="12,4.5 16.5,7.5 19.5,12 16.5,16.5 12,19.5 7.5,16.5 4.5,12 7.5,7.5" fill="#ffffff" opacity="0.32" />
+        {/* Inner radiant crystal core */}
+        <polygon points="12,5.5 15,12 12,18.5 9,12" fill="url(#starMasteryCore)" />
+        {/* Center shining jewel */}
+        <circle cx="12" cy="12" r="2.2" fill="#ffffff" />
+      </svg>
+    );
+  }
+  if (type === 'normal') {
+    return (
+      <svg class="star-svg normal" viewBox="0 0 24 24" width="1em" height="1em" fill="none">
+        <defs>
+          <linearGradient id="starNormalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#fff275" />
+            <stop offset="45%" stop-color="#ffd700" />
+            <stop offset="100%" stop-color="#e67e22" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+          fill="url(#starNormalGrad)"
+          stroke="#b7791f"
+          stroke-width="0.8"
+          stroke-linejoin="round"
+        />
+        <polygon
+          points="12,5 13.8,9.5 18,10.2 15,13.5 15.8,17.5 12,15.5"
+          fill="#ffffff"
+          opacity="0.38"
+        />
+      </svg>
+    );
+  }
   return (
-    <span class="stars">
-      {Array.from({ length: max }, (_, i) => (
-        <span key={i} class={i < star ? '' : 'off'}>
-          ★
-        </span>
-      ))}
+    <svg class="star-svg off" viewBox="0 0 24 24" width="1em" height="1em" fill="none">
+      <polygon
+        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+        fill="#26222d"
+        stroke="#4a4352"
+        stroke-width="0.8"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function Stars({
+  star = 1,
+  mastery,
+  max = 3,
+  size,
+  className = '',
+}: {
+  star?: number;
+  mastery?: number;
+  max?: number;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
+  const mRank = mastery ?? (star > 3 ? Math.min(3, star - 3) : 0);
+  const baseStar = Math.min(max, star > 3 ? 3 : star);
+  return (
+    <span
+      class={`stars ${size ?? ''} ${className}`}
+      title={mRank > 0 ? `★3 进阶 +${mRank} (${mRank}颗新星覆盖)` : `★${baseStar}`}
+    >
+      {Array.from({ length: max }, (_, idx) => {
+        const i = idx + 1;
+        const type: 'mastery' | 'normal' | 'off' = mRank >= i ? 'mastery' : baseStar >= i ? 'normal' : 'off';
+        return <StarIcon key={i} type={type} />;
+      })}
     </span>
   );
 }
@@ -344,22 +428,52 @@ export function FamBadge({ f, count, active }: { f: Family; count?: number; acti
 
 // ───────────────────────── Tooltip contents ─────────────────────────
 
-export function MobTipContent({ mob, star = 1, enchant, enchantLv, bonus, showStar3 = true }: { mob: string; star?: number; enchant?: string; enchantLv?: number; bonus?: number; showStar3?: boolean }) {
+export function MobTipContent({
+  mob,
+  star = 1,
+  enchant,
+  enchantLv,
+  bonus,
+  sigil,
+  sigilStar = 1,
+  mastery,
+  netherite,
+  enchant2,
+  enchant2Lv,
+  showStar3 = true,
+}: {
+  mob: string;
+  star?: number;
+  enchant?: string;
+  enchantLv?: number;
+  bonus?: number;
+  sigil?: string;
+  sigilStar?: number;
+  mastery?: number;
+  netherite?: boolean;
+  enchant2?: string;
+  enchant2Lv?: number;
+  showStar3?: boolean;
+}) {
   const m = mobDef(mob);
   const r = RARITY_INFO[m.rarity];
+  const masteryHpMul = mastery ? 1 + mastery * 0.10 : 1;
+  const masteryAtkMul = mastery ? 1 + mastery * 0.08 : 1;
   const mul = starStatMul(m, star) * (1 + (bonus ?? 0));
   const n = unitCount(m, star);
+  const sDef = sigil ? sigilOfMob(sigil) : null;
   return (
     <div>
-      <div class="tt-title" style={{ color: r.color }}>
-        {m.name} <span class="stars">{'★'.repeat(star)}</span>
+      <div class="tt-title" style={{ color: r.color, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>{m.name}</span>
+        <Stars star={star} mastery={mastery} />
       </div>
       <div class="tt-gray">
         {r.name} · {ROLE_INFO[m.role].icon} {ROLE_INFO[m.role].name} · 出战 ×{n}
       </div>
       {m.families.length > 0 && <div class="tt-line">羁绊：{m.families.map((f) => FAMILIES[f].name).join(' / ')}</div>}
       <div class="tt-sec tt-line">
-        生命 <span class="tt-green">{Math.round(m.hp * mul)}</span> · 攻击 <span class="tt-red">{Math.round(m.atk * mul)}</span> · 间隔 {m.cd}s
+        生命 <span class="tt-green">{Math.round(m.hp * mul * masteryHpMul)}</span> · 攻击 <span class="tt-red">{Math.round(m.atk * mul * masteryAtkMul)}</span> · 间隔 {m.cd}s
       </div>
       <div class="tt-line">
         {m.range >= 60 ? `射程 ${m.range}` : '近战'} · 移速 {m.speed}
@@ -378,12 +492,34 @@ export function MobTipContent({ mob, star = 1, enchant, enchantLv, bonus, showSt
         </div>
       )}
       <KeywordBox texts={[m.skill.desc, m.star3]} />
+      {netherite && (
+        <div class="tt-sec" style={{ color: '#ffbe76' }}>
+          【下界合金武装】受控时间缩短 30%，护甲 +5%，已开启第二附魔槽位！
+        </div>
+      )}
       {enchant && (
         <div class="tt-sec tt-purple">
-          {enchantName(enchant, enchantLv)}：{enchantText(enchant, enchantLv)}
+          {enchant2 ? '第一附魔 · ' : ''}{enchantName(enchant, enchantLv)}：{enchantText(enchant, enchantLv)}
+        </div>
+      )}
+      {enchant2 && (
+        <div class="tt-sec" style={{ color: '#f368e0' }}>
+          第二附魔 · {enchantName(enchant2, enchant2Lv)}：{enchantText(enchant2, enchant2Lv)}
         </div>
       )}
       {bonus ? <div class="tt-aqua">永久强化 +{Math.round(bonus * 100)}%</div> : null}
+      {mastery ? <div class="tt-gold">极阶突破 +{mastery}：生命 +{mastery * 10}% · 攻击 +{mastery * 8}%</div> : null}
+      {sigil && (
+        <div class="tt-sec" style={{ color: '#a29bfe' }}>
+          【融合印记 · {sDef?.name ?? `${mobDef(sigil).name}之印`} · {sigilRoman(sigilStar)}阶({sigilTierName(sigilStar)})】
+          <div class="tt-line" style={{ color: '#dff9fb', fontSize: 12 }}>{sigilDesc(sigil, sigilStar)}</div>
+          {sigilStar < 3 && (
+            <div class="tt-line faint" style={{ fontSize: 11, color: '#a29bfe', marginTop: 3 }}>
+              下一阶预览：{sigilDesc(sigil, sigilStar + 1)}
+            </div>
+          )}
+        </div>
+      )}
       <div class="tt-sec tt-line">
         <span class="tt-aqua">战术</span> {MOB_TACTIC[m.id] ?? ROLE_TACTIC[m.role]}
       </div>
@@ -498,24 +634,73 @@ export function MobCard({
   const ench = card?.enchant;
   const body = (
     <div
-      class={`mcard r-${m.rarity} ${size} ${onClick && !locked ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench && !locked ? 'ench' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''} ${locked ? 'locked' : ''}`}
+      class={`mcard r-${m.rarity} ${size} ${onClick && !locked ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench && !locked ? 'ench' : ''} ${card?.sigil && !locked ? 'fused' : ''} ${card?.netherite && !locked ? 'netherite' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''} ${locked ? 'locked' : ''}`}
       style={{ ...(style ?? {}), opacity: locked ? 0.6 : dim ? 0.45 : 1 }}
       onClick={onClick && !locked ? () => (sfx('card_flip', { vol: 0.5 }), onClick()) : undefined}
     >
       <div class="mc-top">
         <span class="mc-rar">{RARITY_INFO[m.rarity].short}</span>
-        <span class="mc-stars">
-          {[1, 2, 3].map((i) => (
-            <span key={i} class={locked || i > st ? 'off' : ''}>
-              ★
-            </span>
-          ))}
+        <span
+          class="mc-stars"
+          title={!locked && (card?.mastery ?? (st > 3 ? st - 3 : 0)) > 0
+            ? `★3 极阶突破 +${card?.mastery ?? (st > 3 ? st - 3 : 0)} (${card?.mastery ?? (st > 3 ? st - 3 : 0)}颗进阶新星覆盖)`
+            : `★${Math.min(3, st)}`}
+        >
+          {[1, 2, 3].map((i) => {
+            const mRank = card?.mastery ?? (st > 3 ? Math.min(3, st - 3) : 0);
+            const baseStar = Math.min(3, st);
+            const type = locked ? 'off' : mRank >= i ? 'mastery' : baseStar >= i ? 'normal' : 'off';
+            return <StarIcon key={i} type={type} />;
+          })}
         </span>
       </div>
       <div class="mc-art">
         <img src={url.mob(mob)} class={locked ? 'silhouette' : ''} loading="lazy" />
         {!locked && ench && <div class="mc-glint" style={{ maskImage: `url(${url.mob(mob)})`, WebkitMaskImage: `url(${url.mob(mob)})` }} />}
       </div>
+      {!locked && card?.sigil && (
+        <div
+          class="mc-sigil"
+          style={{
+            position: 'absolute',
+            right: 4,
+            top: 24,
+            background: 'rgba(20, 10, 45, 0.88)',
+            border: '1px solid #a29bfe',
+            borderRadius: 4,
+            padding: '1px 4px',
+            fontSize: 10,
+            color: '#dff9fb',
+            zIndex: 3,
+            boxShadow: '0 0 6px rgba(162, 155, 254, 0.5)',
+            pointerEvents: 'none',
+          }}
+        >
+          印·{sigilOfMob(card.sigil)?.name.split(' · ')[1] ?? mobDef(card.sigil).name} [{sigilRoman(card.sigilStar ?? 1)}]
+        </div>
+      )}
+      {!locked && card?.netherite && (
+        <div
+          class="mc-netherite-tag"
+          style={{
+            position: 'absolute',
+            left: 4,
+            top: 24,
+            background: 'linear-gradient(135deg, #2c1a1d 0%, #442a2f 100%)',
+            border: '1px solid #c97d60',
+            borderRadius: 3,
+            padding: '1px 4px',
+            fontSize: 9,
+            fontWeight: 800,
+            color: '#ffbe76',
+            zIndex: 3,
+            boxShadow: '0 0 6px rgba(201, 125, 96, 0.6)',
+            pointerEvents: 'none',
+          }}
+        >
+          合金
+        </div>
+      )}
       {showCount && !locked && <div class="mc-count">×{unitCount(m, st)}</div>}
       <div class="mc-name">{locked ? '？？？' : m.name}</div>
       <div class="mc-fams">
@@ -528,6 +713,11 @@ export function MobCard({
         )}
       </div>
       {!locked && ench && <div class="mc-ench">✦ {enchantName(ench, card?.enchantLv)}</div>}
+      {!locked && card?.enchant2 && (
+        <div class="mc-ench" style={{ bottom: 25, color: '#f368e0' }}>
+          ✦ {enchantName(card.enchant2, card.enchant2Lv)}
+        </div>
+      )}
       <div class="mc-role">
         {locked ? <span class="faint">？ 未知</span> : `${ROLE_INFO[m.role].icon} ${ROLE_INFO[m.role].name}`}
       </div>
@@ -536,13 +726,35 @@ export function MobCard({
           升星 {card.shards}/{card.star === 1 ? 1 : 2}
         </div>
       )}
+      {!locked && card && card.star >= 3 && (card.mastery ?? 0) < 3 && card.shards > 0 && (
+        <div style={{ position: 'absolute', left: 10, top: 124, fontSize: 12, color: '#e056fd', textShadow: '1px 1px 0 #000', zIndex: 2 }}>
+          突破 {card.shards}/{card.mastery === 1 ? 3 : card.mastery === 2 ? 4 : 2}
+        </div>
+      )}
       {children}
       <div class="mc-bar" />
     </div>
   );
   if (!tip || locked) return body;
   return (
-    <Tip content={() => <MobTipContent mob={mob} star={st} enchant={ench} enchantLv={card?.enchantLv} bonus={card?.bonus} />} style={{ display: 'inline-block' }}>
+    <Tip
+      content={() => (
+        <MobTipContent
+          mob={mob}
+          star={st}
+          enchant={ench}
+          enchantLv={card?.enchantLv}
+          bonus={card?.bonus}
+          sigil={card?.sigil}
+          sigilStar={card?.sigilStar}
+          mastery={card?.mastery}
+          netherite={card?.netherite}
+          enchant2={card?.enchant2}
+          enchant2Lv={card?.enchant2Lv}
+        />
+      )}
+      style={{ display: 'inline-block' }}
+    >
       {body}
     </Tip>
   );

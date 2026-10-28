@@ -6,7 +6,7 @@ import { estimateCombatPower, evaluateMatchup, sideSynergies } from '../../battl
 import { FAMILIES } from '../../data/families.ts';
 import type { Family } from '../../core/types.ts';
 import { url } from '../assets.ts';
-import { Btn, Emerald, FamBadge, HeartIcon, MobTipContent, PotionTipContent, Tip, itemIcon } from '../components/common.tsx';
+import { Btn, Emerald, FamBadge, HeartIcon, MobTipContent, PotionTipContent, Stars, Tip, itemIcon } from '../components/common.tsx';
 import { Arena3DView } from './Arena3DView.tsx';
 import { act } from './RunView.tsx';
 import { overlay } from '../store.ts';
@@ -320,8 +320,8 @@ function DeployHud({
               <div class={`dh-row r-${m.rarity}`}>
                 <img src={url.mob(c.mob)} />
                 <div class="dh-rinfo">
-                  <div class="dh-rname rc">
-                    {m.name} <span class="stars">{'★'.repeat(c.star)}</span>
+                  <div class="dh-rname rc" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{m.name}</span> <Stars star={c.star} mastery={c.mastery} size="sm" />
                   </div>
                   <div class="dh-rsub">
                     ×{unitCount(m, c.star)} · {RARITY_INFO[m.rarity].short}
@@ -363,8 +363,8 @@ function DeployHud({
                 <div class={`dh-row r-${m.rarity}`}>
                   <img src={url.mob(mob)} />
                   <div class="dh-rinfo">
-                    <div class="dh-rname rc">
-                      {m.name} <span class="stars">{'★'.repeat(star)}</span>
+                    <div class="dh-rname rc" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>{m.name}</span> <Stars star={star} size="sm" />
                     </div>
                     <div class="dh-rsub">
                       ×{count ?? unitCount(m, star)} · {m.boss ? '首领' : RARITY_INFO[m.rarity].short}

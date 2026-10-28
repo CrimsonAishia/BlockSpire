@@ -1,8 +1,9 @@
 import { useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
-import { allCards, canSmith, chooseBook, enchantFits, hasRelic, leaveNode, pickCard, restAction, restHeal, shardsNeeded } from '../../run/run.ts';
+import { allCards, canSmith, chooseBook, enchantFits, findCard, hasRelic, leaveNode, pickCard, restAction, restHeal, shardsNeeded } from '../../run/run.ts';
 import { ENCHANT_MAP, enchantName, enchantText } from '../../data/items.ts';
 import { mobDef, starPower, starStatMul, unitCount } from '../../data/mobs.ts';
+import { sigilDesc, sigilOfMob, sigilRoman, sigilTierName } from '../../data/sigils.ts';
 import type { Card } from '../../core/types.ts';
 import { url } from '../assets.ts';
 import { Btn, HeartIcon, MobCard, Modal } from '../components/common.tsx';
@@ -15,6 +16,7 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
   const heal = restHeal(s);
   const noRest = hasRelic(s, 'sculk_catalyst');
   const canUp = allCards(s).some(canSmith);
+  const canNetherite = allCards(s).some((c) => c.star >= 3 && !c.netherite);
   const opts = [
     {
       id: 'rest' as const,
@@ -25,6 +27,14 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
     },
     { id: 'smith' as const, icon: 'smithing', name: '锻造', desc: '使一张卡牌 ★+1（隐秘级及以上最高 ★2）。', off: !canUp },
     { id: 'enchant' as const, icon: 'enchanted_book', name: '附魔', desc: '从 3 本随机附魔书中选择一本，附魔一张卡牌。', off: false },
+    { id: 'fuse' as const, icon: 'nether_star', name: '融合', desc: '献祭一张副卡，将其独特生物印记与精魄刻印至主力卡牌。', off: allCards(s).length < 2 },
+    {
+      id: 'netherite' as const,
+      icon: 'netherite_plate',
+      name: '合金',
+      desc: '将一张 ★3 卡牌淬炼为下界合金武装，护甲 +5%，受控时间 -30%，并解锁第二附魔槽位。',
+      off: !canNetherite,
+    },
   ];
   return (
     <div class="screen rest-screen">
@@ -46,7 +56,7 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
               class={`rest-opt ${off ? 'off' : ''} ${done ? 'done' : ''}`}
               disabled={off}
               onClick={() => {
-                sfx(o.id === 'rest' ? 'heal' : o.id === 'smith' ? 'golem' : 'enchant');
+                sfx(o.id === 'rest' ? 'heal' : o.id === 'smith' ? 'golem' : o.id === 'fuse' ? 'star_up' : o.id === 'netherite' ? 'star_up' : 'enchant');
                 act((r) => restAction(r, o.id));
               }}
             >
@@ -75,6 +85,17 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
 
 export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: number }) {
   const [sel, setSel] = useState<string | null>(null);
+  const [ceremony, setCeremony] = useState<{
+    baseName: string;
+    sacName: string;
+    sigilName: string;
+    sigilDesc: string;
+    totalBonus: number;
+    resonance: number;
+    enchantNameStr?: string;
+    fusedCard: Card;
+    sacUid: string;
+  } | null>(null);
   const maxStar = Number(p.data?.maxStar ?? 2);
   const ok = (c: Card) => {
     switch (p.purpose) {
@@ -82,6 +103,10 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
         return enchantFits(c.mob, p.enchant!);
       case 'upgrade':
         return canSmith(c) && c.star <= maxStar;
+      case 'fuse_sac':
+        return c.uid !== p.data?.baseUid;
+      case 'netherite':
+        return c.star >= 3 && !c.netherite;
       default:
         return true;
     }
@@ -94,6 +119,9 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
     bonus: `永久属性 +${Math.round(Number(p.data?.amount ?? 0.15) * 100)}%${p.enchant ? `，并获得附魔「${enchantName(p.enchant, bookLv)}」` : ''}`,
     sacrifice: '被牺牲的卡牌将永久消失。',
     trade: '交出的卡牌将永久消失，换取一次更高品质的开箱。',
+    fuse_base: '选择一张接受刻印的主力卡牌。融合后将获得副卡的专属生物印记，并吸收副卡的精魄成长。',
+    fuse_sac: '选择一张献祭的副卡。副卡将永久消耗，将其专属印记与精魄（属性+5~10%、已有附魔）赋予主力卡牌。',
+    netherite: '下界合金淬炼：将一张 ★3 卡牌重铸为终极下界合金武装形态，永久护甲 +5%，受到控制时间缩短 30%，免疫击退，并解锁【第二附魔槽位】！',
   };
   const selCard = cards.find((c) => c.uid === sel);
   return (
@@ -130,8 +158,58 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
           <div class="row gap12 center" style={{ marginTop: 18 }}>
             <Btn onClick={() => setSel(null)}>重新选择</Btn>
             <Btn
-              variant={p.purpose === 'sacrifice' || p.purpose === 'trade' ? 'red' : 'green'}
+              variant={p.purpose === 'sacrifice' || p.purpose === 'trade' || p.purpose === 'fuse_sac' ? 'red' : 'green'}
               onClick={() => {
+                if (p.purpose === 'fuse_sac') {
+                  const baseCard = findCard(s, String(p.data?.baseUid));
+                  if (baseCard) {
+                    const baseM = mobDef(baseCard.mob);
+                    const sacM = mobDef(selCard.mob);
+                    const sDef = sigilOfMob(selCard.mob);
+                    const isSameSigil = baseCard.sigil === selCard.mob;
+                    const targetStar = isSameSigil ? Math.min(3, Math.max((baseCard.sigilStar ?? 1) + 1, selCard.star)) : selCard.star;
+                    const rawEssence = selCard.star === 3 ? 12 : selCard.star === 2 ? 6 : 3;
+                    const hostMul = (baseCard.star === 3 ? 1.75 : baseCard.star === 2 ? 1.30 : 1.0) + (baseCard.mastery ?? 0) * 0.10;
+                    const resonance = baseM.families.some((f) => sacM.families.includes(f)) ? 5 : 0;
+                    const totalBonus = Math.round(rawEssence * hostMul + resonance);
+
+                    const enchName = !baseCard.enchant && selCard.enchant
+                      ? enchantName(selCard.enchant, selCard.enchantLv)
+                      : (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
+                        ? `【第二槽位】${enchantName(selCard.enchant, selCard.enchantLv)}`
+                        : undefined;
+
+                    const fusedCard: Card = {
+                      ...baseCard,
+                      sigil: selCard.mob,
+                      sigilStar: targetStar,
+                      bonus: (baseCard.bonus ?? 0) + totalBonus / 100,
+                      enchant: baseCard.enchant ?? selCard.enchant,
+                      enchantLv: baseCard.enchant ? baseCard.enchantLv : selCard.enchantLv,
+                      enchant2: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
+                        ? selCard.enchant
+                        : baseCard.enchant2,
+                      enchant2Lv: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
+                        ? selCard.enchantLv
+                        : baseCard.enchant2Lv,
+                    };
+                    setSel(null);
+                    sfx('star_up');
+                    setTimeout(() => sfx('level_up'), 250);
+                    setCeremony({
+                      baseName: baseM.name,
+                      sacName: sacM.name,
+                      sigilName: `${sDef?.name ?? '生物印记'} ${sigilRoman(targetStar)} [${sigilTierName(targetStar)}]`,
+                      sigilDesc: sigilDesc(selCard.mob, targetStar),
+                      totalBonus,
+                      resonance,
+                      enchantNameStr: enchName,
+                      fusedCard,
+                      sacUid: selCard.uid,
+                    });
+                    return;
+                  }
+                }
                 sfx(p.purpose === 'enchant' ? 'enchant' : p.purpose === 'upgrade' ? 'star_up' : 'click');
                 setSel(null);
                 act((r) => pickCard(r, selCard.uid));
@@ -139,6 +217,61 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
             >
               {CONFIRM[p.purpose]}
             </Btn>
+          </div>
+        </Modal>
+      )}
+      {ceremony && (
+        <Modal
+          onClose={() => {
+            act((r) => pickCard(r, ceremony.sacUid));
+            setCeremony(null);
+          }}
+          width={640}
+        >
+          <div class="fusion-ceremony">
+            <div class="fusion-banner">✨ 印记铭刻 · 精魄共鸣达成 ✨</div>
+            <div class="subtle" style={{ fontSize: 14 }}>
+              副卡「{ceremony.sacName}」的灵魂精魄已成功融入「{ceremony.baseName}」！
+            </div>
+
+            <div class="fusion-altar">
+              <div class="fusion-halo" />
+              <div class="fusion-sparks" />
+              <div class="fusion-card-wrap">
+                <MobCard mob={ceremony.fusedCard.mob} card={ceremony.fusedCard} tip={false} />
+              </div>
+            </div>
+
+            <div class="fusion-stat-badge">
+              <div class="row gap8 center" style={{ alignItems: 'center' }}>
+                <span style={{ color: '#a29bfe', fontWeight: 700, fontSize: 16 }}>🔮 赋予印记：{ceremony.sigilName}</span>
+              </div>
+              <div class="subtle" style={{ fontSize: 13, color: '#dfe6e9', marginTop: 2 }}>
+                {ceremony.sigilDesc}
+              </div>
+              <div class="row gap16 center" style={{ marginTop: 8, fontSize: 13 }}>
+                <span class="gold-t">⚡ 精魄滋养：全属性 +{ceremony.totalBonus}%</span>
+                {ceremony.resonance > 0 && <span style={{ color: '#55efc4' }}>🧬 同系共鸣 +5%</span>}
+              </div>
+              {ceremony.enchantNameStr && (
+                <div style={{ color: '#74b9ff', fontSize: 13, marginTop: 4 }}>
+                  🛡️ 附魔继承：{ceremony.enchantNameStr}
+                </div>
+              )}
+            </div>
+
+            <div class="row center" style={{ marginTop: 14 }}>
+              <Btn
+                variant="green"
+                onClick={() => {
+                  sfx('click');
+                  act((r) => pickCard(r, ceremony.sacUid));
+                  setCeremony(null);
+                }}
+              >
+                完成铭刻 · 契约达成
+              </Btn>
+            </div>
           </div>
         </Modal>
       )}
@@ -152,11 +285,163 @@ const CONFIRM: Record<P<'pick_card'>['purpose'], string> = {
   bonus: '确认强化',
   sacrifice: '确认牺牲',
   trade: '确认交易',
+  fuse_base: '选为主力',
+  fuse_sac: '确认献祭融合',
+  netherite: '确认合金淬炼',
 };
 
 /** Before → after for the chosen card, with warnings for anything that gets lost. */
-function ChangePreview({ p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
+function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
   const m = mobDef(c.mob);
+  if (p.purpose === 'netherite') {
+    const afterCard: Card = { ...c, netherite: true };
+    return (
+      <div>
+        <div class="panel-title">淬炼 {m.name} 为下界合金武装形态</div>
+        <div class="row gap16 center" style={{ alignItems: 'center', margin: '8px 0 14px' }}>
+          <div class="col center gap4">
+            <span class="faint" style={{ fontSize: 12 }}>原始形态</span>
+            <MobCard mob={c.mob} card={c} size="sm" tip={false} />
+          </div>
+          <span class="cp-big-arrow">➜</span>
+          <div class="col center gap4">
+            <span class="gold-t" style={{ fontSize: 12 }}>下界合金武装</span>
+            <MobCard mob={c.mob} card={afterCard} size="sm" tip={false} />
+          </div>
+        </div>
+        <div class="cp-table">
+          <div class="cp-row">
+            <span class="subtle">材质装甲</span>
+            <span>普通装甲</span>
+            <span class="cp-arrow">➜</span>
+            <span class="em" style={{ color: '#c97d60' }}>下界合金武装 (Netherite)</span>
+          </div>
+          <div class="cp-row">
+            <span class="subtle">护甲加成</span>
+            <span>基础减伤</span>
+            <span class="cp-arrow">➜</span>
+            <span class="em" style={{ color: '#55efc4' }}>额外 +5% 永久全额护甲减伤</span>
+          </div>
+          <div class="cp-row">
+            <span class="subtle">霸体与韧性</span>
+            <span>标准受控</span>
+            <span class="cp-arrow">➜</span>
+            <span class="em" style={{ color: '#ffeaa7' }}>受到控制时间 -30% & 免疫击退</span>
+          </div>
+          <div class="cp-row">
+            <span class="subtle">附魔槽位</span>
+            <span>单槽位</span>
+            <span class="cp-arrow">➜</span>
+            <span class="em" style={{ color: '#a29bfe' }}>解锁第二附魔槽位 (Dual Enchant)</span>
+          </div>
+        </div>
+        <div class="cp-note" style={{ color: '#fab1a0', marginTop: 12, border: '1px solid rgba(225, 112, 85, 0.4)', background: 'rgba(214, 48, 49, 0.1)', padding: '8px 12px', borderRadius: 4 }}>
+          🔥 淬炼后的卡牌在后续获得附魔（附魔台/宝箱/融合）时，若已有附魔不同，将自动激活并装备至【第二附魔槽位】，双重附魔同时生效！
+        </div>
+      </div>
+    );
+  }
+  if (p.purpose === 'fuse_base') {
+    return (
+      <div>
+        <div class="panel-title">选定 {m.name} 为融合主力</div>
+        <div class="row gap16 center" style={{ alignItems: 'center', margin: '8px 0 14px' }}>
+          <MobCard mob={c.mob} card={c} size="sm" tip={false} />
+        </div>
+        <div class="subtle" style={{ textAlign: 'center', lineHeight: 1.6, padding: '0 20px' }}>
+          下一步将选择一张献祭副卡，将其专属生物印记刻印至 {m.name} 身上，并吸收其精魄属性。
+        </div>
+      </div>
+    );
+  }
+  if (p.purpose === 'fuse_sac') {
+    const baseCard = findCard(s, String(p.data?.baseUid));
+    const baseM = baseCard ? mobDef(baseCard.mob) : null;
+    const isSameSigil = baseCard?.sigil === c.mob;
+    const targetStar = isSameSigil ? Math.min(3, Math.max((baseCard?.sigilStar ?? 1) + 1, c.star)) : c.star;
+    const rawEssence = c.star === 3 ? 12 : c.star === 2 ? 6 : 3;
+    const hostMul = baseCard ? ((baseCard.star === 3 ? 1.75 : baseCard.star === 2 ? 1.30 : 1.0) + (baseCard.mastery ?? 0) * 0.10) : 1.0;
+    const resonance = baseM && baseM.families.some((f) => m.families.includes(f)) ? 5 : 0;
+    const totalBonus = Math.round(rawEssence * hostMul + resonance);
+
+    const sDef = sigilOfMob(c.mob);
+    const targetSigilDesc = sigilDesc(c.mob, targetStar);
+    const romanTier = sigilRoman(targetStar);
+    const tierName = sigilTierName(targetStar);
+
+    const previewCard: Card | null = baseCard
+      ? {
+          ...baseCard,
+          sigil: c.mob,
+          sigilStar: targetStar,
+          bonus: (baseCard.bonus ?? 0) + totalBonus / 100,
+          enchant: baseCard.enchant ?? c.enchant,
+          enchantLv: baseCard.enchant ? baseCard.enchantLv : c.enchantLv,
+          enchant2: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant)
+            ? c.enchant
+            : baseCard.enchant2,
+          enchant2Lv: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant)
+            ? c.enchantLv
+            : baseCard.enchant2Lv,
+        }
+      : null;
+
+    return (
+      <div>
+        <div class="panel-title">献祭 {m.name} 刻印至 {baseM?.name ?? '主力卡牌'}</div>
+        <div class="row gap16 center" style={{ alignItems: 'center', margin: '8px 0 14px' }}>
+          <div class="col center gap4">
+            <span class="faint" style={{ fontSize: 12 }}>献祭副卡（★{c.star}）</span>
+            <MobCard mob={c.mob} card={c} size="sm" tip={false} />
+          </div>
+          <span class="cp-big-arrow">➜</span>
+          {previewCard && (
+            <div class="col center gap4">
+              <span class="gold-t" style={{ fontSize: 12 }}>主力目标（刻印后）</span>
+              <MobCard mob={previewCard.mob} card={previewCard} size="sm" tip={false} />
+            </div>
+          )}
+        </div>
+        <div class="cp-table">
+          <div class="cp-row">
+            <span class="subtle">印记与阶数</span>
+            <span class="em" style={{ color: '#a29bfe' }}>
+              {sDef?.name ?? '专属印记'} {romanTier} [{tierName}]
+              {isSameSigil && <span class="gold-t" style={{ marginLeft: 6 }}>（同印记升级升阶！）</span>}
+            </span>
+          </div>
+          <div class="cp-row">
+            <span class="subtle">印记效果</span>
+            <span style={{ fontSize: 12, color: '#dfe6e9' }}>{targetSigilDesc}</span>
+          </div>
+          <div class="cp-row">
+            <span class="subtle">精魄滋养</span>
+            <span class="em">
+              全属性 +{totalBonus}%
+              <span class="faint" style={{ fontSize: 12, marginLeft: 6 }}>
+                (基础{rawEssence}% × 主力★{baseCard?.star ?? 1}吸收{Math.round(hostMul * 100)}%{resonance ? ' + 同系共鸣5%' : ''})
+              </span>
+            </span>
+          </div>
+          {!baseCard?.enchant && c.enchant && (
+            <div class="cp-row">
+              <span class="subtle">附魔继承</span>
+              <span class="em" style={{ color: '#74b9ff' }}>{enchantName(c.enchant, c.enchantLv)}</span>
+            </div>
+          )}
+          {baseCard?.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant && (
+            <div class="cp-row">
+              <span class="subtle">第二附魔继承</span>
+              <span class="em" style={{ color: '#e056fd' }}>⚔️ 第二槽位：{enchantName(c.enchant, c.enchantLv)}</span>
+            </div>
+          )}
+        </div>
+        <div class="cp-warn" style={{ marginTop: 12 }}>
+          副卡 {m.name}（★{c.star}）将作为祭品永久消耗！
+        </div>
+      </div>
+    );
+  }
   const star = c.star;
   const bonus = c.bonus ?? 0;
   const after = { star, bonus, enchant: c.enchant, lv: c.enchantLv };
@@ -178,7 +463,8 @@ function ChangePreview({ p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
   const a = stat(star, bonus);
   const b = stat(after.star, after.bonus);
   const lost = p.purpose === 'sacrifice' || p.purpose === 'trade';
-  const overwrite = after.enchant !== c.enchant && c.enchant;
+  const isSecondEnchant = c.netherite && !!c.enchant && c.enchant !== p.enchant && !c.enchant2;
+  const overwrite = !isSecondEnchant && after.enchant !== c.enchant && !!c.enchant;
   const changedEnch = after.enchant !== c.enchant || merge;
   const row = (label: string, x: number | string, y: number | string, up?: boolean) => (
     <div class="cp-row">
@@ -220,6 +506,11 @@ function ChangePreview({ p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
         <div class="cp-note tt-purple">
           {merge && <span class="gold-t">同名附魔合成升级！</span>}
           {enchantName(after.enchant, after.lv)}：{enchantText(after.enchant, after.lv)}
+        </div>
+      )}
+      {isSecondEnchant && (
+        <div class="cp-note tt-purple" style={{ color: '#e056fd' }}>
+          ⚔️ 解锁装备至【第二附魔槽位】：{enchantName(p.enchant!, bookLv)}：{enchantText(p.enchant!, bookLv)}（原有附魔保留，双重附魔同时生效！）
         </div>
       )}
       {overwrite && (

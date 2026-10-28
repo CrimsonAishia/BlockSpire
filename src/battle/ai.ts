@@ -35,6 +35,8 @@ export interface Behavior {
   afterDamaged?(u: Unit, src: Unit | null, d: number, b: Battle): void;
   onKill?(u: Unit, victim: Unit, b: Battle): void;
   onDeath?(u: Unit, b: Battle, killer: Unit | null): void;
+  /** Triggered when a boss undergoes a health-gated phase transition */
+  onPhaseTransition?(u: Unit, phase: number, b: Battle): void;
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -1289,17 +1291,34 @@ export const BEHAVIORS: Record<string, Behavior> = {
   warden: {
     tick(u, b, dt) {
       u.ab.anger = Math.floor((1 - u.hpFrac) * 10);
-      if (cool(u, 'sb', dt, 4) && u.target && u.target.alive) {
-        u.ab.sb = u.star >= 3 ? 4.5 : 6;
+      const isP2 = u.bossPhase >= 2;
+      const sonicCd = isP2 ? (u.star >= 3 ? 2.5 : 3.5) : (u.star >= 3 ? 4.5 : 6);
+      if (cool(u, 'sb', dt, 3) && u.target && u.target.alive) {
+        u.ab.sb = sonicCd;
         u.animAtk = 0.6;
-        sonic(u, u.target, b, 320, 22, b.atkOf(u));
+        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 15, s: '【幽匿音波咆哮!】', color: '#00d2d3' });
+        sonic(u, u.target, b, 360, 26, b.atkOf(u) * (isP2 ? 1.4 : 1.0));
       } else if (u.ab.sb <= 0) u.ab.sb = 0.3;
     },
     attack(u, t, b) {
       // 幽匿歌谣: the singer's song makes the anger count twice.
       const anger = (u.ab.anger ?? 0) * (b.has(u.team, 'combo_sculk_song') ? 2 : 1);
-      b.meleeHit(u, t, b.atkOf(u) * (1 + 0.06 * anger));
-      b.emit({ k: 'shake', a: 2 });
+      const p2Bonus = u.bossPhase >= 2 ? 0.35 : 0;
+      b.meleeHit(u, t, b.atkOf(u) * (1 + 0.06 * anger + p2Bonus));
+      b.emit({ k: 'shake', a: u.bossPhase >= 2 ? 5 : 2 });
+    },
+    onPhaseTransition(u, phase, b) {
+      b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 25, s: '幽匿核心暴怒 · 音波狂啸!', color: '#00d2d3' });
+      b.emit({ k: 'sfx', id: 'roar' });
+      b.emit({ k: 'shake', a: 10 });
+      u.atkSpd *= 1.25;
+      u.moveSpd *= 1.30;
+      u.ab.sb = 0.5; // 立即准备发射一记毁灭音波
+      // 全场施加 5 秒深度黑暗压制
+      const foe = (1 - u.team) as 0 | 1;
+      for (const e of b.live[foe]) {
+        if (e.alive && !e.structure) e.blindT = Math.max(e.blindT, 4.0);
+      }
     },
   },
 
@@ -1428,42 +1447,36 @@ export const BEHAVIORS: Record<string, Behavior> = {
   ravager_boss: {
     tick(u, b, dt) {
       const atk = b.atkOf(u);
-      if (cool(u, 'roar', dt, 5)) {
-        u.ab.roar = 8;
+      const isP2 = u.bossPhase >= 2;
+      if (cool(u, 'roar', dt, isP2 ? 4 : 5.5)) {
+        u.ab.roar = isP2 ? 5 : 8;
         u.animAtk = 0.5;
-        b.emit({ k: 'roar', x: u.x, y: u.y, r: 160, color: '#ffe0a0' });
-        b.emit({ k: 'shake', a: 7 });
+        b.emit({ k: 'roar', x: u.x, y: u.y, r: 180, color: '#ffe0a0' });
+        b.emit({ k: 'shake', a: 8 });
         b.emit({ k: 'sfx', id: 'roar' });
-        b.aoe(u.x, u.y, 160, u.team, (e) => {
-          b.damage(u, e, atk * 0.5, 'phys', { noCrit: true });
-          b.knock(e, u.x, u.y, 150);
-          b.stun(e, 0.8);
+        b.aoe(u.x, u.y, 180, u.team, (e) => {
+          b.damage(u, e, atk * (isP2 ? 0.75 : 0.5), 'phys', { noCrit: true });
+          b.knock(e, u.x, u.y, 180);
+          b.stun(e, isP2 ? 1.0 : 0.7);
         });
       }
       if (cool(u, 'horn', dt, 8)) {
-        u.ab.horn = 16;
+        u.ab.horn = 14;
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 10, s: '袭击号角!', color: '#ffb347' });
         b.emit({ k: 'sfx', id: 'horn' });
         const bx = b.rowX(u.team, 'back');
         for (const [m, dy] of [['pillager', -90], ['pillager', 90]] as const)
           b.summon(u, m, bx, ARENA_D / 2 + dy + b.rng.range(-20, 20), 0.6, { fx: 'summon' });
       }
-      if (!u.ab.rage && u.hpFrac < 0.4) {
-        u.ab.rage = 1;
-        u.atkSpd *= 1.3;
-        u.moveSpd *= 1.4;
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '狂暴!', color: '#ff5d5d' });
-        b.emit({ k: 'phase', s: 'enrage' });
-      }
-      if (u.ab.rage) u.ab.ccd = (u.ab.ccd ?? 2) - dt;
+      if (u.bossPhase >= 2) u.ab.ccd = (u.ab.ccd ?? 2) - dt;
     },
     move(u, b, dt) {
-      if (u.ref.charge) return chargeMove(u, b, dt, { mul: 1.5, knock: 180, stun: 0.6, all: true, speed: 300 });
-      if (u.ab.rage && u.ab.ccd <= 0 && u.target && u.target.alive) {
+      if (u.ref.charge) return chargeMove(u, b, dt, { mul: 1.6, knock: 220, stun: 0.8, all: true, speed: 320 });
+      if (u.bossPhase >= 2 && u.ab.ccd <= 0 && u.target && u.target.alive) {
         const d = dist(u, u.target);
-        if (d > 70 && d < 320) {
-          u.ab.ccd = 5;
-          startCharge(u, u.target, 80);
+        if (d > 60 && d < 350) {
+          u.ab.ccd = 4.5;
+          startCharge(u, u.target, 90);
           b.emit({ k: 'sfx', id: 'roar', v: 0.6 });
           return true;
         }
@@ -1473,9 +1486,26 @@ export const BEHAVIORS: Record<string, Behavior> = {
     attack(u, t, b) {
       const atk = b.atkOf(u);
       b.meleeHit(u, t, atk);
-      b.aoe(t.x, t.y, 55, u.team, (e) => {
-        if (e !== t) b.damage(u, e, atk * 0.5, 'phys', { melee: true, noCrit: true });
+      const isP2 = u.bossPhase >= 2;
+      b.aoe(t.x, t.y, isP2 ? 75 : 55, u.team, (e) => {
+        if (e !== t) b.damage(u, e, atk * (isP2 ? 0.7 : 0.5), 'phys', { melee: true, noCrit: true });
       });
+      if (isP2) b.emit({ k: 'shake', a: 3 });
+    },
+    onPhaseTransition(u, phase, b) {
+      b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 20, s: '破城践踏 · 全军狂暴冲锋!', color: '#ff4757' });
+      b.emit({ k: 'sfx', id: 'horn' });
+      u.atkSpd *= 1.35;
+      u.moveSpd *= 1.40;
+      u.ab.ccd = 0.5;
+      const bx = b.rowX(u.team, 'front');
+      for (const dy of [-70, 70]) {
+        const v = b.summon(u, 'vindicator', bx, ARENA_D / 2 + dy, 0.75, { fx: 'summon' });
+        if (v) {
+          v.hasteT = 8.0;
+          v.hasteMul = 1.30;
+        }
+      }
     },
   },
 
@@ -1492,27 +1522,51 @@ export const BEHAVIORS: Record<string, Behavior> = {
           b.summon(u, 'guardian', u.x + b.rng.range(-70, 20), u.y + (i ? 70 : -70), 0.8, { fx: 'summon' });
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '守卫集结!', color: '#5ee6d6' });
       }
-      if (!u.ab.p2 && u.hpFrac < 0.5 && b.has(u.team, 'omen_enrage')) {
-        u.ab.p2 = 1;
-        b.emit({ k: 'phase', s: 'guardian2' });
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 10, s: '深海护盾与溺尸护卫！', color: '#5ee6d6' });
-        b.emit({ k: 'roar', x: u.x, y: u.y, r: 300, color: '#5ee6d6' });
-        u.shield += u.maxHp * 0.15;
-        b.summon(u, 'drowned', u.x + (u.team === 0 ? 30 : -30), ARENA_D / 2, 0.7, { fx: 'summon' });
+      if (u.bossPhase >= 2 && cool(u, 'tidal', dt, 7)) {
+        u.ab.tidal = 7;
+        b.emit({ k: 'roar', x: u.x, y: u.y, r: 400, color: '#00cec9' });
+        b.emit({ k: 'sfx', id: 'splash' });
+        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 15, s: '【深海海啸·暗流卷退!】', color: '#00cec9' });
+        const foe = (1 - u.team) as 0 | 1;
+        for (const e of b.live[foe]) {
+          if (e.alive && !e.structure) {
+            b.knock(e, u.x, u.y, 140);
+            b.slow(e, 0.4, 0.2, 3.0, u.team);
+          }
+        }
       }
     },
     attack(u, t, b) {
-      startBeam(u, t, 1.5);
+      startBeam(u, t, u.bossPhase >= 2 ? 1.1 : 1.5);
       b.emit({ k: 'sfx', id: 'charge' });
     },
     move(u, b, dt) {
       return beamMove(u, b, dt, 1);
+    },
+    onPhaseTransition(u, phase, b) {
+      b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 25, s: '远古鬼脸诅咒 · 尖刺全开!', color: '#5ee6d6' });
+      b.emit({ k: 'phase', s: 'guardian2' });
+      b.emit({ k: 'roar', x: u.x, y: u.y, r: 450, color: '#5ee6d6' });
+      b.emit({ k: 'sfx', id: 'magic' });
+      u.fx.thorns = 0.55;
+      u.atkSpd *= 1.25;
+      const foe = (1 - u.team) as 0 | 1;
+      for (const e of b.live[foe]) {
+        if (e.alive && !e.structure) {
+          b.freeze(e, 50, 1.2, u);
+          b.slow(e, 0.5, 0.3, 3.0, u.team);
+        }
+      }
+      for (let i = 0; i < 2; i++) {
+        b.summon(u, 'drowned', u.x + (u.team === 0 ? 40 : -40), ARENA_D / 2 + (i ? 80 : -80), 0.8, { fx: 'summon' });
+      }
     },
   },
 
   wither_boss: {
     init(u) {
       u.ab.boom = 1.2;
+      u.alt = 60; // Phase 1 悬浮空战
     },
     tick(u, b, dt) {
       if (u.ab.boom > 0) {
@@ -1526,30 +1580,22 @@ export const BEHAVIORS: Record<string, Behavior> = {
           b.blast(u.x, u.y, 300);
         }
       }
-      if (!u.ab.p2 && u.hpFrac < 0.5) {
-        u.ab.p2 = 1;
-        u.ref.witherArmor = 1;
-        u.atkSpd *= 1.25;
-        b.emit({ k: 'phase', s: 'wither2' });
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '凋灵护甲!', color: '#9fd4ff' });
-        for (let i = 0; i < 3; i++) b.summon(u, 'wither_skeleton', u.x - u.facing * 40, ARENA_D / 2 + (i - 1) * 100, 0.7, { fx: 'summon' });
-        u.ab.dash = 2;
-      }
-      if (u.ab.p2) u.ab.dash -= dt;
+      if (u.bossPhase >= 2) u.ab.dash = (u.ab.dash ?? 2) - dt;
     },
     move(u, b, dt) {
       if (u.ref.charge) {
-        u.alt = 22;
-        const r = chargeMove(u, b, dt, { mul: 1.5, knock: 200, stun: 0.5, all: true, speed: 340 });
-        if (!u.ref.charge) u.alt = 70;
+        u.alt = 0;
+        const r = chargeMove(u, b, dt, { mul: 1.6, knock: 220, stun: 0.6, all: true, speed: 360 });
+        if (!u.ref.charge) u.alt = 0;
         return r;
       }
-      if (u.ab.p2 && u.ab.dash <= 0) {
+      if (u.bossPhase >= 2 && (u.ab.dash ?? 0) <= 0) {
         const c = b.densest((1 - u.team) as 0 | 1, 90);
         if (c) {
-          u.ab.dash = 8;
-          startCharge(u, c, 160);
-          b.emit({ k: 'sfx', id: 'wither_spawn', v: 0.5 });
+          u.ab.dash = 6;
+          startCharge(u, c, 180);
+          b.emit({ k: 'sfx', id: 'wither_spawn', v: 0.6 });
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 15, s: '【毁灭冲撞!】', color: '#74b9ff' });
           return true;
         }
       }
@@ -1558,18 +1604,33 @@ export const BEHAVIORS: Record<string, Behavior> = {
     attack(u, t, b) {
       u.ab.n = (u.ab.n ?? 0) + 1;
       const atk = b.atkOf(u);
+      const isP2 = u.bossPhase >= 2;
       const foes = b.live[(1 - u.team) as 0 | 1].filter((e) => dist(u, e) < b.rangeOf(u) + 80 && !e.structure);
       const tt = u.ab.n % 3 === 1 || !foes.length ? t : b.rng.pick(foes);
-      if (u.ab.n % 4 === 0)
-        fire(u, tt, b, 'blue_skull', atk * 2, (p) => {
-          p.wither = atk * 0.15;
-          p.witherDur = 3;
+      if (u.ab.n % 3 === 0)
+        fire(u, tt, b, 'blue_skull', atk * (isP2 ? 2.2 : 1.8), (p) => {
+          p.wither = atk * 0.18;
+          p.witherDur = 3.5;
         });
       else
-        fire(u, tt, b, 'wither_skull', atk, (p) => {
+        fire(u, tt, b, 'wither_skull', atk * (isP2 ? 1.2 : 1.0), (p) => {
           p.wither = atk * 0.12;
           p.witherDur = 3;
         });
+    },
+    onPhaseTransition(u, phase, b) {
+      u.ref.witherArmor = 1;
+      u.alt = 0; // 迫降至地面！近战能够攻击本体！
+      u.atkSpd *= 1.35;
+      u.ab.dash = 1.5;
+      b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 25, s: '凋灵迫降 · 护甲弹矢全开!', color: '#9fd4ff' });
+      b.emit({ k: 'phase', s: 'wither2' });
+      b.emit({ k: 'boom', x: u.x, y: u.y, r: 240, color: '#9fd4ff', big: true });
+      b.emit({ k: 'sfx', id: 'wither_spawn' });
+      b.blast(u.x, u.y, 240);
+      for (let i = 0; i < 3; i++) {
+        b.summon(u, 'wither_skeleton', u.x - u.facing * 40, ARENA_D / 2 + (i - 1) * 90, 0.75, { fx: 'summon' });
+      }
     },
   },
 
@@ -1582,20 +1643,11 @@ export const BEHAVIORS: Record<string, Behavior> = {
       u.z = 110;
     },
     move(u, b, dt) {
-      if (!u.ab.p2 && u.hpFrac < 0.5 && b.has(u.team, 'omen_enrage')) {
-        u.ab.p2 = 1;
-        b.emit({ k: 'phase', s: 'dragon2' });
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '终末之怒！', color: '#d36bff' });
-        b.emit({ k: 'roar', x: u.x, y: u.y, r: 400, color: '#d36bff' });
-        u.atkSpd *= 1.25;
-        for (let i = 0; i < 2; i++) {
-          b.summon(u, 'enderman', u.x + b.rng.range(-40, 40), ARENA_D / 2 + (i ? 80 : -80), 0.75, { fx: 'summon' });
-        }
-      }
       u.atkTimer = Math.max(0, u.atkTimer - dt * b.atkSpeedOf(u));
       const foe = (1 - u.team) as 0 | 1;
       const foes = b.live[foe].filter((e) => !e.structure);
       const atk = b.atkOf(u);
+      const isP2 = u.bossPhase >= 2;
       const goto = (x: number, y: number, s: number) => {
         const dx = x - u.x;
         const dy = y - u.y;
@@ -1614,11 +1666,11 @@ export const BEHAVIORS: Record<string, Behavior> = {
         u.alt = 110;
         goto(homeX + Math.sin(u.age * 0.7) * 160, ARENA_D / 2 + Math.cos(u.age * 0.9) * 120, b.moveSpeedOf(u));
         if (u.atkTimer <= 0 && foes.length) {
-          u.atkTimer = u.cd;
+          u.atkTimer = isP2 ? u.cd * 0.75 : u.cd;
           u.animAtk = 0.4;
           const t = b.rng.pick(foes);
           u.facing = t.x > u.x ? 1 : -1;
-          b.shoot(u, t, 'dragon_fireball', atk * 0.8, {});
+          b.shoot(u, t, 'dragon_fireball', atk * (isP2 ? 1.0 : 0.8), {});
           b.emit({ k: 'sfx', id: 'dragon_shoot' });
         }
         u.ab.st -= dt;
@@ -1630,17 +1682,17 @@ export const BEHAVIORS: Record<string, Behavior> = {
               u.ab.state = 1;
               startCharge(u, c, 220);
               b.emit({ k: 'sfx', id: 'dragon_roar' });
-              b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '俯冲!', color: '#d36bff' });
+              b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '俯冲冲撞!', color: '#d36bff' });
             } else u.ab.st = 3;
           } else {
             u.ab.state = 2;
-            u.ab.st = 6;
-            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '栖息', color: '#d36bff' });
+            u.ab.st = isP2 ? 8 : 6;
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 40, s: '栖息龙巢 · 展开龙翼', color: '#d36bff' });
           }
         }
       } else if (u.ab.state === 1) {
         u.alt = 24;
-        chargeMove(u, b, dt, { mul: 1.3, knock: 220, stun: 0.4, all: true, speed: 360 });
+        chargeMove(u, b, dt, { mul: 1.4, knock: 240, stun: 0.5, all: true, speed: 380 });
         if (!u.ref.charge) {
           u.ab.state = 0;
           u.ab.st = 7;
@@ -1648,18 +1700,27 @@ export const BEHAVIORS: Record<string, Behavior> = {
       } else {
         // Perch on the fountain and breathe.
         u.alt = 0;
-        const px = u.team === 1 ? ARENA_W * 0.66 : ARENA_W * 0.34;
-        const d = goto(px, ARENA_D / 2, b.moveSpeedOf(u) * 1.2);
+        const px = u.team === 1 ? ARENA_W * 0.64 : ARENA_W * 0.36;
+        const d = goto(px, ARENA_D / 2, b.moveSpeedOf(u) * 1.3);
         if (d < 4) {
           u.moving = false;
           u.facing = u.team === 1 ? -1 : 1;
-          if (cool(u, 'br', dt, 0.6)) {
+          if (cool(u, 'br', dt, isP2 ? 0.45 : 0.6)) {
             u.ab.br = 1;
             u.animAtk = 0.5;
-            const bx = u.x + u.facing * 150;
-            b.emit({ k: 'boom', x: bx, y: u.y, r: 120, color: '#c56cf0', big: false });
+            const bx = u.x + u.facing * 160;
+            b.emit({ k: 'boom', x: bx, y: u.y, r: 140, color: '#c56cf0', big: false });
             b.emit({ k: 'sfx', id: 'breath', v: 0.6 });
-            b.aoe(bx, u.y, 120, u.team, (e) => b.damage(u, e, atk * 0.45, 'magic', { noCrit: true }));
+            b.aoe(bx, u.y, 140, u.team, (e) => b.damage(u, e, atk * (isP2 ? 0.65 : 0.45), 'magic', { noCrit: true }));
+          }
+          if (isP2 && cool(u, 'tail', dt, 3.5)) {
+            u.ab.tail = 3.5;
+            b.emit({ k: 'shake', a: 8 });
+            b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + 40, s: '【巨尾横扫!】', color: '#d36bff' });
+            b.aoe(u.x - u.facing * 100, u.y, 130, u.team, (e) => {
+              b.damage(u, e, atk * 0.8, 'phys', { noCrit: true });
+              b.knock(e, u.x, u.y, 220);
+            });
           }
         }
         u.ab.st -= dt;
@@ -1671,7 +1732,20 @@ export const BEHAVIORS: Record<string, Behavior> = {
       return true;
     },
     onProjExplode(u, p, x, y, b) {
-      if (p.kind === 'dragon_fireball') b.addZone({ x, y, r: 70, dur: 4, team: u.team, dps: b.atkOf(u) * 0.3, kind: 'breath', src: u });
+      if (p.kind === 'dragon_fireball') b.addZone({ x, y, r: 85, dur: 4.5, team: u.team, dps: b.atkOf(u) * 0.35, kind: 'breath', src: u });
+    },
+    onPhaseTransition(u, phase, b) {
+      b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + 45, s: '终末之怒 · 水晶共鸣强行自愈!', color: '#d36bff' });
+      b.emit({ k: 'phase', s: 'dragon2' });
+      b.emit({ k: 'roar', x: u.x, y: u.y, r: 450, color: '#d36bff' });
+      b.emit({ k: 'sfx', id: 'dragon_roar' });
+      u.atkSpd *= 1.30;
+      u.fx.projTaken = 0.35;
+      u.ab.state = 2;
+      u.ab.st = 8;
+      for (let i = 0; i < 2; i++) {
+        b.summon(u, 'enderman', u.x + b.rng.range(-40, 40), ARENA_D / 2 + (i ? 80 : -80), 0.75, { fx: 'summon' });
+      }
     },
   },
 };

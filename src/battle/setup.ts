@@ -3,7 +3,7 @@ import type { Family, Row } from '../core/types.ts';
 import { computeSynergies } from '../data/families.ts';
 import { mobDef, starStatMul, unitCount } from '../data/mobs.ts';
 import type { CardPlan, SidePlan } from './sim.ts';
-import { IMM_BURN, IMM_HUNGER, IMM_KB, IMM_POISON, baseFx } from './unit.ts';
+import { IMM_BURN, IMM_HUNGER, IMM_KB, IMM_POISON, IMM_SLOW, baseFx } from './unit.ts';
 import type { BuildOrder } from './terrain.ts';
 import { COMMANDER_MAP } from '../data/commanders.ts';
 import { enchantVal } from '../data/items.ts';
@@ -19,6 +19,12 @@ export interface PlanCardInput {
   count?: number;
   uid?: string;
   anchor?: [number, number];
+  mastery?: number;
+  sigil?: string;
+  sigilStar?: number;
+  netherite?: boolean;
+  enchant2?: string;
+  enchant2Lv?: number;
 }
 
 export interface SideContext {
@@ -80,76 +86,88 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     let immune = 0;
     let count = c.count ?? unitCount(m, c.star);
 
-    // ── Enchantment (levels I–III; 青金石 boosts the numbers) ──
-    const lv = c.enchantLv ?? 2;
-    const ev = (k = 0) => (c.enchant ? enchantVal(c.enchant, lv, k) / 100 : 0) * E;
-    switch (c.enchant) {
-      case 'sharpness':
-        if (!ranged) atkMul *= 1 + ev();
-        break;
-      case 'power':
-        if (ranged) atkMul *= 1 + ev();
-        break;
-      case 'protection':
-        hpMul *= 1 + ev();
-        break;
-      case 'knockback':
-        fx.knock = (40 + 30 * (lv - 1)) * E;
-        fx.stunChance = ev();
-        break;
-      case 'thorns':
-        fx.thorns += ev();
-        break;
-      case 'unbreaking':
-        fx.dodge = Math.min(0.4, ev());
-        break;
-      case 'looting':
-        fx.loot = Math.round(enchantVal('looting', lv) * E);
-        break;
-      case 'sweeping':
-        if (!ranged) fx.sweep = ev();
-        break;
-      case 'piercing':
-        if (ranged) {
-          fx.pierce = enchantVal('piercing', lv) + (E > 1 ? 1 : 0);
-          atkMul *= 1 + ev(1);
-        }
-        break;
-      case 'mending':
-        fx.lifesteal += ev();
-        break;
-      case 'soul_speed':
-        moveSpd *= 1 + ev();
-        atkSpd *= 1 + ev(1);
-        break;
-      case 'channeling':
-        fx.channel = Math.max(3, enchantVal('channeling', lv) - (E > 1 ? 1 : 0));
-        break;
-      case 'multishot':
-        if (ranged && m.projectile) fx.multishot = ev();
-        break;
-      case 'smite':
-        fx.vsUndead = ev();
-        break;
-      case 'bane':
-        fx.vsArthropod = ev();
-        fx.baneSlow = enchantVal('bane', lv, 1);
-        break;
-      case 'breach':
-        fx.breach = Math.min(0.9, ev());
-        break;
-      case 'density':
-        fx.density = ev();
-        break;
-      case 'wind_burst':
-        fx.windBurst = Math.max(2, enchantVal('wind_burst', lv) - (E > 1 ? 1 : 0));
-        break;
-      case 'punch':
-        if (ranged) {
-          fx.knock = (40 + 30 * (lv - 1)) * E;
-          fx.stunChance = ev();
-        }
-        break;
+    // ── Enchantment (levels I–III; 青金石 boosts the numbers; supports dual enchant with Netherite) ──
+    const applyOneEnchant = (ench?: string, elv?: number) => {
+      if (!ench) return;
+      const lv = elv ?? 1;
+      const ev = (k = 0) => (enchantVal(ench, lv, k) / 100) * E;
+      switch (ench) {
+        case 'sharpness':
+          if (!ranged) atkMul *= 1 + ev();
+          break;
+        case 'power':
+          if (ranged) atkMul *= 1 + ev();
+          break;
+        case 'protection':
+          hpMul *= 1 + ev();
+          break;
+        case 'knockback':
+          fx.knock = Math.max(fx.knock || 0, (40 + 30 * (lv - 1)) * E);
+          fx.stunChance = Math.max(fx.stunChance || 0, ev());
+          break;
+        case 'thorns':
+          fx.thorns += ev();
+          break;
+        case 'unbreaking':
+          fx.dodge = Math.min(0.4, fx.dodge + ev());
+          break;
+        case 'looting':
+          fx.loot = Math.max(fx.loot, Math.round(enchantVal('looting', lv) * E));
+          break;
+        case 'sweeping':
+          if (!ranged) fx.sweep = Math.max(fx.sweep, ev());
+          break;
+        case 'piercing':
+          if (ranged) {
+            fx.pierce = Math.max(fx.pierce, enchantVal('piercing', lv) + (E > 1 ? 1 : 0));
+            atkMul *= 1 + ev(1);
+          }
+          break;
+        case 'mending':
+          fx.lifesteal += ev();
+          break;
+        case 'soul_speed':
+          moveSpd *= 1 + ev();
+          atkSpd *= 1 + ev(1);
+          break;
+        case 'channeling':
+          fx.channel = Math.max(3, enchantVal('channeling', lv) - (E > 1 ? 1 : 0));
+          break;
+        case 'multishot':
+          if (ranged && m.projectile) fx.multishot = Math.max(fx.multishot, ev());
+          break;
+        case 'smite':
+          fx.vsUndead = Math.max(fx.vsUndead, ev());
+          break;
+        case 'bane':
+          fx.vsArthropod = Math.max(fx.vsArthropod, ev());
+          fx.baneSlow = Math.max(fx.baneSlow, enchantVal('bane', lv, 1));
+          break;
+        case 'breach':
+          fx.breach = Math.min(0.9, fx.breach + ev());
+          break;
+        case 'density':
+          fx.density = Math.max(fx.density, ev());
+          break;
+        case 'wind_burst':
+          fx.windBurst = Math.max(2, enchantVal('wind_burst', lv) - (E > 1 ? 1 : 0));
+          break;
+        case 'punch':
+          if (ranged) {
+            fx.knock = Math.max(fx.knock || 0, (40 + 30 * (lv - 1)) * E);
+            fx.stunChance = Math.max(fx.stunChance || 0, ev());
+          }
+          break;
+      }
+    };
+    applyOneEnchant(c.enchant, c.enchantLv);
+    if (c.enchant2) applyOneEnchant(c.enchant2, c.enchant2Lv);
+
+    // ── Netherite Reinforcement (下界合金强化) ──
+    if (c.netherite) {
+      armorAdd += 0.05;
+      fx.dmgTaken *= 0.95;
+      immune |= IMM_KB;
     }
 
     // ── Relics ──
@@ -339,15 +357,93 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
       fx.burnMul *= 1.3;
     }
 
-    if (c.enchant === 'fire_aspect' || c.enchant === 'flame') {
-      fx.burnHit = Math.max(fx.burnHit, baseAtk() * ev());
-      fx.burnDur = Math.max(fx.burnDur, c.enchant === 'flame' ? 3 : 4);
+    const applyHitEnchant = (ench?: string, elv?: number) => {
+      if (!ench) return;
+      const lv = elv ?? 1;
+      const ev = (k = 0) => (enchantVal(ench, lv, k) / 100) * E;
+      if (ench === 'fire_aspect' || ench === 'flame') {
+        fx.burnHit = Math.max(fx.burnHit, baseAtk() * ev());
+        fx.burnDur = Math.max(fx.burnDur, ench === 'flame' ? 3 : 4);
+      }
+      if (ench === 'frost') fx.freezeHit = Math.max(fx.freezeHit, baseAtk() * ev());
+    };
+    applyHitEnchant(c.enchant, c.enchantLv);
+    if (c.enchant2) applyHitEnchant(c.enchant2, c.enchant2Lv);
+
+    // ── ★3+ Mastery Overcharge (极阶突破) ──
+    if (c.mastery && c.mastery > 0) {
+      hpMul *= 1 + c.mastery * 0.10;
+      atkMul *= 1 + c.mastery * 0.08;
     }
-    if (c.enchant === 'frost') fx.freezeHit = baseAtk() * ev();
+
+    // ── Sigil / Essence Fusion (生物印记刻印 - 支持 ★1/★2/★3 阶位缩放) ──
+    if (c.sigil) {
+      const sStar = Math.max(1, Math.min(3, c.sigilStar ?? 1));
+      switch (c.sigil) {
+        case 'creeper':
+          // Death explosion handled in sim.ts onDeath with sigilStar scaling
+          break;
+        case 'snow_golem':
+          fx.freezeHit = Math.max(fx.freezeHit, sStar === 3 ? 45 : sStar === 2 ? 28 : 15);
+          break;
+        case 'cave_spider':
+          fx.poisonHit = Math.max(fx.poisonHit, sStar === 3 ? 35 : sStar === 2 ? 22 : 12);
+          fx.poisonDur = Math.max(fx.poisonDur, sStar >= 2 ? 4 : 3);
+          fx.poisonStacks = Math.max(fx.poisonStacks, sStar === 3 ? 6 : sStar === 2 ? 5 : 3);
+          break;
+        case 'iron_golem':
+          armorAdd += sStar === 3 ? 0.28 : sStar === 2 ? 0.18 : 0.10;
+          fx.thorns = Math.max(fx.thorns, sStar === 3 ? 0.50 : sStar === 2 ? 0.35 : 0.20);
+          if (sStar >= 3) immune |= IMM_KB;
+          break;
+        case 'enderman':
+          fx.dodge = Math.min(0.75, fx.dodge + (sStar === 3 ? 0.28 : sStar === 2 ? 0.20 : 0.12));
+          fx.projDodge = Math.min(0.85, fx.projDodge + (sStar === 3 ? 0.70 : sStar === 2 ? 0.50 : 0.30));
+          break;
+        case 'blaze':
+          fx.burnHit = Math.max(fx.burnHit, baseAtk() * (sStar === 3 ? 0.50 : sStar === 2 ? 0.35 : 0.20));
+          fx.burnDur = Math.max(fx.burnDur, 3);
+          fx.vsBurning = Math.max(fx.vsBurning, sStar === 3 ? 0.50 : sStar === 2 ? 0.35 : 0.20);
+          break;
+        case 'shulker':
+          fx.dmgTaken *= sStar === 3 ? 0.76 : sStar === 2 ? 0.84 : 0.90;
+          break;
+        case 'witch':
+          fx.lifesteal = Math.max(fx.lifesteal, sStar === 3 ? 0.30 : sStar === 2 ? 0.20 : 0.12);
+          immune |= IMM_POISON | (sStar >= 2 ? IMM_SLOW : 0);
+          break;
+        case 'wolf':
+          atkSpd *= sStar === 3 ? 1.35 : sStar === 2 ? 1.25 : 1.15;
+          moveSpd *= sStar === 3 ? 1.25 : sStar === 2 ? 1.20 : 1.12;
+          fx.executeLowHp = Math.max(fx.executeLowHp, sStar === 3 ? 0.60 : sStar === 2 ? 0.40 : 0.25);
+          break;
+        case 'vindicator':
+          fx.crit = Math.min(0.85, fx.crit + (sStar === 3 ? 0.35 : sStar === 2 ? 0.25 : 0.15));
+          fx.critMul = Math.max(fx.critMul, sStar === 3 ? 2.6 : sStar === 2 ? 2.2 : 1.9);
+          break;
+        case 'phantom':
+          fx.pierce += sStar === 3 ? 3 : sStar === 2 ? 2 : 1;
+          fx.breach = Math.max(fx.breach, sStar === 3 ? 0.50 : sStar === 2 ? 0.35 : 0.20);
+          break;
+        case 'drowned':
+          fx.regen = Math.max(fx.regen, sStar === 3 ? 0.05 : sStar === 2 ? 0.035 : 0.02);
+          break;
+        case 'piglin_brute':
+          atkMul *= sStar === 3 ? 1.30 : sStar === 2 ? 1.20 : 1.12;
+          break;
+        case 'skeleton_vanguard':
+          fx.projTaken *= sStar === 3 ? 0.30 : sStar === 2 ? 0.50 : 0.70;
+          break;
+        case 'redstone_golem':
+          fx.sweep = Math.max(fx.sweep, sStar === 3 ? 0.60 : sStar === 2 ? 0.40 : 0.25);
+          break;
+      }
+    }
 
     return {
       mob: c.mob, star: c.star, row: c.row, count, hpMul, atkMul, atkSpd, moveSpd, rangeMul, armorAdd, fx, immune,
-      enchant: c.enchant, uid: c.uid, anchor: c.anchor,
+      enchant: c.enchant, uid: c.uid, anchor: c.anchor, mastery: c.mastery, sigil: c.sigil,
+      sigilStar: c.sigilStar, netherite: c.netherite, enchant2: c.enchant2, enchant2Lv: c.enchant2Lv,
     };
   });
 

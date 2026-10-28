@@ -220,9 +220,10 @@ export function enemyScales(act: number, row: number, kind: EncounterDef['kind']
   const baseTable = [1, 0.82, 1.32, 1.9, 3.2, 3.8, 4.4, 5.0];
   const base = baseTable[Math.min(baseTable.length - 1, act)] ?? 3.2;
   if (kind === 'boss') {
-    const bossTable = [1, 0.75, 0.88, 0.74, 1.3, 1.45, 1.6, 1.8];
-    const boss = bossTable[Math.min(bossTable.length - 1, act)] ?? 1.3;
-    return { hp: boss, atk: boss };
+    const bossHpTable = [1, 0.85, 1.20, 1.60, 2.20, 2.80, 3.40, 4.20];
+    const bossAtkTable = [1, 0.85, 1.15, 1.45, 1.90, 2.40, 2.80, 3.40];
+    const actIdx = Math.min(bossHpTable.length - 1, act);
+    return { hp: bossHpTable[actIdx] ?? 2.2, atk: bossAtkTable[actIdx] ?? 1.9 };
   }
   // Four floors form a readable chapter: steady growth, then a visible step when the encounter tier changes.
   const tier = tierForRow(row);

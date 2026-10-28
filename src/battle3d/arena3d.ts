@@ -337,6 +337,8 @@ export class Arena3D {
   shake = 0;
   flash = 0;
   flashColor = '#fff';
+  guardianJumpscareT = 0;
+  bossAwakenedVignetteT = 0;
   sfxEnabled = true;
   statusTick = 0;
   width = 1600;
@@ -873,6 +875,26 @@ export class Arena3D {
             P.add(tx(e.x), y, tz(e.y), Math.cos(a) * 2.2, 0.5 + Math.random(), Math.sin(a) * 2.2, 0.45, 0.14, c, 2, 4);
           }
           if (this.sfxEnabled) sfx('hit_big', { vol: 0.3, pan: pan(e.x) });
+          break;
+        }
+        case 'phase': {
+          // ── 全局首领阶段转换视听表现 ──
+          if (e.s === 'boss_p2' || e.s === 'wither2' || e.s === 'dragon2' || e.s === 'guardian2' || e.s === 'enrage') {
+            this.flash = Math.max(this.flash, 0.35);
+            this.flashColor = e.s === 'guardian2' ? '#5ee6d6' : e.s === 'wither2' ? '#a29bfe' : e.s === 'dragon2' ? '#d36bff' : '#ff4757';
+            if (this.opts.shake) this.shake = Math.max(this.shake, 6.0);
+            this.hitStop(0.12);
+            if (e.s === 'guardian2') {
+              this.guardianJumpscareT = 1.3;
+            }
+          } else if (e.s === 'boss_p3_awakened') {
+            // Omen 5 终末三阶段觉醒：全屏深渊血红暗涌
+            this.flash = Math.max(this.flash, 0.50);
+            this.flashColor = '#ff3838';
+            if (this.opts.shake) this.shake = Math.max(this.shake, 9.0);
+            this.hitStop(0.22);
+            this.bossAwakenedVignetteT = 2.5;
+          }
           break;
         }
       }
@@ -1773,6 +1795,20 @@ export class Arena3D {
       if (u.ab.fuse > 0 && Math.random() < 0.6) P.add(x, y + h, z, (Math.random() - 0.5) * 1.2, 1.8, (Math.random() - 0.5) * 1.2, 0.4, 0.08, this.color('#cfcfcf'), 0, 0);
       if (id(u) === 'creeper' && u.star >= 3 && Math.random() < 0.4) A.add(rx(), y + Math.random() * h, rz(), 0, 0, 0, 0.2, 0.1, this.color('#7fd8ff'), 0, 0);
       if (u.shield > 1 && Math.random() < 0.3) A.add(rx(), y + Math.random() * h, rz(), 0, 0.5, 0, 0.4, 0.08, this.color('#ffe680'), 0, 0);
+      // ── 凋灵护甲原著电弧白蓝星芒环绕 ──
+      if (u.ref.witherArmor) {
+        const a = this.time * 8 + u.id;
+        const armorR = r * 1.5;
+        for (let k = 0; k < 2; k++) {
+          const ang = a + k * Math.PI;
+          A.add(x + Math.cos(ang) * armorR, y + Math.random() * h, z + Math.sin(ang) * armorR, 0, 0.3, 0, 0.22, 0.15, this.color('#9fd4ff'), 0, 0, SH_STAR);
+        }
+      }
+      // ── 首领狂暴形态专属周身脉冲气流 (Phase 2 & Phase 3) ──
+      if (u.boss && u.bossPhase >= 2 && Math.random() < 0.4) {
+        const col = u.bossPhase >= 3 ? '#ff3838' : '#e056fd';
+        A.add(rx(), y + Math.random() * h * 0.9, rz(), 0, 1.8, 0, 0.45, 0.16, this.color(col), -1, 0, SH_STAR);
+      }
     }
   }
 
@@ -2060,6 +2096,67 @@ export class Arena3D {
       ctx.globalAlpha = 1;
       this.flash *= Math.exp(-dt * 9);
     }
+
+    // ── 远古守护者转阶段全屏原著鬼脸跳杀幻影 (Elder Guardian Ghost Jumpscare) ──
+    if (this.guardianJumpscareT > 0) {
+      this.guardianJumpscareT -= dt;
+      const progress = Math.max(0, this.guardianJumpscareT / 1.3);
+      const alpha = progress > 0.8 ? (1.3 - this.guardianJumpscareT) / 0.26 : progress / 0.8;
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.72, alpha * 0.72);
+      const cx = this.width / 2;
+      const cy = this.height / 2;
+      const size = Math.min(this.width, this.height) * 0.65;
+      
+      const grad = ctx.createRadialGradient(cx, cy, size * 0.1, cx, cy, size * 0.7);
+      grad.addColorStop(0, 'rgba(94, 230, 214, 0.45)');
+      grad.addColorStop(0.6, 'rgba(40, 116, 101, 0.25)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      ctx.fillStyle = '#78a69e';
+      ctx.strokeStyle = '#3d665f';
+      ctx.lineWidth = 6;
+      ctx.fillRect(cx - size * 0.35, cy - size * 0.35, size * 0.7, size * 0.7);
+      ctx.strokeRect(cx - size * 0.35, cy - size * 0.35, size * 0.7, size * 0.7);
+
+      ctx.fillStyle = '#ff3838';
+      ctx.beginPath();
+      ctx.arc(cx, cy, size * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2d0000';
+      ctx.beginPath();
+      ctx.arc(cx + Math.sin(this.time * 20) * 4, cy, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = 'bold 28px Pixel, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#5ee6d6';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#000';
+      ctx.strokeText('【挖掘疲劳 III · 远古诅咒】', cx, cy + size * 0.45);
+      ctx.fillText('【挖掘疲劳 III · 远古诅咒】', cx, cy + size * 0.45);
+      ctx.restore();
+    }
+
+    // ── Omen 5 终末三阶段觉醒深渊红光晕影 (Awakened Abyss Vignette) ──
+    if (this.bossAwakenedVignetteT > 0) {
+      this.bossAwakenedVignetteT -= dt;
+      const vAlpha = Math.min(0.55, this.bossAwakenedVignetteT / 2.5);
+      ctx.save();
+      const cx = this.width / 2;
+      const cy = this.height / 2;
+      const rad = Math.max(cx, cy);
+      const vig = ctx.createRadialGradient(cx, cy, rad * 0.4, cx, cy, rad);
+      vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      vig.addColorStop(0.7, `rgba(180, 20, 20, ${vAlpha * 0.4})`);
+      vig.addColorStop(1, `rgba(120, 0, 0, ${vAlpha * 0.85})`);
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.restore();
+    }
+
     void alpha;
   }
 

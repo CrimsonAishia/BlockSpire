@@ -267,7 +267,7 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     requiredEliteGates: 2,
     star3Chance: { tier0: 0.1, tier1: 0.45, tier2: 0.8, elite: 1.0 },
     star3Cap: { tier0: 1, tier1: 1, tier2: 2, elite: 2 },
-    startingEmeraldBonus: 100,
+    startingEmeraldBonus: 0,
     shopPriceMul: 1.15,
     restHeal: 2,
     heartsPenalty: 1,
@@ -284,7 +284,8 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
     newRules: [
       '第 2 幕包含 1 场、第 3 幕起每幕必须突破 2 场必经精英战，无法绕路规避（第 1 幕允许路线规避精英）。',
       '中后期敌军常态化五卡满编，精英固定双战术。',
-      '所有首领进入强化二阶段，最终决战需连续阶段作战。',
+      '首领拥有单次伤害偏斜上限与阶段硬锁血霸体，彻底免疫一击秒杀。',
+      '终末觉醒：首领二阶段被击杀后，残血觉醒进入 Phase 3 狂暴决战。',
       '战备特权：开局可规划终极策略（自选一紫一蓝一随机蓝、自选三蓝或全随机三蓝）。',
     ],
     rules: [
@@ -302,7 +303,8 @@ export const DIFFICULTY_POLICIES: DifficultyPolicy[] = [
       '战备特权：开局可规划小队策略（自选三蓝或全随机三蓝）。',
       '第 2 幕包含 1 场、第 3 幕起每幕必须突破 2 场必经精英战，无法绕路规避（第 1 幕允许路线规避精英）。',
       '中后期敌军常态化五卡满编，精英固定双战术。',
-      '所有首领进入强化二阶段，最终决战需连续阶段作战。',
+      '首领拥有单次伤害偏斜上限与阶段硬锁血霸体，彻底免疫一击秒杀。',
+      '终末觉醒：首领二阶段被击杀后，残血觉醒进入 Phase 3 狂暴决战。',
       '战备特权：开局可规划终极策略（自选一紫一蓝一随机蓝、自选三蓝或全随机三蓝）。',
     ],
   },

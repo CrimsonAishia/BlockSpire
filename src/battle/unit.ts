@@ -241,6 +241,10 @@ export class Unit {
   lifespan = 0;
   structure = false;
   boss = false;
+  bossPhase = 1;
+  phaseImmunityTimer = 0;
+  p2Triggered = false;
+  p3Triggered = false;
   posture = 0;
   postureMax = 100;
   channeling = false;

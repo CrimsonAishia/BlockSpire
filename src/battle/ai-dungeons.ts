@@ -1046,6 +1046,24 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
         }
       }
 
+      // 虚空跃迁 (Void Blink): Phase 2 & 3 periodic teleport behind enemy backline
+      if (phase >= 2 && !u.channeling && !u.ref.charge && cool(u, 'blinkCd', dt, phase === 3 ? 6.5 : 9.5)) {
+        const backliner = foesOf(u, b).filter((f) => f.alive && !f.structure).sort((a, b) => (u.team === 0 ? b.x - a.x : a.x - b.x))[0];
+        if (backliner && dist(u, backliner) > 100) {
+          const blinkX = clampX(u, backliner.x + (u.team === 0 ? 35 : -35));
+          const blinkY = clampY(backliner.y);
+          b.emit({ k: 'tele', x: u.x, y: u.y, x2: blinkX, y2: blinkY, z: u.gz });
+          b.emit({ k: 'sfx', id: 'shoot' });
+          b.emit({ k: 'text', x: blinkX, y: blinkY, z: u.gz + u.size, s: '虚空闪现!', color: '#9b59b6' });
+          u.x = blinkX;
+          u.y = blinkY;
+          b.aoe(blinkX, blinkY, 70, u.team, (f) => {
+            b.damage(u, f, b.atkOf(u) * 0.45, 'magic');
+            b.knock(f, blinkX, blinkY, 80);
+          });
+        }
+      }
+
       if (phase >= 2 && !u.channeling && !u.ref.charge && cool(u, 'voidPoolCd', dt, poolCd)) {
         u.ab.voidPoolCd = poolCd;
         const target = foesOf(u, b).find((f) => f.alive && !f.structure);

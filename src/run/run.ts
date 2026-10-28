@@ -20,6 +20,7 @@ import { DUNGEONS_MAP_BY_ID } from '../data/dungeonsMaps.ts';
 import { createDungeonsTerrain } from '../battle/dungeonsTerrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 import { rollEnemyTactics } from '../data/enemyTactics.ts';
+import { sigilOfMob } from '../data/sigils.ts';
 
 export { actDifficultyRamp } from '../data/difficulty.ts';
 
@@ -126,7 +127,7 @@ export type Pending =
   | { type: 'shop'; stock: ShopItem[]; reroll: number; /** Villager orders left in this shop. */ orders?: number }
   | { type: 'event'; id: string; result?: string; resultTone?: 'good' | 'bad' | 'neutral'; data: Record<string, number> }
   | { type: 'rest'; actions: number; done: string[] }
-  | { type: 'pick_card'; purpose: 'enchant' | 'upgrade' | 'bonus' | 'sacrifice' | 'trade'; title: string; enchant?: string; data?: Record<string, number | string> }
+  | { type: 'pick_card'; purpose: 'enchant' | 'upgrade' | 'bonus' | 'sacrifice' | 'trade' | 'fuse_base' | 'fuse_sac' | 'netherite'; title: string; enchant?: string; data?: Record<string, number | string> }
   | { type: 'enchant_choice'; title: string; books: string[]; cost: number; /** Book levels (default I). */ levels?: number[] }
   | { type: 'boss_reward'; relics: string[]; slotGained: boolean; healed: number }
   | { type: 'act_intro'; act: number }
@@ -1166,7 +1167,22 @@ export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }
   const modifierFlags = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier]?.flags : undefined;
   const tacticFlags = (p.tactics ?? []).map((t) => `tactic_${t}`);
   const player = buildSide(
-    s.team.map((c) => ({ mob: c.mob, star: c.star, row: c.row, enchant: c.enchant, enchantLv: c.enchantLv, bonus: c.bonus, uid: c.uid, anchor: p.deploy?.[c.uid] })),
+    s.team.map((c) => ({
+      mob: c.mob,
+      star: c.star,
+      row: c.row,
+      enchant: c.enchant,
+      enchantLv: c.enchantLv,
+      bonus: c.bonus,
+      uid: c.uid,
+      anchor: p.deploy?.[c.uid],
+      mastery: c.mastery,
+      netherite: c.netherite,
+      sigil: c.sigil,
+      sigilStar: c.sigilStar,
+      enchant2: c.enchant2,
+      enchant2Lv: c.enchant2Lv,
+    })),
     { relics: s.relics, potions: [], commander: s.commander, act: s.act, builds: p.build, flags: modifierFlags },
   );
   const enemy = buildSide(
@@ -1176,7 +1192,12 @@ export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }
       flags: [
         ...(modifierFlags ?? []),
         ...tacticFlags,
-        ...(p.kind === 'boss' && difficultyPolicy(s.omen).bossPhase ? ['omen_enrage'] : []),
+        ...(p.kind === 'boss' ? [
+          ...(s.omen >= 2 ? ['omen_early_p2'] : []),
+          ...(s.omen >= 3 ? ['omen_anti_stall'] : []),
+          ...(s.omen >= 4 ? ['omen_hard_wither_armor', 'omen_enrage'] : []),
+          ...(s.omen >= 5 ? ['omen_awakened_p3'] : []),
+        ] : []),
       ],
     },
   );
@@ -1531,6 +1552,19 @@ export function gainCard(s: RunState, mob: string, fromCrate = true): GainOutcom
   const existing = allCards(s).find((c) => c.mob === mob);
   if (existing) {
     if (existing.star >= 3) {
+      const curMastery = existing.mastery ?? 0;
+      if (curMastery < 3) {
+        existing.shards = (existing.shards ?? 0) + 1;
+        const needed = curMastery === 0 ? 2 : curMastery === 1 ? 3 : 4;
+        let starUp = false;
+        if (existing.shards >= needed) {
+          existing.mastery = curMastery + 1;
+          existing.shards = 0;
+          starUp = true;
+          s.stats.starUps = (s.stats.starUps ?? 0) + 1;
+        }
+        return { kind: 'merge', card: existing, starUp };
+      }
       const em = Math.round(dustValue(mob, 3) * 0.5);
       gainEmeralds(s, em);
       return { kind: 'dust', emeralds: em };
@@ -1666,6 +1700,20 @@ export function applyEnchant(c: Card, enchant: string, lv: number): boolean {
   if (c.enchant === enchant) {
     c.enchantLv = Math.min(3, (c.enchantLv ?? 2) + lv);
     return true;
+  }
+  if (c.enchant2 === enchant) {
+    c.enchant2Lv = Math.min(3, (c.enchant2Lv ?? 2) + lv);
+    return true;
+  }
+  if (c.netherite && c.enchant && !c.enchant2) {
+    c.enchant2 = enchant;
+    c.enchant2Lv = Math.max(1, Math.min(3, lv));
+    return false;
+  }
+  if (c.netherite && c.enchant && c.enchant2) {
+    c.enchant2 = enchant;
+    c.enchant2Lv = Math.max(1, Math.min(3, lv));
+    return false;
   }
   c.enchant = enchant;
   c.enchantLv = Math.max(1, Math.min(3, lv));
@@ -1931,7 +1979,73 @@ export function pickCard(s: RunState, uid: string | null) {
       s.queue.unshift(openCrate(s, 'ominous', grade, '流浪商人的交易'));
       break;
     }
+    case 'netherite': {
+      c.netherite = true;
+      toast(s, `【下界合金淬炼】${mobDef(c.mob).name} 成功淬炼为下界合金武装，护甲提升，受控时间缩短 30%，解锁双附魔槽位！`, 'gold');
+      break;
+    }
+    case 'fuse_base': {
+      s.queue.unshift({
+        type: 'pick_card',
+        purpose: 'fuse_sac',
+        title: `印记融合：选择献祭副卡刻印至「${mobDef(c.mob).name}」`,
+        data: { baseUid: uid },
+      });
+      break;
+    }
+    case 'fuse_sac': {
+      const baseUid = String(p.data?.baseUid);
+      fuseCard(s, baseUid, uid);
+      break;
+    }
   }
+}
+
+export function fuseCard(s: RunState, baseUid: string, sacUid: string) {
+  if (baseUid === sacUid) return;
+  const baseCard = findCard(s, baseUid);
+  const sacCard = findCard(s, sacUid);
+  if (!baseCard || !sacCard) return;
+
+  const baseM = mobDef(baseCard.mob);
+  const sacM = mobDef(sacCard.mob);
+
+  // 1. Inscribe or Upgrade Sigil Star Tier
+  const isSameSigil = baseCard.sigil === sacCard.mob;
+  if (isSameSigil) {
+    baseCard.sigilStar = Math.min(3, Math.max((baseCard.sigilStar ?? 1) + 1, sacCard.star));
+  } else {
+    baseCard.sigil = sacCard.mob;
+    baseCard.sigilStar = sacCard.star;
+  }
+
+  // 2. Essence Stat Infusion with Host & Sacrifice Star Multipliers
+  // Sacrifice star base: ★1: 3%, ★2: 6%, ★3: 12%
+  const rawEssence = sacCard.star === 3 ? 0.12 : sacCard.star === 2 ? 0.06 : 0.03;
+  // Host star absorption multiplier: ★1: 1.0x, ★2: 1.3x, ★3: 1.75x (+10% per mastery rank)
+  const hostMul = (baseCard.star === 3 ? 1.75 : baseCard.star === 2 ? 1.30 : 1.0) + (baseCard.mastery ?? 0) * 0.10;
+  // Family Resonance: +5% if sharing any family tag
+  const resonance = baseM.families.some((f) => sacM.families.includes(f)) ? 0.05 : 0;
+
+  const bonusAdd = rawEssence * hostMul + resonance;
+  baseCard.bonus = (baseCard.bonus ?? 0) + bonusAdd;
+
+  // 3. Trait Inheritance: Inherit enchant if base card has none, or into enchant2 if netherite reinforced
+  if (!baseCard.enchant && sacCard.enchant) {
+    baseCard.enchant = sacCard.enchant;
+    baseCard.enchantLv = sacCard.enchantLv;
+  } else if (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && sacCard.enchant && sacCard.enchant !== baseCard.enchant) {
+    baseCard.enchant2 = sacCard.enchant;
+    baseCard.enchant2Lv = sacCard.enchantLv;
+  }
+
+  // 4. Consume sacrificial card from team / bench
+  s.team = s.team.filter((c) => c.uid !== sacUid);
+  s.bench = s.bench.filter((c) => c.uid !== sacUid);
+
+  const sigilName = sigilOfMob(sacCard.mob)?.name ?? `${sacM.name}之印`;
+  const romanTier = baseCard.sigilStar === 3 ? ' [III阶·极阶]' : baseCard.sigilStar === 2 ? ' [II阶·进阶]' : ' [I阶]';
+  toast(s, `【印记融合】${baseM.name} 成功融合「${sigilName}」${romanTier}，属性永久 +${Math.round(bonusAdd * 100)}%！`, 'gold');
 }
 
 export function chooseBook(s: RunState, enchant: string | null) {
@@ -1956,7 +2070,7 @@ export function restHeal(s: RunState) {
   return difficultyPolicy(s.omen).restHeal;
 }
 
-export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant') {
+export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant' | 'fuse' | 'netherite') {
   const p = s.queue[0];
   if (p.type !== 'rest' || p.actions <= 0 || p.done.includes(action)) return;
   if (action === 'rest') {
@@ -1972,6 +2086,12 @@ export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant') {
   if (action === 'enchant') {
     const books = randomBooks(s, 3);
     s.queue.unshift({ type: 'enchant_choice', title: '附魔台：选择一本附魔书', books, cost: 0, levels: withRng(s, (r) => books.map(() => bookLevel(s, r))) });
+  }
+  if (action === 'fuse') {
+    s.queue.unshift({ type: 'pick_card', purpose: 'fuse_base', title: '印记融合：选择接受印记刻印的主力卡牌' });
+  }
+  if (action === 'netherite') {
+    s.queue.unshift({ type: 'pick_card', purpose: 'netherite', title: '下界合金重铸台：选择进行合金淬炼的 ★3 卡牌' });
   }
 }
 

@@ -5552,3 +5552,83 @@
   flex-shrink: 0;
   margin-right: 4px;
 }
+
+/* ───────── Fusion Ceremony VFX (融合特效与仪式动画) ───────── */
+.fusion-ceremony {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  padding: 10px 14px 4px;
+}
+.fusion-altar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 18px 0 18px;
+  min-height: 220px;
+  width: 100%;
+}
+.fusion-halo {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(162, 155, 254, 0.45) 0%, rgba(108, 92, 231, 0.2) 45%, transparent 70%);
+  animation: fusion-rotate 8s linear infinite;
+  pointer-events: none;
+}
+.fusion-sparks {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(253, 121, 168, 0.3) 0%, rgba(85, 239, 196, 0.15) 50%, transparent 70%);
+  animation: fusion-pulse 2.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes fusion-rotate {
+  0% { transform: rotate(0deg) scale(0.92); }
+  50% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(0.92); }
+}
+@keyframes fusion-pulse {
+  0% { opacity: 0.4; transform: scale(0.85); }
+  100% { opacity: 0.95; transform: scale(1.15); }
+}
+.fusion-card-wrap {
+  animation: fusion-pop 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 20px rgba(162, 155, 254, 0.75));
+}
+@keyframes fusion-pop {
+  0% { transform: scale(0.35) rotate(-6deg); opacity: 0; filter: brightness(2.2); }
+  65% { transform: scale(1.12) rotate(2deg); filter: brightness(1.4); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
+}
+.fusion-banner {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(162, 155, 254, 0.85), 0 2px 4px #000;
+  margin-bottom: 6px;
+  letter-spacing: 1.5px;
+}
+.fusion-stat-badge {
+  background: rgba(22, 18, 38, 0.85);
+  border: 1px solid rgba(162, 155, 254, 0.5);
+  border-radius: 8px;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 520px;
+  margin: 10px auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 0 16px rgba(108, 92, 231, 0.2);
+}
+

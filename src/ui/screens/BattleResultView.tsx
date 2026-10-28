@@ -4,7 +4,7 @@ import { captureTamed, leaveNode, swapLoot } from '../../run/run.ts';
 import { RARITY_INFO, mobDef } from '../../data/mobs.ts';
 import { POTION_MAP } from '../../data/items.ts';
 import { url } from '../assets.ts';
-import { Btn, Emerald, HeartIcon, MobTipContent, PotionTipContent, Tip, itemIcon } from '../components/common.tsx';
+import { Btn, Emerald, HeartIcon, MobTipContent, PotionTipContent, Stars, Tip, itemIcon } from '../components/common.tsx';
 import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
 
@@ -82,7 +82,7 @@ export function BattleResultView({ s, p }: { s: RunState; p: P; v?: number }) {
                 <span class="rt-card">
                   <img src={url.mob(c.mob)} />
                   <span class="rc">{m.name}</span>
-                  <span class="stars">{'★'.repeat(c.star)}</span>
+                  <Stars star={c.star} mastery={(c as any).mastery} size="sm" />
                   {c === mvp && c.dmg > 0 && <span class="mvp-tag">MVP</span>}
                 </span>
                 <span class="rt-dmg">

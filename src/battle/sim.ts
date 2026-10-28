@@ -9,6 +9,7 @@ import { FORT_TAKEN, build, canTame, hireGolem, placeDispenser, tame, tickWalls,
 import type { SkillId } from '../data/commanders.ts';
 import { ITEM_MAP } from '../data/items.ts';
 import { counterMul } from '../data/combos.ts';
+import { sigilOfMob } from '../data/sigils.ts';
 import { P as TP, TAC, type Danger, dodgeStep, goalStep, kiteStep, pickTarget, planRanged, refreshTactics, retreatStep, startKite } from './tactics.ts';
 import {
   BLOCK, FlowField, GW as TGW, S as TS, atkMul as terrainAtkMul, atkSpeedMul as terrainAtkSpd, autoAnchors, blastTerrain, cellX, cellY,
@@ -48,6 +49,12 @@ export interface CardPlan {
   startHp?: number;
   /** Deployment anchor (world coords); auto-placed when absent. */
   anchor?: [number, number];
+  mastery?: number;
+  sigil?: string;
+  sigilStar?: number;
+  netherite?: boolean;
+  enchant2?: string;
+  enchant2Lv?: number;
 }
 
 export interface SidePlan {
@@ -443,6 +450,17 @@ export class Battle {
         }
       }
 
+      for (const u of this.live[team]) {
+        const plan = this.plans[u.card];
+        if (plan?.sigil && !u.isSummon && !u.structure) {
+          const sDef = sigilOfMob(plan.sigil);
+          const sigName = sDef ? sDef.name.split(' · ')[1] ?? sDef.name : plan.sigil;
+          const sStar = plan.sigilStar ?? 1;
+          const roman = sStar >= 3 ? ' III阶' : sStar === 2 ? ' II阶' : '';
+          this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 10, s: `【印记·${sigName}${roman}】`, color: '#a29bfe' });
+        }
+      }
+
       if (has('combo_wolf_armor')) {
         for (const u of this.live[team]) {
           if (u.mob.id === 'wolf' && !u.isSummon) {
@@ -708,6 +726,23 @@ export class Battle {
     for (const u of this.units) if (u.alive) this.fixTerrain(u);
     if (Math.floor(this.t * 30) % 90 === 0) this.compact();
     this.rebuildLive();
+    // ── 高难狂暴收税计时 (Anti-Stall Rage Timer, 针对 Omen 3+) ──
+    if (this.boss && this.t >= 40) {
+      const rageCycle = Math.floor((this.t - 40) / 10);
+      const lastCycle = this.sides[1].timers['boss_anti_stall_cycle'] ?? -1;
+      if (rageCycle > lastCycle && rageCycle <= 6) {
+        this.sides[1].timers['boss_anti_stall_cycle'] = rageCycle;
+        for (const u of this.live[1]) {
+          if (u.alive && u.boss && !u.isSummon) {
+            u.atk *= 1.15;
+            u.atkSpd *= 1.05;
+            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 20, s: `【破韧狂暴 · +15% 伤害 (第${rageCycle}层)】`, color: '#e74c3c' });
+            this.emit({ k: 'sfx', id: 'roar', v: 0.5 });
+          }
+        }
+      }
+    }
+
     this.suddenDeath(dt);
     this.checkEnd();
   }
@@ -2705,6 +2740,46 @@ export class Battle {
     return best;
   }
 
+  /**
+   * 触发首领阶段转换 (The Sovereign Gate):
+   * 1. 净化自身全部负面状态
+   * 2. 赋予 1.8 秒霸体无敌与 15% 最大生命护盾
+   * 3. 震退周围敌方并打断蓄力施法
+   * 4. 播放全屏视觉震荡与咆哮音效
+   * 5. 回调首领行为树专有 onPhaseTransition
+   */
+  triggerBossPhase(u: Unit, phase: number) {
+    u.bossPhase = phase;
+    u.phaseImmunityTimer = 1.8;
+    u.freezeT = 0;
+    u.slowT = 0;
+    u.stunT = 0;
+    u.burnT = 0;
+    u.poisonT = 0;
+    u.witherT = 0;
+    u.shield += u.maxHp * 0.15;
+
+    this.emit({ k: 'roar', x: u.x, y: u.y, r: 350, color: '#ff4757' });
+    this.emit({ k: 'shake', a: 12 });
+    this.emit({ k: 'sfx', id: 'roar' });
+    this.emit({ k: 'phase', s: `boss_p${phase}` });
+    this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size + 20, s: `【阶段 ${phase} · 狂暴觉醒!】`, color: '#ff4757' });
+    this.blast(u.x, u.y, 220);
+
+    const foe = (1 - u.team) as 0 | 1;
+    for (const e of this.live[foe]) {
+      if (!e.alive || e.structure) continue;
+      if (e.channeling || e.cast) this.cancelCast(e, 'phase_transition');
+      const d = Math.hypot(e.x - u.x, e.y - u.y);
+      if (d <= 220) {
+        this.knock(e, u.x, u.y, 160);
+        this.stun(e, 0.8);
+      }
+    }
+
+    this.beh(u).onPhaseTransition?.(u, phase, this);
+  }
+
   // ───────────────────────── Damage & statuses ─────────────────────────
 
   /**
@@ -2718,6 +2793,10 @@ export class Battle {
     o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean; isPandaIntercept?: boolean } = {},
   ): number {
     if (!t.alive || amount <= 0 || t.ghost) return 0;
+    if (t.phaseImmunityTimer > 0) {
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【转阶段霸体】', color: '#ff7675' });
+      return 0;
+    }
     if (!o.noDodge && kind !== 'dot') {
       if (t.fx.dodge > 0 && this.rng.chance(t.fx.dodge)) {
         this.emit({ k: 'num', x: t.x, y: t.y, z: t.gz + t.z + t.size, v: 0, c: NUM_DODGE });
@@ -3025,6 +3104,31 @@ export class Battle {
       }
     }
     d *= t.takenMul;
+
+    // ── 首领防秒杀：单次伤害上限截断 (Anti-Burst Cap) ──
+    if (t.boss && !t.structure && t.maxHp > 0) {
+      const maxCap = t.maxHp * 0.12;
+      if (d > maxCap) {
+        d = maxCap;
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【首领霸体 · 伤害偏斜】', color: '#ffa502' });
+      }
+    }
+
+    // ── 原著凋灵护甲判定：远程投射物几乎无法穿透 ──
+    if (t.ref.witherArmor && o.proj) {
+      this.emit({ k: 'sfx', id: 'anvil_land', v: 0.6 });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【凋灵护甲 · 弹矢偏斜!】', color: '#9fd4ff' });
+      d *= this.has(t.team, 'omen_hard_wither_armor') ? 0 : 0.12;
+    }
+
+    // ── 首领阶段硬锁血门槛 (Phase 2 Health Gate) ──
+    const p2Thresh = this.has(t.team, 'omen_early_p2') ? 0.65 : 0.50;
+    if (t.boss && !t.structure && !t.p2Triggered && (t.hp - d) / t.maxHp <= p2Thresh) {
+      t.p2Triggered = true;
+      d = Math.max(0, t.hp - t.maxHp * p2Thresh);
+      this.triggerBossPhase(t, 2);
+    }
+
     if (this.has(t.team, 'nimble_turtle') && !t.structure && t.maxHp > 0) {
       const cap = t.maxHp * 0.25;
       if (d > cap) {
@@ -3408,6 +3512,26 @@ export class Battle {
 
   kill(t: Unit, killer: Unit | null, silent = false) {
     if (!t.alive) return;
+
+    // ── Omen 5 终末觉醒：首领濒死残血三阶段复生 (Phase 3 Awakened) ──
+    if (t.boss && !silent && !t.p3Triggered && this.has(t.team, 'omen_awakened_p3')) {
+      t.p3Triggered = true;
+      t.bossPhase = 3;
+      t.hp = t.maxHp * 0.35;
+      t.phaseImmunityTimer = 2.0;
+      t.shield = t.maxHp * 0.20;
+      t.atk *= 1.25;
+      t.atkSpd *= 1.30;
+      this.emit({ k: 'roar', x: t.x, y: t.y, r: 400, color: '#d63031' });
+      this.emit({ k: 'shake', a: 15 });
+      this.emit({ k: 'sfx', id: 'wither_spawn' });
+      this.emit({ k: 'phase', s: 'boss_p3_awakened' });
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 25, s: '【终末觉醒 · 狂暴复苏!】', color: '#ff3838' });
+      this.blast(t.x, t.y, 250);
+      this.beh(t).onPhaseTransition?.(t, 3, this);
+      return;
+    }
+
     // Undead synergy revive.
     if (!silent && !t.isSummon && !t.undeadRevived && this.syn(t.team, 'undead') >= 1 && t.mob.families.includes('undead')) {
       t.undeadRevived = true;
@@ -3549,6 +3673,26 @@ export class Battle {
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【炸药殉爆!】', color: '#ff8844' });
       this.aoe(t.x, t.y, 70 * bm.r, t.team, (e) => this.damage(t, e, dmg, 'phys', { noCrit: true }));
     }
+    const tPlan = this.plans[t.card];
+    if (!silent && tPlan?.sigil === 'creeper' && t.mob.id !== 'creeper' && !t.structure) {
+      const sStar = tPlan.sigilStar ?? 1;
+      const dmgPct = sStar >= 3 ? 0.85 : sStar === 2 ? 0.55 : 0.35;
+      const radius = sStar >= 3 ? 90 : sStar === 2 ? 70 : 50;
+      const dmg = t.maxHp * dmgPct;
+      this.emit({ k: 'boom', x: t.x, y: t.y, r: radius, color: '#2ecc71', big: true });
+      this.emit({ k: 'shake', a: sStar >= 3 ? 10 : sStar === 2 ? 7 : 5 });
+      this.emit({ k: 'sfx', id: 'explode', v: 0.8 });
+      const roman = sStar >= 3 ? ' [III阶]' : sStar === 2 ? ' [II阶]' : '';
+      this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: `【苦力怕之印${roman} · 自爆!】`, color: '#2ecc71' });
+      this.aoe(t.x, t.y, radius, t.team, (e) => {
+        this.damage(t, e, dmg, 'true', { noCrit: true });
+        if (sStar >= 3) {
+          e.stunT = Math.max(e.stunT, 2.0);
+        } else if (sStar === 2) {
+          e.slowT = Math.max(e.slowT, 2.0);
+        }
+      });
+    }
     // 阴森护甲: 多单位队伍有成员阵亡时，其余队员回复 15% 并狂暴
     if (!silent && this.has(t.team, 'grim_armor') && !t.structure && !t.isSummon) {
       for (const a of this.live[t.team]) {
@@ -3655,6 +3799,7 @@ export class Battle {
   }
 
   private tickStatus(u: Unit, dt: number) {
+    if (u.phaseImmunityTimer > 0) u.phaseImmunityTimer -= dt;
     if (u.channeling) {
       if (!u.cast) {
         u.channelT -= dt;
@@ -3959,7 +4104,10 @@ export class Battle {
     t.posture = 0;
     t.channeling = false;
     t.channelT = 0;
-    const stunDur = t.cast ? 1.5 : 2.5;
+    const breakCount = (t.ref.breakCount as number | undefined) ?? 0;
+    t.ref.breakCount = breakCount + 1;
+    t.ref.lastBreakTime = this.t;
+    const stunDur = Math.max(1.0, (t.cast ? 1.5 : 2.5) - breakCount * 0.5);
     t.stunT = Math.max(t.stunT, stunDur);
     if (t.cast) {
       const c = t.cast;
@@ -3979,8 +4127,12 @@ export class Battle {
 
   addPosture(t: Unit, amt: number) {
     if (!t.boss || !t.channeling || (t.cast && t.cast.phase !== 'windup')) return;
+    const lastBreak = (t.ref.lastBreakTime as number | undefined) ?? -999;
+    if (this.t - lastBreak < 12) return;
     this.checkRavenInterrupt(t);
-    const actualAmt = this.has((1 - t.team) as 0 | 1, 'guardian_eye') ? amt * 1.30 : amt;
+    const breakCount = (t.ref.breakCount as number | undefined) ?? 0;
+    const resistance = Math.pow(0.75, breakCount);
+    const actualAmt = (this.has((1 - t.team) as 0 | 1, 'guardian_eye') ? amt * 1.30 : amt) * resistance;
     t.posture = Math.min(100, t.posture + actualAmt);
     if (t.cast) t.cast.posture = t.posture;
     if (t.posture >= 100) {

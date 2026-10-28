@@ -9,7 +9,7 @@ import { canTame, type SkillKind } from '../../battle/skills.ts';
 import { itemRadius } from '../../battle/items.ts';
 import { ITEM_MAP } from '../../data/items.ts';
 import { SKILL_INFO, type SkillId } from '../../data/commanders.ts';
-import { Emerald, PotionTipContent, Tip, itemIcon } from '../components/common.tsx';
+import { Emerald, PotionTipContent, Stars, Tip, itemIcon } from '../components/common.tsx';
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
 import { earnAchievement, settings, stageScale, stageSize, updateSettings } from '../store.ts';
@@ -980,9 +980,9 @@ function Chip({ c }: { c: HudCard }) {
     <div class={`chip r-${m.rarity} ${c.alive <= 0 ? 'dead' : ''}`}>
       <img src={url.mob(c.mob)} />
       <div class="chip-info">
-        <div class="chip-name">
-          {m.name}
-          <span class="stars"> {'★'.repeat(c.star)}</span>
+        <div class="chip-name" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span>{m.name}</span>
+          <Stars star={c.star} size="sm" />
         </div>
         <div class="chip-stat">
           <span>

@@ -98,6 +98,17 @@ export interface Card {
   row: Row;
   /** Permanent stat bonus from events (e.g. Hero of the Village), as fraction. */
   bonus?: number;
+  /** ★3 Mastery refinement rank (0–3), granting +10% HP and +8% ATK per rank. */
+  mastery?: number;
+  /** Infused mob essence/sigil providing secondary trait. */
+  sigil?: string;
+  /** Infused sigil tier / star (1, 2, 3), scaling effect magnitude and mechanics. */
+  sigilStar?: number;
+  /** Netherite reinforced card (unlocked in late-game): +5% armor, -30% CC duration, dual enchant slot. */
+  netherite?: boolean;
+  /** Second enchantment slot unlocked by Netherite Reinforcement. */
+  enchant2?: string;
+  enchant2Lv?: number;
 }
 
 /** rift: a tear into the Sift (acts 2–3): a Sift fight that pays out a Sift crate. */

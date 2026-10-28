@@ -823,7 +823,30 @@ export const MODERN: Record<string, Behavior> = {
       u.ab.ccd = (u.ab.ccd ?? 3) - dt;
     },
     move(u, b, dt) {
+      if (u.ref.leap) {
+        return leapMove(u, dt, () => {
+          b.emit({ k: 'shake', a: 8 });
+          b.emit({ k: 'boom', x: u.x, y: u.y, r: 120, color: '#2ee6f0', big: true });
+          b.emit({ k: 'sfx', id: 'sonic', v: 0.8 });
+          say(b, u, '泰坦跃砸!', '#2ee6f0');
+          const atk = b.atkOf(u);
+          b.aoe(u.x, u.y, 120, u.team, (e) => {
+            b.damage(u, e, atk * 1.25, 'magic', { noCrit: true });
+            b.knock(e, u.x, u.y, 180);
+          });
+        });
+      }
       if (u.ref.charge) return chargeMove(u, b, dt, { mul: 1.6, knock: 200, stun: 0.6, all: true, speed: 320 });
+      const rage = !!u.ab.rage;
+      if (cool(u, 'leapCd', dt, rage ? 7.5 : 11)) {
+        const jumpTgt = leapTarget(u, b, 140, 420);
+        if (jumpTgt) {
+          startLeap(u, jumpTgt, 0.75, 75);
+          b.emit({ k: 'sfx', id: 'leap' });
+          say(b, u, '跃空重压!', '#2ee6f0');
+          return true;
+        }
+      }
       const t = u.target;
       if (u.ab.ccd > 0 || !t || !t.alive) return false;
       const d = dist(u, t);
