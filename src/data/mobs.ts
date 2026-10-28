@@ -154,7 +154,7 @@ export const MOBS: MobDef[] = [
 
   // ───────────── 紫 · 受限级 ─────────────
   {
-    id: 'creeper', name: '苦力怕', rarity: 'purple', families: [], role: 'bomber',
+    id: 'creeper', name: '苦力怕', rarity: 'purple', families: ['beast'], role: 'bomber',
     hp: 130, atk: 185, cd: 1, range: 22, speed: 48, armor: 0, radius: 15, size: 60,
     count: [3, 3, 4], ai: 'creeper', defaultRow: 'mid',
     skill: { name: '嘶……', desc: '冲向敌人最密集处，点燃引信 1 秒后爆炸，对 85 范围内敌人造成大量伤害并击退。' },
@@ -275,7 +275,7 @@ export const MOBS: MobDef[] = [
     flavor: '跳起来比你想的远。',
   },
   {
-    id: 'mossy_skeleton', name: '苔藓骷髅', rarity: 'purple', families: ['undead'], role: 'ranged',
+    id: 'mossy_skeleton', name: '苔藓骷髅', rarity: 'purple', families: ['undead', 'arthropod'], role: 'ranged',
     hp: 95, atk: 13, cd: 1.5, range: 245, speed: 34, armor: 0, radius: 14, size: 64,
     count: [4, 4, 5], ai: 'mossy_skeleton', projectile: 'arrow', defaultRow: 'back',
     skill: { name: '苔毒箭', desc: '队伍每累计射击命中 4 次，为目标附带中毒效果（每秒造成 30% 伤害，持续 3 秒）。' },
@@ -331,7 +331,7 @@ export const MOBS: MobDef[] = [
     flavor: '脱离唤魔者法杖的小型恼鬼编队，握着铁剑满场乱窜，专挑没防备的后排下手。',
   },
   {
-    id: 'zombified_piglin', name: '僵尸化猪灵', rarity: 'purple', families: ['undead', 'nether'], role: 'melee',
+    id: 'zombified_piglin', name: '僵尸化猪灵', rarity: 'purple', families: ['undead', 'nether', 'beast'], role: 'melee',
     hp: 210, atk: 20, cd: 1.3, range: 10, speed: 38, armor: 0.08, radius: 16, size: 66,
     count: [2, 3, 4], ai: 'zombified_piglin', immune: ['burn'], defaultRow: 'front',
     skill: { name: '亡金报复', desc: '持金剑慢速作战。首次受到近战伤害时激发报复怒火，下一次金剑挥斩伤害提升 30%。免疫燃烧。' },
@@ -365,7 +365,7 @@ export const MOBS: MobDef[] = [
     flavor: '林地府邸的主人，不死图腾的持有者。',
   },
   {
-    id: 'piglin_brute', name: '猪灵蛮兵', rarity: 'pink', families: ['nether'], role: 'melee',
+    id: 'piglin_brute', name: '猪灵蛮兵', rarity: 'pink', families: ['nether', 'beast'], role: 'melee',
     hp: 400, atk: 42, cd: 1.5, range: 12, speed: 46, armor: 0.2, radius: 16, size: 68,
     count: [2, 2, 3], ai: 'piglin_brute', defaultRow: 'front',
     skill: { name: '处决', desc: '对生命低于 40% 的目标造成 +50% 伤害。' },
@@ -454,7 +454,7 @@ export const MOBS: MobDef[] = [
     flavor: '会飞的触须植物，最爱把落单的家伙拽过来。',
   },
   {
-    id: 'zombified_hunter', name: '僵尸化猪灵弩手', rarity: 'pink', families: ['undead', 'nether'], role: 'ranged',
+    id: 'zombified_hunter', name: '僵尸化猪灵弩手', rarity: 'pink', families: ['undead', 'nether', 'beast'], role: 'ranged',
     hp: 235, atk: 27, cd: 1.8, range: 265, speed: 30, armor: 0.12, radius: 16, size: 66,
     count: [2, 2, 3], ai: 'zombified_hunter', projectile: 'bolt', immune: ['burn'], defaultRow: 'back',
     skill: { name: '腐金贯矢', desc: '重装亡灵弩手。队伍每射击 3 次发射强力贯穿弩矢，可贯穿 1 个额外目标（对次要目标造成 45% 伤害）。免疫燃烧。' },
@@ -502,7 +502,7 @@ export const MOBS: MobDef[] = [
     flavor: '全身套着沉重生锈铠甲的水底重装尸，在暗流涌动的深海里就像一座不可动摇的礁石。',
   },
   {
-    id: 'icy_creeper', name: '冰霜苦力怕', rarity: 'pink', families: [], role: 'bomber',
+    id: 'icy_creeper', name: '冰霜苦力怕', rarity: 'pink', families: ['beast'], role: 'bomber',
     hp: 210, atk: 155, cd: 1.0, range: 22, speed: 39, armor: 0.05, radius: 15, size: 62,
     count: [3, 3, 4], ai: 'icy_creeper', defaultRow: 'front',
     skill: { name: '霜壳爆破', desc: '靠近敌人后引燃极寒核心，预警 1.2 秒后自爆，对 75 范围内最多 4 名敌人造成 100% 伤害并减速 25%（持续 2 秒）。自身在爆炸后阵亡。' },
@@ -553,7 +553,7 @@ export const MOBS: MobDef[] = [
   },
 
   {
-    id: 'creaking', name: '嘎枝', rarity: 'red', families: [], role: 'tank',
+    id: 'creaking', name: '嘎枝', rarity: 'red', families: ['construct', 'sift'], role: 'tank',
     hp: 900, atk: 46, cd: 1.4, range: 12, speed: 46, armor: 0.15, radius: 18, size: 96, mass: 3,
     count: [1, 1, 1], ai: 'creaking', immune: ['knockback'], defaultRow: 'front',
     skill: { name: '嘎枝之心', desc: '开战时在我方后方长出一颗「嘎枝之心」。心脏存活时，嘎枝受到的伤害 -90%；心脏被摧毁时嘎枝随之崩塌。被敌人盯上（作为目标）时移动减慢。' },
@@ -635,7 +635,7 @@ export const MOBS: MobDef[] = [
 
   // ───────────── 金 · 罕见特殊 ★ ─────────────
   {
-    id: 'warden', name: '监守者', rarity: 'gold', families: [], role: 'tank',
+    id: 'warden', name: '监守者', rarity: 'gold', families: ['sift', 'beast'], role: 'tank',
     hp: 1500, atk: 62, cd: 1.5, range: 16, speed: 38, armor: 0.3, radius: 30, size: 112, mass: 8,
     count: [1, 1, 1], ai: 'warden', immune: ['knockback', 'slow'], defaultRow: 'front',
     skill: { name: '音波尖啸', desc: '每 6 秒释放直线音波，无视护甲贯穿路径上所有敌人。存在时敌方射程 -25%（黑暗）。每损失 10% 生命攻击 +6%。' },
@@ -643,7 +643,7 @@ export const MOBS: MobDef[] = [
     flavor: '远古城市的守护者。它看不见你，但它听得见。',
   },
   {
-    id: 'wither', name: '凋灵', rarity: 'gold', families: ['undead', 'nether'], role: 'ranged',
+    id: 'wither', name: '凋灵', rarity: 'gold', families: ['undead', 'nether', 'sift'], role: 'ranged',
     hp: 1400, atk: 30, cd: 1.1, range: 320, speed: 40, armor: 0.15, radius: 30, size: 116, flying: true, alt: 60, mass: 6,
     count: [1, 1, 1], ai: 'wither', projectile: 'wither_skull', immune: ['burn', 'wither', 'knockback'], defaultRow: 'back',
     skill: { name: '凋零之首', desc: '三颗头轮流发射爆炸凋灵头颅并附加凋零，每第 4 发为蓝色头颅（2 倍伤害、更大范围）。生命低于 50% 时受到的投射物伤害减半。' },
@@ -668,7 +668,7 @@ export const MOBS: MobDef[] = [
     flavor: '筛界的舞者首领，每一步都踩在你的心跳上。',
   },
   {
-    id: 'redstone_colossus', sprite: 'redstone_colossus_card', name: '红石巨兽 · 熔心', rarity: 'gold', families: ['construct'], role: 'tank',
+    id: 'redstone_colossus', sprite: 'redstone_colossus_card', name: '红石巨兽 · 熔心', rarity: 'gold', families: ['construct', 'nether'], role: 'tank',
     hp: 1900, atk: 56, cd: 1.9, range: 22, speed: 23, armor: 0.18, radius: 34, size: 122, mass: 9,
     count: [1, 1, 1], ai: 'redstone_colossus', defaultRow: 'front',
     skill: { name: '熔心重震', desc: '开战 4 秒后及每 8 秒猛烈蓄力砸地，对前方大范围敌人造成 130% 物理伤害并留下熔岩地表（每 0.5 秒造成 6% 魔法灼伤，持续 2.5 秒）。' },
@@ -676,7 +676,7 @@ export const MOBS: MobDef[] = [
     flavor: '余烬锻造厂的核心造物，庞大的重躯每一步都能震裂大地并流淌岩浆。',
   },
   {
-    id: 'verdant_abomination', sprite: 'verdant_abomination_card', name: '丛林巨兽 · 共生', rarity: 'gold', families: ['construct'], role: 'melee',
+    id: 'verdant_abomination', sprite: 'verdant_abomination_card', name: '丛林巨兽 · 共生', rarity: 'gold', families: ['construct', 'beast', 'arthropod'], role: 'melee',
     hp: 1550, atk: 48, cd: 1.65, range: 20, speed: 27, armor: 0.16, radius: 31, size: 112, mass: 7,
     count: [1, 1, 1], ai: 'verdant_abomination', defaultRow: 'front',
     skill: { name: '根脉共生', desc: '每 3 次普通攻击附加中毒（持续 3 秒）。开战 4 秒后及每 10 秒在目标身旁破土催生 2 株共生藤蔓协助拍击，造成 40% 伤害（存在 4 秒）。' },
@@ -692,7 +692,7 @@ export const MOBS: MobDef[] = [
     flavor: '疾风圣殿的坚毅镇守者，虽寸步不行，但风暴之雷自会代它行刑。',
   },
   {
-    id: 'void_sovereign', sprite: 'void_sovereign_card', name: '复仇之心 · 虚空契', rarity: 'gold', families: ['ender'], role: 'assassin',
+    id: 'void_sovereign', sprite: 'void_sovereign_card', name: '复仇之心 · 虚空契', rarity: 'gold', families: ['ender', 'construct', 'sift'], role: 'assassin',
     hp: 1220, atk: 42, cd: 1.5, range: 18, speed: 40, armor: 0.12, radius: 28, size: 108, mass: 6,
     count: [1, 1, 1], ai: 'void_sovereign', dmgKind: 'magic', defaultRow: 'mid',
     skill: { name: '虚空双相', desc: '开战 4 秒后及每 8 秒交替释放技能：第一轮预警后向前猛烈冲撞（造成 140% 魔法伤害）；第二轮蓄力射出贯穿直线的虚空激光（造成 130% 魔法伤害）。' },
@@ -708,7 +708,7 @@ export const MOBS: MobDef[] = [
     flavor: '来自神秘蘑菇关卡的巨石巨兽，头顶长满红白哞菇，挥下的每一记重拳都伴随着漫天飞散的孢子。'
   },
   {
-    id: 'heart_of_ender', sprite: 'heart_of_ender_card', name: '末影之心', rarity: 'gold', families: ['ender'], role: 'ranged',
+    id: 'heart_of_ender', sprite: 'heart_of_ender_card', name: '末影之心', rarity: 'gold', families: ['ender', 'construct', 'sift'], role: 'ranged',
     hp: 1300, atk: 38, cd: 1.8, range: 270, speed: 31, armor: 0.12, radius: 30, size: 112,
     count: [1, 1, 1], ai: 'heart_of_ender', dmgKind: 'magic', defaultRow: 'back',
     skill: { name: '虚空迫击', desc: '普攻射出魔弹。开战 4 秒后及每 8 秒在敌阵召唤 2 枚虚空迫击弹造成 100% 范围魔法伤害；每第二轮改为射出一道贯穿直线的毁灭激光，造成 150% 魔法伤害。' },
@@ -731,7 +731,7 @@ export const MOBS: MobDef[] = [
     flavor: '1.21.9 加入的铜傀儡，平时只爱整理箱子。',
   },
   {
-    id: 'dispenser', name: '发射器', rarity: 'blue', families: [], role: 'ranged',
+    id: 'dispenser', name: '发射器', rarity: 'blue', families: ['construct'], role: 'ranged',
     hp: 220, atk: 14, cd: 2.5, range: 256, speed: 0, armor: 0.3, radius: 13, size: 34, flying: true, alt: 64,
     count: [1, 1, 1], ai: 'dispenser', projectile: 'arrow', defaultRow: 'back', hidden: true, structure: true,
     immune: ['knockback', 'stun', 'burn', 'poison', 'wither', 'slow'],
@@ -758,7 +758,7 @@ export const MOBS: MobDef[] = [
     skill: { name: '翻滚', desc: '朝目标一路滚过去，撞上时造成伤害并击退。' }, star3: '', flavor: '巨像召唤的滚动方块。',
   },
   {
-    id: 'creaking_heart', name: '嘎枝之心', rarity: 'red', families: [], role: 'support',
+    id: 'creaking_heart', name: '嘎枝之心', rarity: 'red', families: ['construct', 'sift'], role: 'support',
     hp: 600, atk: 0, cd: 1, range: 0, speed: 0, armor: 0.2, radius: 14, size: 40,
     count: [1, 1, 1], ai: 'creaking_heart', defaultRow: 'back', hidden: true, structure: true,
     immune: ['knockback', 'stun', 'burn', 'poison', 'wither', 'slow'],
@@ -784,7 +784,7 @@ export const MOBS: MobDef[] = [
     skill: { name: '神殿诅咒', desc: '挖掘疲劳：敌方攻速 -20%。激光弹射 1 次。每 18 秒召唤 1 只守卫者（最多 2 只）。' }, star3: '', flavor: '海底神殿深处的古老存在。',
   },
   {
-    id: 'wither_boss', name: '凋灵 · 毁灭之主', rarity: 'gold', families: ['undead', 'nether'], role: 'boss', sprite: 'wither',
+    id: 'wither_boss', name: '凋灵 · 毁灭之主', rarity: 'gold', families: ['undead', 'nether', 'sift'], role: 'boss', sprite: 'wither',
     hp: 5200, atk: 39, cd: 0.85, range: 340, speed: 44, armor: 0.15, radius: 36, size: 150, flying: true, alt: 70, mass: 10,
     count: [1, 1, 1], ai: 'wither_boss', projectile: 'wither_skull', immune: ['knockback', 'stun', 'burn', 'wither', 'slow'], defaultRow: 'back', hidden: true, boss: true,
     skill: { name: '凋零风暴', desc: '登场爆炸；三头连射凋灵头颅。生命低于 50% 时进入凋灵护甲阶段：投射物伤害减半、召唤凋灵骷髅并发动冲撞。' }, star3: '', flavor: '下界之星在它的胸腔里跳动。',
@@ -806,7 +806,7 @@ export const MOBS: MobDef[] = [
     flavor: '身披残破锁甲与铁盾的古代骷髅卫士。',
   },
   {
-    id: 'redstone_golem', name: '红石守卫', rarity: 'red', families: ['construct'], role: 'tank',
+    id: 'redstone_golem', name: '红石守卫', rarity: 'red', families: ['construct', 'nether'], role: 'tank',
     hp: 1050, atk: 58, cd: 2.0, range: 18, speed: 26, armor: 0.22, radius: 28, size: 90, mass: 6,
     count: [1, 1, 1], ai: 'redstone_golem', defaultRow: 'front',
     skill: { name: '红石震击', desc: '每 7 秒蓄力 1 秒砸地，对周围 65 范围至多 4 名敌人造成 140% 攻击力的物理伤害，并降低目标 5% 护甲，持续 4 秒。' },
@@ -830,7 +830,7 @@ export const MOBS: MobDef[] = [
     flavor: '手持魔导书的灾厄法师，能用邪术强化他的同僚。',
   },
   {
-    id: 'geomancer', name: '地卜师', rarity: 'purple', families: ['illager'], role: 'caster',
+    id: 'geomancer', name: '地卜师', rarity: 'purple', families: ['illager', 'construct'], role: 'caster',
     hp: 145, atk: 14, cd: 1.8, range: 210, speed: 32, armor: 0.05, radius: 15, size: 64,
     count: [2, 3, 4], ai: 'geomancer', dmgKind: 'magic', defaultRow: 'back',
     skill: { name: '大地岩柱', desc: '发射魔法弹；开战 3 秒后每 8 秒升起大地岩柱造成 90% 魔法伤害并阻挡路径 4 秒（命中蓄势首领推进 20 破势），优先切分逼近后排的威胁。' },
@@ -870,7 +870,7 @@ export const MOBS: MobDef[] = [
     flavor: '来自极寒冻原的灾厄施法者，操控着刺骨的玄冰。',
   },
   {
-    id: 'whisperer', name: '丛林低语者', rarity: 'purple', families: ['beast'], role: 'support',
+    id: 'whisperer', name: '丛林低语者', rarity: 'purple', families: ['beast', 'construct'], role: 'support',
     hp: 210, atk: 12, cd: 1.6, range: 170, speed: 28, armor: 0.06, radius: 18, size: 60,
     count: [2, 3, 4], ai: 'whisperer', dmgKind: 'magic', defaultRow: 'mid',
     skill: { name: '藤木护佑', desc: '发射魔法弹；开战 2 秒后每 7 秒为 2 支主力队伍施加 12% 最大生命藤木护盾，持续 5 秒（单个目标上限为自身最大生命的 30%，优先近战）；护盾期间受益野兽移速 +15%。' },
@@ -910,7 +910,7 @@ export const MOBS: MobDef[] = [
     flavor: '隐藏在树冠中的敏捷掠食者，擅长飞扑敌方后排。',
   },
   {
-    id: 'poison_quill_vine', name: '毒刺藤', rarity: 'purple', families: ['beast'], role: 'ranged',
+    id: 'poison_quill_vine', name: '毒刺藤', rarity: 'purple', families: ['beast', 'arthropod'], role: 'ranged',
     hp: 240, atk: 28, cd: 1.3, range: 240, speed: 0, armor: 0.05, radius: 16, size: 62,
     count: [2, 3, 4], ai: 'poison_quill_vine', projectile: 'quill', defaultRow: 'mid',
     skill: { name: '剧毒喷吐', desc: '开战潜地破土出现在敌人附近；毒刺附带剧毒，每秒造成 35% 攻击力魔法伤害持续 3 秒；周围无敌人时再次潜地突袭。' },
@@ -969,7 +969,7 @@ export const MOBS: MobDef[] = [
     flavor: '雪原上的白狐，能带领笨重的重装战友踏雪如飞。',
   },
   {
-    id: 'pumpkin_turret', name: '杰克南瓜灯', rarity: 'purple', families: ['construct'], role: 'ranged',
+    id: 'pumpkin_turret', name: '杰克南瓜灯', rarity: 'purple', families: ['construct', 'nether'], role: 'ranged',
     hp: 220, atk: 16, cd: 1.5, range: 240, speed: 0, armor: 0.1, radius: 16, size: 52, projectile: 'fireball',
     count: [2, 2, 3], ai: 'pumpkin_turret', defaultRow: 'back',
     skill: { name: '火籽连弩', desc: '【固定炮台】短齐射连续发射 3 枚火炎弹，命中造成点燃与持续伤害；每 8 秒可沿己方通路调整部署一次（调整期间停火 1.5 秒）。' },
@@ -987,7 +987,7 @@ export const MOBS: MobDef[] = [
 
   // ── 蔓生神殿 ──
   {
-    id: 'jungle_zombie', name: '丛林僵尸', rarity: 'blue', families: ['undead'], role: 'tank',
+    id: 'jungle_zombie', name: '丛林僵尸', rarity: 'blue', families: ['undead', 'beast'], role: 'tank',
     hp: 210, atk: 13, cd: 1.2, range: 10, speed: 36, armor: 0.1, radius: 16, size: 64,
     count: [3, 4, 5], ai: 'jungle_zombie', defaultRow: 'front',
     skill: { name: '丛林剧毒', desc: '肉盾近战；全队每累计普攻 3 次，为目标附带持续 4 秒的剧毒（重复触发刷新持续时间）。' },
@@ -1143,7 +1143,7 @@ export const MOBS: MobDef[] = [
     flavor: '漂浮在空中的幼年恶魂，发出悲鸣替最重要的领袖承受致命打击。',
   },
   {
-    id: 'armored_piglin', name: '披甲猪灵', rarity: 'purple', families: ['nether'], role: 'tank',
+    id: 'armored_piglin', name: '披甲猪灵', rarity: 'purple', families: ['nether', 'beast'], role: 'tank',
     hp: 280, atk: 12, cd: 1.1, range: 10, speed: 40, armor: 0.22, radius: 17, size: 64,
     count: [2, 3, 4], ai: 'armored_piglin', defaultRow: 'front',
     skill: { name: '熔岩厚甲', desc: '【重甲分支】生命值提升 30%，受到普通攻击伤害降低 10%，移动速度降低 15%，稳固坚守战线。' },
@@ -1227,7 +1227,7 @@ export const MOBS: MobDef[] = [
     flavor: '漂浮在黑石高塔顶端的黑袍怨灵，在地面降下吞噬生灵的幽绿烈焰。',
   },
   {
-    id: 'mob_spawner', name: '刷怪笼', rarity: 'pink', families: ['construct'], role: 'summoner',
+    id: 'mob_spawner', name: '刷怪笼', rarity: 'pink', families: ['construct', 'undead'], role: 'summoner',
     hp: 550, atk: 0, cd: 1.0, range: 0, speed: 0, armor: 0.15, radius: 20, size: 60, structure: true,
     count: [1, 1, 1], ai: 'mob_spawner', defaultRow: 'back',
     skill: { name: '亡骸出土', desc: '【战地建筑】开战 2 秒召唤 1 只僵尸走卒，此后每 7 秒补充 1 只（存活 10 秒，场上最多同时存在 2 只，整场至多 6 只；僵尸继承刷怪笼 18% 生命并具备基础攻击力）。' },

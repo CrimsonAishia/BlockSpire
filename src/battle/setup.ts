@@ -280,47 +280,54 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     const tier = (f: Family) => (has(f) && !m.boss && !m.structure ? (syn[f] ?? -1) : -1);
     const baseAtk = () => m.atk * starStatMul(m, c.star) * atkMul;
     if (tier('undead') >= 0) {
-      hpMul *= 1.15;
+      hpMul *= 1.12;
     }
     if (tier('undead') >= 1) fx.revive = 1.0;
     if (tier('arthropod') >= 0) {
-      atkSpd *= 1.25;
+      atkSpd *= 1.20;
       fx.poisonHit = Math.max(fx.poisonHit, Math.max(3, baseAtk() * 0.25));
       fx.poisonDur = 3;
       fx.poisonStacks = Math.max(fx.poisonStacks, tier('arthropod') >= 1 ? 5 : 3);
     }
-    if (tier('illager') >= 0) {
-      atkMul *= 1.15;
-      hpMul *= 1.15;
-      atkSpd *= 1.20;
-      fx.executeLowHp = 0.20;
-      fx.executeLowHpTier2 = 0.35;
+    if (tier('arthropod') >= 1) {
+      fx.pierce = Math.max(fx.pierce, 2);
     }
-    if (tier('illager') >= 2 && !ranged) fx.lifesteal += 0.15;
+    if (tier('illager') >= 0) {
+      atkMul *= 1.10;
+      hpMul *= 1.10;
+      fx.executeLowHp = 0.20;
+      fx.executeLowHpTier2 = 0.20;
+    }
+    if (tier('illager') >= 2 && !ranged) fx.lifesteal += 0.12;
     if (tier('nether') >= 0) {
       immune |= IMM_BURN;
       fx.burnHit = Math.max(fx.burnHit, Math.max(4, baseAtk() * 0.25));
-      fx.burnDur = Math.max(fx.burnDur, 2);
+      fx.burnDur = Math.max(fx.burnDur, 2.5);
+      fx.crit += 0.15;
     }
     if (tier('nether') >= 1) {
-      fx.vsBurning = 0.30;
+      fx.vsBurning = 0.25;
       fx.burnMul *= 1.5;
     }
+    if (tier('nether') >= 2) {
+      fx.vsBurning = 0.45;
+    }
     if (tier('ender') >= 0) {
-      fx.projDodge = 0.30;
+      fx.projDodge = 0.35;
+      fx.dodge = Math.max(fx.dodge, 0.15);
       fx.enderNonDot = 0.12;
     }
     if (tier('ender') >= 1) {
-      fx.projDodge = 0.40;
+      fx.projDodge = 0.45;
     }
     if (tier('construct') >= 0) armorAdd += 0.20;
     if (tier('beast') >= 0) {
       moveSpd *= 1.25;
       atkSpd *= 1.20;
     }
-    if (tier('beast') >= 1) fx.crit += 0.12;
-    if (tier('aquatic') >= 0) fx.regen = 0.02;
-    if (tier('slime') >= 1) hpMul *= 1.20;
+    if (tier('beast') >= 2) fx.crit += 0.15;
+    if (tier('aquatic') >= 0) fx.regen = 0.025;
+    if (tier('slime') >= 1) hpMul *= 1.25;
 
     // ── Commander ──
     if (ctx.commander === 'alex' && has('beast')) {

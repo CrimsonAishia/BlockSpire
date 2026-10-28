@@ -418,9 +418,11 @@ export class Battle {
       }
 
       if (this.syn(team, 'construct') >= 0) {
+        const constrTier = this.syn(team, 'construct');
+        const shieldPct = constrTier >= 2 ? 0.50 : constrTier >= 1 ? 0.30 : 0.15;
         for (const u of this.live[team]) {
           if (u.mob.families.includes('construct') && !u.structure && !u.boss && !u.isSummon) {
-            u.addSynergyShield('construct_start', u.maxHp * 0.10, 8);
+            u.addSynergyShield('construct_start', u.maxHp * shieldPct, 8);
             this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '构装护盾', color: '#c9c9c9' });
           }
         }
@@ -429,7 +431,7 @@ export class Battle {
       if (this.syn(team, 'aquatic') >= 0) {
         for (const u of this.live[team]) {
           if (u.mob.families.includes('aquatic') && !u.structure && !u.boss && !u.isSummon) {
-            u.addSynergyShield('aquatic_start', u.maxHp * 0.10, 8);
+            u.addSynergyShield('aquatic_start', u.maxHp * 0.12, 8);
             this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '潮汐护盾', color: '#3fc6d6' });
           }
         }
@@ -981,7 +983,7 @@ export class Battle {
   skillSpeedOf(u: Unit): number {
     if (!this.isNativeIllager(u) || !['caster', 'summoner', 'support'].includes(u.mob.role)) return 1;
     const ill = this.syn(u.team, 'illager');
-    return ill >= 4 ? 1.35 : ill >= 3 ? 1.20 : 1;
+    return ill >= 2 ? 1.20 : 1;
   }
 
   /** Effective attack-speed multiplier including statuses and side effects. */
@@ -994,7 +996,7 @@ export class Battle {
     if (fat > 0) s *= 1 - fat;
     if (this.has(u.team, 'clock') && this.t > 20) s *= 1.25;
     if (u.hasteT > 0) s *= u.hasteMul;
-    if (this.illagerHornActive(u)) s *= 1.20;
+    if (this.illagerHornActive(u)) s *= 1.18;
     if (u.freezeT > 0) s *= 0.85;
     if (this.tideOn && !this.tideImmune(u)) s *= 0.75;
     if (u.gh >= 1 && u.isRanged && !u.flying && this.has(u.team, 'lookout')) s *= 1.2;
@@ -1144,8 +1146,8 @@ export class Battle {
   moveSpeedOf(u: Unit): number {
     let s = u.speed * u.moveSpd * this.buff(u.team, 'move');
     if (u.speedT > 0) s *= u.speedMul;
-    if (this.illagerHornActive(u)) s *= 1.20;
-    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
+    if (this.illagerHornActive(u)) s *= 1.15;
+    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 3) {
       s *= 1.15;
     }
     if (!(u.immune & IMM_SLOW)) {
@@ -1174,13 +1176,13 @@ export class Battle {
     if (u.blindT > 0) a *= 0.8;
     if (u.killStacks > 0) a *= 1 + u.fx.killAtk * u.killStacks;
     const ill = this.syn(u.team, 'illager');
-    if (this.illagerHornActive(u)) a *= ill >= 4 ? 1.35 : 1.22;
-    if (ill >= 3 && this.isNativeIllager(u)) {
+    if (this.illagerHornActive(u)) a *= 1.18;
+    if (ill >= 2 && this.isNativeIllager(u)) {
       const stacks = this.sides[u.team].timers['illager_kill_stacks'] ?? 0;
-      a *= 1 + stacks * (ill >= 4 ? 0.03 : 0.02);
+      a *= 1 + stacks * 0.02;
     }
     if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 1) {
-      const beastPct = this.syn(u.team, 'beast') >= 2 ? 0.10 : 0.08;
+      const beastPct = this.syn(u.team, 'beast') >= 2 ? 0.12 : 0.08;
       const stacks = this.sides[u.team].beastKillStacks || 0;
       if (stacks > 0) a *= 1 + beastPct * stacks;
     }
@@ -1460,14 +1462,22 @@ export class Battle {
       }
     }
     // 筛界: Sift attacks leave an echo that makes the next hit on the target land harder.
-    if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, this.syn(u.team, 'sift') >= 2 ? 0.32 : 0.20);
+    if (u.mob.families.includes('sift') && this.syn(u.team, 'sift') >= 0) t.echoMul = Math.max(t.echoMul, this.syn(u.team, 'sift') >= 1 ? 0.32 : 0.20);
     // 亡灵凋零
     if (u.mob.families.includes('undead') && this.syn(u.team, 'undead') >= 2) {
-      this.wither(t, this.atkOf(u) * 0.10, 3, u);
+      this.wither(t, this.atkOf(u) * 0.12, 3, u);
     }
-    // 野兽满层撕裂
-    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 2 && (this.sides[u.team].beastKillStacks || 0) >= 6) {
-      this.dot(t, this.atkOf(u) * 0.15, u);
+    // 野兽猎手印记机制
+    if (u.mob.families.includes('beast') && this.syn(u.team, 'beast') >= 1) {
+      const maxMarks = this.syn(u.team, 'beast') >= 2 ? 6 : 5;
+      const curMarks = ((t.ref.beastMarks as number) || 0) + 1;
+      t.ref.beastMarks = curMarks;
+      this.heal(u, this.atkOf(u) * 0.03 * curMarks, u);
+      if (curMarks >= maxMarks) {
+        t.ref.beastMarks = 0;
+        this.damage(u, t, this.atkOf(u) * 0.15 * maxMarks, 'phys', { noCrit: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '撕裂爆痕!', color: '#e0b25b' });
+      }
     }
     // 联动: 林梢追猎 (combo_canopy_hunt)
     if (u.mob.id === 'ocelot' && this.has(u.team, 'combo_canopy_hunt') && t.poisonT > 0) {
@@ -2103,8 +2113,8 @@ export class Battle {
     const hasAliveFamily = (f: Family) => live.some((u) => u.alive && !u.isSummon && !u.structure && !u.boss && u.mob.families.includes(f));
     const ill = this.syn(team, 'illager');
     if (ill >= 1 && hasAliveFamily('illager')) {
-      const hornPeriod = ill >= 4 ? 5.0 : ill >= 3 ? 6.0 : 7.0;
-      const hornDuration = ill >= 4 ? 6.0 : 5.0;
+      const hornPeriod = ill >= 2 ? 6.5 : 7.5;
+      const hornDuration = 4.0;
       const blowHorn = () => {
         const illagers = live.filter((u) => u.alive && this.isNativeIllager(u));
         if (!illagers.length) return;
@@ -2113,15 +2123,14 @@ export class Battle {
         this.emit({ k: 'sfx', id: 'horn' });
         this.emit({ k: 'text', x: this.rowX(team, 'mid'), y: ARENA_D / 2, z: 90, s: '灾厄号角！', color: '#ff4757' });
         if (ill >= 2) {
-          for (const u of illagers) u.addSynergyShield('illager_horn', u.maxHp * (ill >= 4 ? 0.20 : 0.12), hornDuration);
+          for (const u of illagers) u.addSynergyShield('illager_horn', u.maxHp * 0.15, hornDuration);
         }
-        if (ill >= 4) tm['illager_kill_stacks'] = Math.min(10, (tm['illager_kill_stacks'] ?? 0) + 1);
         // 召唤预算只读取原生面板，排除号角与击杀成长，避免召唤物递归放大；旧一轮被替换。
         const totalH = illagers.reduce((sum, u) => sum + u.maxHp, 0);
         const vexHp = Math.max(20, totalH * 0.06);
         const totalDps = illagers.reduce((sum, u) => sum + (u.atk * u.atkSpd) / Math.max(0.2, u.cd), 0);
-        const vexCount = ill >= 4 ? 4 : ill >= 3 ? 3 : 2;
-        const vexDpsMul = ill >= 3 ? 0.10 : 0.12;
+        const vexCount = ill >= 2 ? 2 : 1;
+        const vexDpsMul = 0.10;
         const targetDps = totalDps * vexDpsMul;
         const owner = illagers[0];
         const sideObj = this.sides[team];
@@ -2133,7 +2142,7 @@ export class Battle {
             }
           }
         }
-        // 六秒援军直接加入当前战线，避免从部署区赶路耗尽寿命。
+        // 援军直接加入当前战线，避免从部署区赶路耗尽寿命。
         const visibleFoes = this.live[foe].filter((u) => u.alive && !u.ghost && u.invisT <= 0);
         const fighters = visibleFoes.filter((u) => !u.structure);
         const candidates = fighters.length ? fighters : visibleFoes;
@@ -2145,11 +2154,11 @@ export class Battle {
         const newVexes: Unit[] = [];
         for (let i = 0; i < vexCount; i++) {
           const angle = approach + (i - (vexCount - 1) / 2) * 0.7 + this.rng.range(-0.08, 0.08);
-          const vex = this.summon(owner, 'vex', anchor.x + Math.cos(angle) * distance, anchor.y + Math.sin(angle) * distance, 1, { lifespan: 6, fx: 'summon' });
+          const vex = this.summon(owner, 'vex', anchor.x + Math.cos(angle) * distance, anchor.y + Math.sin(angle) * distance, 1, { lifespan: 4.5, fx: 'summon' });
           if (vex) {
             vex.maxHp = vex.hp = vexHp;
             vex.atk = Math.max(4, targetDps * (vex.cd / Math.max(0.1, vex.atkSpd)));
-            vex.fx = { ...vex.fx, dodge: 0.40, lifesteal: 0 };
+            vex.fx = { ...vex.fx, dodge: 0.25, lifesteal: 0 };
             vex.target = target;
             vex.retarget = target ? 0.4 : 0;
             newVexes.push(vex);
@@ -2180,8 +2189,8 @@ export class Battle {
         });
       });
     }
-    if (this.syn(team, 'ender') >= 1)
-      once('flank', 3.5, () => {
+    if (this.syn(team, 'ender') >= 2)
+      once('flank', 3.0, () => {
         for (const u of live) {
           if (!u.mob.families.includes('ender') || u.speed <= 0 || u.structure) continue;
           const nx = team === 0 ? ARENA_W - 330 + this.rng.range(-40, 40) : 330 + this.rng.range(-40, 40);
@@ -2189,6 +2198,7 @@ export class Battle {
           this.emit({ k: 'tele', x: u.x, y: u.y, x2: nx, y2: ny, z: u.gz + u.z });
           u.x = u.px = nx;
           u.y = u.py = ny;
+          u.ref.enderAmbushCrit = true;
           this.teleported(u);
         }
       });
@@ -2324,15 +2334,16 @@ export class Battle {
         }
       });
     if (this.syn(team, 'aquatic') >= 1 && hasAliveFamily('aquatic')) {
-      const period = this.syn(team, 'aquatic') >= 2 ? 2.5 : 3.5;
-      every('storm', period, 4.0, () => {
+      const period = this.syn(team, 'aquatic') >= 2 ? 2.0 : 3.0;
+      every('storm', period, 3.5, () => {
         const foes = this.live[foe].filter((e) => !e.structure);
         if (!foes.length) return;
         const e = this.rng.pick(foes);
         const src = live.find((u) => u.mob.families.includes('aquatic')) ?? null;
         const avgAtk = this.sides[team].aquaticAvgAtk || 20;
-        const dmg = 45 + Math.min(e.maxHp * 0.06, 3 * avgAtk);
+        const dmg = 60 + Math.min(e.maxHp * 0.08, 4 * avgAtk);
         this.lightning(src, e.x, e.y, dmg, 34);
+        if (this.syn(team, 'aquatic') >= 2) this.stun(e, 1.0);
         const healCount = this.syn(team, 'aquatic') >= 2 ? 2 : 1;
         const aquaticAllies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon && u.mob.families.includes('aquatic'));
         aquaticAllies.sort((a, b) => a.hpFrac - b.hpFrac || a.id - b.id);
@@ -2348,15 +2359,15 @@ export class Battle {
     }
 
     if (this.syn(team, 'aquatic') >= 2 && hasAliveFamily('aquatic')) {
-      every('aquatic_wave', 8.0, 5.0, () => {
+      every('aquatic_wave', 7.0, 5.0, () => {
         const foes = this.live[foe].filter((e) => !e.structure && !e.boss && e.row === 'front');
         if (!foes.length) return;
         this.emit({ k: 'text', x: ARENA_W / 2, y: ARENA_D / 2, z: 90, s: '海啸退敌！', color: '#3fc6d6' });
         this.emit({ k: 'sfx', id: 'splash' });
         for (const e of foes) {
-          const pushDist = (foe === 0 ? -1 : 1) * BLOCK;
+          const pushDist = (foe === 0 ? -1 : 1) * BLOCK * 2;
           e.x = clampX(e.x + pushDist, e.radius);
-          this.slow(e, 0.25, 0.15, 2.5);
+          this.slow(e, 0.30, 0.20, 3.0);
         }
       });
     }
@@ -2366,7 +2377,7 @@ export class Battle {
         const allies = live.filter((u) => u.alive && !u.structure && !u.boss && !u.isSummon);
         allies.sort((a, b) => a.hpFrac - b.hpFrac || a.hp - b.hp || a.id - b.id);
         const count = this.syn(team, 'construct') >= 2 ? 3 : 2;
-        const pct = this.syn(team, 'construct') >= 2 ? 0.22 : 0.18;
+        const pct = this.syn(team, 'construct') >= 2 ? 0.22 : 0.20;
         for (const target of allies.slice(0, count)) {
           target.addSynergyShield('construct_periodic', target.maxHp * pct, 5);
           this.emit({ k: 'text', x: target.x, y: target.y, z: target.gz + target.z + target.size, s: '构装护盾', color: '#cfe8ff' });
@@ -2729,12 +2740,31 @@ export class Battle {
     if (src) {
       if (src.fx.vsHighHp > 0 && t.hpFrac > 0.5) d *= 1 + src.fx.vsHighHp;
       if (src.fx.executeLowHp > 0) {
-        if (t.hpFrac <= 0.25) d *= 1 + (src.fx.executeLowHpTier2 || src.fx.executeLowHp * 1.75);
-        else if (t.hpFrac <= 0.50) d *= 1 + src.fx.executeLowHp;
+        if (t.hpFrac <= 0.40) d *= 1 + src.fx.executeLowHp;
       }
-      if (this.syn(src.team, 'illager') >= 3 && src.mob.families.includes('illager') && !src.boss && !src.structure && kind !== 'dot') d *= 1.12;
-      if (this.syn(src.team, 'arthropod') >= 1 && t.poisonStacks >= 5 && kind !== 'dot') {
-        d += amount * 0.15;
+      if (this.syn(src.team, 'illager') >= 2 && src.mob.families.includes('illager') && !src.boss && !src.structure && kind !== 'dot') d *= 1.12;
+      if (this.syn(src.team, 'arthropod') >= 2 && t.poisonStacks >= 5 && kind !== 'dot') {
+        const lostHp = Math.max(0, t.maxHp - t.hp);
+        const toxicBurst = Math.min(lostHp * 0.15, this.atkOf(src) * 2.5);
+        if (toxicBurst > 0) {
+          d += toxicBurst;
+          this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '致命毒爆!', color: '#b0794c' });
+        }
+      }
+      if (t.ref.beastMarks && src.mob.families.includes('beast') && kind !== 'dot') {
+        const markBonus = (t.ref.beastMarks as number) * (this.syn(src.team, 'beast') >= 2 ? 0.06 : 0.04);
+        d *= 1 + markBonus;
+      }
+      if (src.mob.families.includes('ender') && this.syn(src.team, 'ender') >= 1 && kind !== 'dot') {
+        const isBackstab = (src.facing === t.facing) || (src.ref.justTeleported && this.t < (src.ref.justTeleported as number));
+        if (isBackstab) {
+          d *= 1 + (this.syn(src.team, 'ender') >= 2 ? 0.50 : 0.30);
+          if (src.ref.enderAmbushCrit) {
+            d *= 2.0;
+            src.ref.enderAmbushCrit = false;
+            this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '虚空伏击 200%!', color: '#c06bff' });
+          }
+        }
       }
       if (src.fx.vsBurning > 0 && t.burnT > 0) d *= 1 + src.fx.vsBurning;
       if (src.fx.enderNonDot > 0 && kind !== 'dot') d *= 1 + src.fx.enderNonDot;
@@ -2977,9 +3007,9 @@ export class Battle {
     else if (kind === 'magic') d *= 1 - armor * 0.5;
     if (t.ref.closed) d *= 0.6;
     if (t.ref.undeadReviveDmgResist && this.t < t.ref.undeadReviveDmgResist) {
-      d *= 0.80;
+      d *= this.syn(t.team, 'undead') >= 2 ? 0.70 : 0.80;
     }
-    if (this.illagerHornActive(t)) d *= this.syn(t.team, 'illager') >= 4 ? 0.75 : 0.85;
+    if (this.illagerHornActive(t)) d *= 0.88;
     if (this.has(t.team, 'combo_armored_caravan') && !t.structure && !t.isSummon && (t.mob.id === 'armored_piglin' || t.mob.id === 'royal_guard') && (t.hp - d) / t.maxHp < 0.50) {
       const tm = this.sides[t.team].timers;
       if (!tm.armored_caravan_cd || this.t >= tm.armored_caravan_cd) {
@@ -3010,7 +3040,7 @@ export class Battle {
         this.emit({ k: 'sfx', id: 'stomp' });
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 15, s: '【冠军反震!】', color: '#ff9f43' });
         this.aoe(t.x, t.y, 70, t.team, (e) => {
-          this.damage(t, e, d * 1.0, 'phys', { noCrit: true });
+          this.damage(t, e, d * 1.0, 'phys', { noCrit: true, noThorns: true });
           this.knock(e, t.x, t.y, 140);
         });
       }
@@ -3106,7 +3136,7 @@ export class Battle {
       if (t.ref.championDmg >= t.maxHp * 0.25) {
         t.ref.championDmg = 0;
         this.aoe(t.x, t.y, 50, t.team, (e) => {
-          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true });
+          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true, noThorns: true });
         });
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【反击震击!】', color: '#f39c12' });
       }
@@ -3199,20 +3229,24 @@ export class Battle {
           }
         }
       }
+      if (absorbed > 0 && t.mob.families.includes('construct') && this.syn(t.team, 'construct') >= 1 && src && src.alive && src !== t && !o.noThorns) {
+        const reflectPct = this.syn(t.team, 'construct') >= 2 ? 0.35 : 0.25;
+        this.damage(t, src, absorbed * reflectPct, 'phys', { noCrit: true, noDodge: true, noThorns: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '盾铠反弹', color: '#c9c9c9' });
+      }
       if (hadShield && t.shield <= 0 && this.syn(t.team, 'construct') >= 2 && t.mob.families.includes('construct')) {
-        this.emit({ k: 'boom', x: t.x, y: t.y, r: 50, color: '#c9c9c9', big: false });
-        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '脉冲!', color: '#cfe8ff' });
-        this.aoe(t.x, t.y, 50, t.team, (e) => {
-          this.damage(t, e, t.atk * 0.8, 'phys', { noCrit: true });
-          e.erosionStacks = Math.min(6, (e.erosionStacks ?? 0) + 1);
-          e.erosionTimer = 4.0;
+        this.emit({ k: 'boom', x: t.x, y: t.y, r: 60, color: '#c9c9c9', big: true });
+        this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '电磁震荡!', color: '#cfe8ff' });
+        this.aoe(t.x, t.y, 60, t.team, (e) => {
+          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true, noThorns: true });
+          this.stun(e, 1.0);
         });
       }
       if (hadShield && t.shield <= 0 && this.has(t.team, 'stalwart_armor') && t.row === 'front') {
         this.emit({ k: 'boom', x: t.x, y: t.y, r: 60, color: '#74b9ff', big: true });
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '【坚岩破裂震击!】', color: '#74b9ff' });
         this.aoe(t.x, t.y, 60, t.team, (e) => {
-          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true });
+          this.damage(t, e, t.atk * 1.0, 'phys', { noCrit: true, noThorns: true });
           this.stun(e, 1.0);
         });
       }
@@ -3273,7 +3307,7 @@ export class Battle {
       }
       if (kind !== 'true' && !src.ref.inArthropodProc) {
         src.ref.inArthropodProc = true;
-        this.damage(src, t, d * 0.15, 'true', { noCrit: true, noDodge: true });
+        this.damage(src, t, d * 0.15, 'true', { noCrit: true, noDodge: true, noThorns: true });
         delete src.ref.inArthropodProc;
       }
     }
@@ -3390,6 +3424,18 @@ export class Battle {
       t.ref.undeadReviveDmgResist = this.t + 3.0;
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '复生!', color: '#9be36b' });
       this.emit({ k: 'spawn', u: t, fx: 'revive' });
+      // 白骨冲击：击退周围敌人并施加攻速降低
+      const foes = this.live[(1 - t.team) as 0 | 1];
+      for (const foe of foes) {
+        if (!foe.alive || foe.ghost) continue;
+        const dist = Math.hypot(foe.x - t.x, foe.y - t.y);
+        if (dist <= 75) {
+          this.knock(foe, t.x, t.y, 25);
+          foe.slowT = Math.max(foe.slowT, 3.0);
+          foe.slowAtk = Math.max(foe.slowAtk, 0.25);
+          this.emit({ k: 'text', x: foe.x, y: foe.y, z: foe.z + 20, s: '骨碎减速', color: '#8fbf6a' });
+        }
+      }
       if (tier >= 2) {
         this.triggerUndeadWill(t.team);
       }
@@ -3446,10 +3492,17 @@ export class Battle {
         if (this.t >= cd) {
           this.sides[killer.team].timers.beast_kill_cd = this.t + 2.0;
           const cur = this.sides[killer.team].beastKillStacks || 0;
-          const maxKill = this.syn(killer.team, 'beast') >= 2 ? 6 : 5;
+          const maxKill = this.syn(killer.team, 'beast') >= 2 ? 5 : 3;
           if (cur < maxKill) {
             this.sides[killer.team].beastKillStacks = cur + 1;
-            this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.z + killer.size, s: `野性猎杀 +${this.sides[killer.team].beastKillStacks}`, color: '#e0b25b' });
+            this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.z + killer.size, s: `野性觉醒 +${this.sides[killer.team].beastKillStacks}`, color: '#e0b25b' });
+          }
+          if (this.syn(killer.team, 'beast') >= 2) {
+            for (const u of this.live[killer.team]) {
+              if (u.alive && !u.isSummon && u.mob.families.includes('beast')) {
+                this.heal(u, u.maxHp * 0.12, killer);
+              }
+            }
           }
         }
       }
@@ -3457,15 +3510,15 @@ export class Battle {
         const hornActive = this.sides[killer.team].timers['illager_horn_active'] ?? 0;
         if (this.t < hornActive && !this.sides[killer.team].timers['illager_horn_extended']) {
           this.sides[killer.team].timers['illager_horn_extended'] = 1;
-          this.sides[killer.team].timers['illager_horn_active'] += 2.0;
+          this.sides[killer.team].timers['illager_horn_active'] += 1.5;
           const wounded = this.live[killer.team].filter((u) => u.alive && this.isNativeIllager(u)).sort((a, b) => a.hpFrac - b.hpFrac)[0];
           wounded?.addSynergyShield('illager_kill', wounded.maxHp * 0.12, 5.0);
           this.emit({ k: 'text', x: killer.x, y: killer.y, z: killer.gz + killer.z + killer.size, s: '号角延续!', color: '#ff4757' });
         }
       }
-      if (!silent && this.syn(killer.team, 'illager') >= 3 && killer.mob.families.includes('illager') && !killer.boss && !killer.structure && !t.isSummon && !t.structure) {
+      if (!silent && this.syn(killer.team, 'illager') >= 2 && killer.mob.families.includes('illager') && !killer.boss && !killer.structure && !t.isSummon && !t.structure) {
         const cur = this.sides[killer.team].timers['illager_kill_stacks'] ?? 0;
-        const cap = this.syn(killer.team, 'illager') >= 4 ? 10 : 8;
+        const cap = 8;
         this.sides[killer.team].timers['illager_kill_stacks'] = Math.min(cap, cur + 1);
       }
       if (killer.alive) this.beh(killer).onKill?.(killer, t, this);

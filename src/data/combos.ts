@@ -270,11 +270,11 @@ export interface CounterDef {
 
 /** Natural enemies: damage multipliers between specific mobs, whichever side they are on. */
 export const COUNTERS: CounterDef[] = [
-  { from: ['wolf'], to: [...SKELETONS, 'wither_skeleton'], mul: 1.5, desc: '狼天生猎杀骷髅：对骷髅类伤害 +50%' },
+  { from: ['wolf', 'ocelot'], to: [...SKELETONS, 'wither_skeleton', 'creeper', 'icy_creeper'], mul: 1.4, desc: '猫犬天敌：对骷髅与苦力怕伤害 +40%' },
   { from: ['piglin_brute'], to: ['hoglin'], mul: 1.5, desc: '猪灵蛮兵擅长猎杀疣猪兽：伤害 +50%' },
   { from: ['enderman'], to: ['endermite'], mul: 1.5, desc: '末影人憎恨末影螨：伤害 +50%' },
-  { from: ['iron_golem', 'copper_golem'], to: ILLAGERS.concat(['ravager', 'vex']), mul: 1.25, desc: '傀儡守护村庄：对灾厄势力伤害 +25%' },
-  { from: ['snow_golem', 'frostbite'], to: ['blaze', 'magma_cube', 'sulfur_cube'], mul: 3, desc: '寒冷克制火焰：雪球和冰冻对烈焰人、岩浆怪伤害 ×3' },
+  { from: ['iron_golem', 'copper_golem', 'redstone_golem', 'redstone_colossus', 'ancient_warden'], to: ILLAGERS.concat(['ravager', 'vex', 'geomancer', 'windcaller', 'mountaineer', 'iceologer']), mul: 1.25, desc: '傀儡守护阵线：对灾厄势力伤害 +25%' },
+  { from: ['snow_golem', 'frostbite', 'icy_creeper', 'iceologer', 'drowned', 'armored_drowned'], to: ['blaze', 'magma_cube', 'sulfur_cube', 'baby_ghast'], mul: 2.5, desc: '寒水克制熔火：水流与极寒对下界火焰单位伤害 ×2.5' },
   { from: ['bee'], to: ['spider', 'cave_spider'], mul: 1.3, desc: '蜜蜂护巢：对蜘蛛伤害 +30%' },
 ];
 
