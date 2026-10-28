@@ -13,8 +13,14 @@ import { sfx } from '../../audio/audio.ts';
 import { isHostConnected } from '../../net/bakaboxBridge.ts';
 import { OMEN_TIER_NAME, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
 
+import { computeSynergies, FAMILIES } from '../../data/families.ts';
+import type { Family } from '../../core/types.ts';
+import type { HistoryEntry } from '../../meta/profile.ts';
+import { reportRunTelemetry } from '../../net/telemetry.ts';
+
 export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
   const [unlocks, setUnlocks] = useState<string[]>([]);
+  const [record, setRecord] = useState<HistoryEntry | null>(null);
   const done = useRef(false);
   const score = runScore({ ...s, won });
 
@@ -23,6 +29,48 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
     done.current = true;
     sfx(won ? 'victory' : 'defeat');
     const before = { ...profile.value };
+
+    const syn = computeSynergies([...new Set(s.team.map((c) => c.mob))].map((m) => mobDef(m).families));
+    const synergies = (Object.keys(syn.active) as Family[])
+      .filter((f) => syn.active[f] >= 0)
+      .map((f) => ({
+        family: f,
+        name: FAMILIES[f]?.name ?? f,
+        tier: syn.active[f] + 1,
+        count: syn.counts[f] || 0,
+      }));
+
+    const historyEntry: HistoryEntry = {
+      date: Date.now(),
+      commander: s.commander,
+      omen: s.omen,
+      won,
+      act: s.act,
+      score,
+      team: s.team.map((c) => ({ mob: c.mob, star: c.star })),
+      seed: s.seed,
+      relics: [...s.relics],
+      synergies,
+      killedBy: won
+        ? undefined
+        : (s.stats.lastDefeat ?? (s.abandoned ? { encId: 'abandoned', encName: '放弃爬塔', kind: 'abandon', act: s.act } : undefined)),
+      battles: s.stats.battleLogs ? [...s.stats.battleLogs] : [],
+      runStats: {
+        damage: s.stats.damage,
+        battlesWon: s.stats.battlesWon,
+        battlesLost: s.stats.battlesLost,
+        elitesWon: s.stats.elitesWon,
+        bossesWon: s.stats.bossesWon,
+        emeraldsEarned: s.stats.emeraldsEarned,
+        itemsUsed: s.stats.itemsUsed ?? 0,
+        potionsUsed: s.stats.potionsUsed ?? 0,
+        duration: Math.round((Date.now() - s.stats.startTime) / 1000),
+      },
+    };
+    setRecord(historyEntry);
+    // ── 自动推送本局遥测数据给服务器 (后台静默自动上报，无需手动操作) ──
+    void reportRunTelemetry(historyEntry);
+
     updateProfile((p) => {
       p.runs++;
       if (won) p.wins++;
@@ -36,9 +84,9 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
         p.daily = { ...(p.daily ?? {}), [s.daily]: { ...rec, best: Math.max(rec.best, score) } };
       }
       p.history = [
-        { date: Date.now(), commander: s.commander, omen: s.omen, won, act: s.act, score, team: s.team.map((c) => ({ mob: c.mob, star: c.star })) },
+        historyEntry,
         ...p.history,
-      ].slice(0, 30);
+      ].slice(0, 50);
     });
     const after = profile.value;
     // Achievements only the end of a run can tell (the rest come with every run action).
@@ -142,6 +190,20 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
           </div>
         </div>
         <div class="row gap16 center">
+          {record && (
+            <Btn
+              onClick={() => {
+                try {
+                  navigator.clipboard.writeText(JSON.stringify(record, null, 2));
+                  pushToast('本局对战数据已复制到剪贴板！', 'gold');
+                } catch {
+                  pushToast('复制失败，请在图鉴记录中查看', 'bad');
+                }
+              }}
+            >
+              📋 复制本局战报
+            </Btn>
+          )}
           <Btn size="big" onClick={() => (setRun(null), go('title'))}>返回主菜单</Btn>
           <Btn variant="green" size="big" onClick={() => (setRun(null), go('newrun'))}>再来一局</Btn>
         </div>

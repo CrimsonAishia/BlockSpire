@@ -2,13 +2,13 @@ import { useState } from 'preact/hooks';
 import { MOBS, PLAYABLE_MOBS, RARITY_INFO, ROLE_INFO, mobDef, starStatMul, unitCount } from '../../data/mobs.ts';
 import { DEVELOPMENT_RULES, DIFFICULTY_POLICIES } from '../../data/difficulty.ts';
 import { CRATES } from '../../data/crates.ts';
-import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_TIER_INFO, COMMANDER_MAP, COMMANDERS } from '../../data/items.ts';
+import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_MAP, RELIC_TIER_INFO, COMMANDER_MAP } from '../../data/items.ts';
 import { FAMILY_LIST } from '../../data/families.ts';
-import { ACHIEVEMENTS, ACH_CAT, ROMAN_OMEN, omenTier } from '../../meta/profile.ts';
+import { ACHIEVEMENTS, ACH_CAT, ROMAN_OMEN, type HistoryEntry } from '../../meta/profile.ts';
 import { RARITIES, type Family } from '../../core/types.ts';
 import { url } from '../assets.ts';
-import { Btn, FamBadge, RelicTipContent, Tip, itemIcon } from '../components/common.tsx';
-import { go, profile } from '../store.ts';
+import { Btn, FamBadge, Modal, RelicTipContent, Tip, itemIcon } from '../components/common.tsx';
+import { go, profile, pushToast, updateProfile } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
 import { KEYWORDS, RichText } from '../components/rich.tsx';
 import { SURFACE_INFO } from '../../battle/terrain.ts';
@@ -175,45 +175,7 @@ export function Codex() {
             </div>
           )}
           {tab === 'achievements' && <AchievementsTab />}
-          {tab === 'records' && (
-            <div class="codex-cols">
-              <div>
-                <div class="tp-sec">生涯</div>
-                <div class="es-row"><span>爬塔局数</span><span>{p.runs}</span></div>
-                <div class="es-row"><span>通关次数</span><span>{p.wins}</span></div>
-                <div class="es-row"><span>最高分</span><span class="gold-t">{p.bestScore}</span></div>
-                <div class="es-row"><span>最高解锁难度</span><span>{p.maxOmen ? `不祥之兆 ${ROMAN_OMEN[p.maxOmen]}` : '普通'}</span></div>
-                {COMMANDERS.map((c) => {
-                  const best = p.bestOmen?.[c.id];
-                  return (
-                    <div key={c.id} class="es-row">
-                      <span style={{ color: c.color }}>{c.name} · 最高通关</span>
-                      <span class={`omen-best ${omenTier(best)}`}>{best === undefined ? '—' : best > 0 ? `不祥之兆 ${ROMAN_OMEN[best]}` : '普通'}</span>
-                    </div>
-                  );
-                })}
-                <div class="es-row"><span>累计绿宝石</span><span class="em">{p.totalEmeralds}</span></div>
-                <div class="es-row"><span>竞技场</span><span>{p.classic.played} 场{p.classic.duels ? `（另有双人对战 ${p.classic.duels} 场）` : ''}</span></div>
-                <div class="es-row"><span>竞技场竞猜</span><span>{p.classic.correct}/{p.classic.guesses}（最高连胜 {p.classic.best}{p.classic.upsets ? ` · 爆冷命中 ${p.classic.upsets}` : ''}）</span></div>
-              </div>
-              <div>
-                <div class="tp-sec">最近对局</div>
-                {p.history.length === 0 && <div class="faint">还没有记录</div>}
-                {p.history.slice(0, 10).map((h, i) => (
-                  <div key={i} class="hist-row">
-                    <span class={h.won ? 'gold-t' : 'red-t'}>{h.won ? '通关' : `第${h.act}幕`}</span>
-                    <span style={{ color: COMMANDER_MAP[h.commander]?.color }}>{COMMANDER_MAP[h.commander]?.name}</span>
-                    <span class="row gap4">
-                      {h.team.map((c, k) => (
-                        <img key={k} src={url.mob(c.mob)} style={{ width: 26, height: 26, objectFit: 'contain' }} />
-                      ))}
-                    </span>
-                    <span class="faint">{h.score} 分</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {tab === 'records' && <RecordsTab p={p} />}
         </div>
       </div>
     </div>
@@ -736,6 +698,406 @@ function AchievementsTab() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function RecordsTab({ p }: { p: typeof profile.value }) {
+  const [selectedRun, setSelectedRun] = useState<HistoryEntry | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importText, setImportText] = useState('');
+
+  const history = p.history ?? [];
+  const totalRuns = history.length;
+  const wins = history.filter((h) => h.won).length;
+  const winRate = totalRuns > 0 ? Math.round((wins / totalRuns) * 100) : 0;
+
+  // 难度阶梯统计 (Omen 0 ~ 5)
+  const omenStats = [0, 1, 2, 3, 4, 5].map((omen) => {
+    const list = history.filter((h) => h.omen === omen);
+    const w = list.filter((h) => h.won).length;
+    const rate = list.length > 0 ? Math.round((w / list.length) * 100) : null;
+    return { omen, total: list.length, wins: w, rate };
+  });
+
+  // 头号团灭杀手 Top 3 (Deadliest Killers)
+  const killerMap: Record<string, { count: number; name: string; kind: string }> = {};
+  for (const h of history) {
+    if (!h.won && h.killedBy) {
+      const key = h.killedBy.encName || h.killedBy.encId;
+      if (!killerMap[key]) {
+        killerMap[key] = { count: 0, name: h.killedBy.encName || h.killedBy.encId, kind: h.killedBy.kind };
+      }
+      killerMap[key].count++;
+    }
+  }
+  const topKillers = Object.values(killerMap)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  // 核心主力 Top 3
+  const mobCounts: Record<string, number> = {};
+  for (const h of history) {
+    for (const c of h.team) {
+      mobCounts[c.mob] = (mobCounts[c.mob] || 0) + 1;
+    }
+  }
+  const topMobs = Object.entries(mobCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  const handleExportAll = () => {
+    if (history.length === 0) {
+      pushToast('暂无对战数据可导出', 'bad');
+      return;
+    }
+    try {
+      navigator.clipboard.writeText(JSON.stringify(history, null, 2));
+      pushToast(`已复制 ${history.length} 局对战遥测数据到剪贴板！`, 'gold');
+    } catch {
+      pushToast('复制失败，请检查浏览器权限', 'bad');
+    }
+  };
+
+  const handleImport = () => {
+    try {
+      const parsed = JSON.parse(importText.trim());
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      if (!arr.length || typeof arr[0].score !== 'number') {
+        throw new Error('数据格式不符合战报结构');
+      }
+      updateProfile((prof) => {
+        const merged = [...arr, ...prof.history];
+        const seen = new Set<number>();
+        prof.history = merged
+          .filter((item) => {
+            if (!item.date || seen.has(item.date)) return false;
+            seen.add(item.date);
+            return true;
+          })
+          .slice(0, 100);
+      });
+      pushToast(`成功导入 ${arr.length} 局对战数据！`, 'gold');
+      setImporting(false);
+      setImportText('');
+    } catch (e) {
+      pushToast(`导入失败: ${(e as Error).message}`, 'bad');
+    }
+  };
+
+  return (
+    <div class="codex-cols" style={{ gap: 24, alignItems: 'flex-start' }}>
+      {/* ── 左侧：生涯与难度健康度诊断 ── */}
+      <div style={{ width: 330, flexShrink: 0 }}>
+        <div class="tp-sec">生涯数据</div>
+        <div class="es-row"><span>爬塔局数</span><span>{p.runs}</span></div>
+        <div class="es-row"><span>通关次数</span><span class="gold-t">{p.wins} ({winRate}%)</span></div>
+        <div class="es-row"><span>最高分</span><span class="gold-t">{p.bestScore}</span></div>
+        <div class="es-row"><span>最高解锁难度</span><span>{p.maxOmen ? `不祥之兆 ${ROMAN_OMEN[p.maxOmen]}` : '普通'}</span></div>
+        <div class="es-row"><span>累计绿宝石</span><span class="em">{p.totalEmeralds}</span></div>
+
+        <div class="tp-sec" style={{ marginTop: 14 }}>难度平衡与通关率 (Balance)</div>
+        <div class="panel" style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+          {omenStats.map(({ omen, total, wins: w, rate }) => (
+            <div key={omen} class="row between center" style={{ fontSize: 13, padding: '3px 0' }}>
+              <span>{omen === 0 ? '普通难度' : `不祥之兆 ${ROMAN_OMEN[omen]}`}</span>
+              <span class="row gap8 center">
+                <span class="faint">{total}局 ({w}胜)</span>
+                <span
+                  style={{
+                    minWidth: 42,
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    color: rate === null ? '#777' : rate >= 50 ? '#4ade80' : rate >= 25 ? '#facc15' : '#ef4444',
+                  }}
+                >
+                  {rate === null ? '—' : `${rate}%`}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {topKillers.length > 0 && (
+          <>
+            <div class="tp-sec" style={{ marginTop: 14 }}>头号致命杀手 (Top Run Killers)</div>
+            <div class="panel" style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6 }}>
+              {topKillers.map((k, idx) => (
+                <div key={idx} class="row between center" style={{ fontSize: 13, padding: '3px 0' }}>
+                  <span style={{ color: '#fca5a5' }}>☠ {k.name}</span>
+                  <span class="red-t" style={{ fontWeight: 'bold' }}>团灭 {k.count} 次</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {topMobs.length > 0 && (
+          <>
+            <div class="tp-sec" style={{ marginTop: 14 }}>常用核心主力 (Top Units)</div>
+            <div class="row gap8 wrap">
+              {topMobs.map(([mobId, count], idx) => (
+                <div key={idx} class="row center gap4" style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 4 }}>
+                  <img src={url.mob(mobId)} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                  <span style={{ fontSize: 13 }}>{mobDef(mobId).name} ({count})</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── 右侧：可交互历史对局与复盘入口 ── */}
+      <div style={{ flex: 1, minWidth: 420 }}>
+        <div class="row between center mb8">
+          <div class="tp-sec" style={{ margin: 0 }}>对局遥测记录 ({history.length} 局)</div>
+          <div class="row gap8">
+            <Btn size="small" onClick={handleExportAll}>📋 导出全部 JSON</Btn>
+            <Btn size="small" onClick={() => setImporting(true)}>📥 导入战报</Btn>
+          </div>
+        </div>
+        <div class="faint mb8" style={{ fontSize: 12 }}>
+          💡 点击任意对局可展开【深度复盘】，查看致命死因、终局羁绊、宝物与全关卡战报流水。
+        </div>
+
+        {history.length === 0 && <div class="faint" style={{ padding: '16px 0' }}>还没有记录，完成一次爬塔后即可在此复盘！</div>}
+
+        <div style={{ maxHeight: 520, overflowY: 'auto', paddingRight: 6 }}>
+          {history.map((h, i) => (
+            <div
+              key={i}
+              class="hist-row clickable"
+              onClick={() => {
+                sfx('card_place');
+                setSelectedRun(h);
+              }}
+              title="点击查看此局深度复盘与战场流水"
+            >
+              <span class={h.won ? 'gold-t' : 'red-t'}>
+                {h.won ? '🏆 通关' : `💀 第${h.act}幕`}
+              </span>
+              <span style={{ color: COMMANDER_MAP[h.commander]?.color }}>
+                {COMMANDER_MAP[h.commander]?.name}
+              </span>
+              <span class="row gap4 wrap">
+                {h.team.map((c, k) => (
+                  <span key={k} style={{ position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={url.mob(c.mob)}
+                      title={`${mobDef(c.mob).name} (${c.star}星)`}
+                      style={{ width: 26, height: 26, objectFit: 'contain' }}
+                    />
+                    {c.star > 1 && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: -2,
+                          bottom: -2,
+                          fontSize: 10,
+                          background: c.star >= 4 ? '#e056fd' : '#f59e0b',
+                          color: '#000',
+                          fontWeight: 'bold',
+                          borderRadius: 2,
+                          padding: '0 2px',
+                          lineHeight: '10px',
+                        }}
+                      >
+                        {c.star}★
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </span>
+              <span class="faint" style={{ textAlign: 'right' }}>
+                {h.omen ? `Omen ${ROMAN_OMEN[h.omen]}` : '普通'} · {h.score}分
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 单局对战深度复盘弹窗 ── */}
+      {selectedRun && (
+        <Modal width={860} onClose={() => setSelectedRun(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div class="row between center" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 'bold' }} class="title-shadow">
+                {selectedRun.won ? '🏆 爬塔通关复盘' : `💀 第 ${selectedRun.act} 幕阵亡复盘`} · {COMMANDER_MAP[selectedRun.commander]?.name || selectedRun.commander}
+              </div>
+              <div class="row gap8 center">
+                <span class="gold-t" style={{ fontSize: 16 }}>{selectedRun.omen ? `不祥之兆 ${ROMAN_OMEN[selectedRun.omen]}` : '普通难度'}</span>
+                <span class="faint" style={{ fontSize: 13 }}>得分: {selectedRun.score}</span>
+              </div>
+            </div>
+
+            {/* 致命死因 */}
+            {!selectedRun.won && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)', padding: '10px 14px', borderRadius: 8 }}>
+                <div class="row between center">
+                  <div style={{ color: '#fca5a5', fontSize: 16, fontWeight: 'bold' }}>
+                    🚨 致命遭遇：{selectedRun.killedBy?.encName || selectedRun.killedBy?.encId || '未知遭遇'}
+                  </div>
+                  <div class="row gap12" style={{ fontSize: 13 }}>
+                    {selectedRun.killedBy?.time !== undefined && (
+                      <span>战斗时长: <b>{selectedRun.killedBy.time}s</b></span>
+                    )}
+                    {selectedRun.killedBy?.bossHp !== undefined && (
+                      <span>首领剩余血量: <b class="red-t">{selectedRun.killedBy.bossHp}%</b></span>
+                    )}
+                  </div>
+                </div>
+                <div class="faint" style={{ fontSize: 12, marginTop: 4 }}>
+                  {selectedRun.killedBy?.bossHp !== undefined && selectedRun.killedBy.bossHp < 25
+                    ? '⚡ 濒死惜败：首领残血已不足 25%，仅差微小输出爆发或护盾续航即可破局！'
+                    : selectedRun.killedBy?.time !== undefined && selectedRun.killedBy.time < 10
+                    ? '⚠️ 突发秒杀：战斗仅持续不足 10 秒即全线溃败，可能遭遇数值碾压或站位严重受克！'
+                    : '复盘提示：建议排查前排抗伤分配，留意高伤怪物技能前摇并合理携带克制药水。'}
+                </div>
+              </div>
+            )}
+
+            {/* 终局构筑、羁绊与宝物 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div class="panel" style={{ padding: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 6 }}>
+                <div class="panel-title" style={{ fontSize: 15, marginBottom: 8 }}>最终出战阵容</div>
+                <div class="row gap8 wrap">
+                  {selectedRun.team.map((c, idx) => (
+                    <div key={idx} class="row center gap4" style={{ background: 'rgba(255,255,255,0.06)', padding: '4px 8px', borderRadius: 4 }}>
+                      <img src={url.mob(c.mob)} style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 'bold' }}>{mobDef(c.mob).name}</div>
+                        <div style={{ fontSize: 11, color: c.star >= 4 ? '#e056fd' : '#f59e0b' }}>{c.star} ★</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div class="panel" style={{ padding: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 6 }}>
+                <div class="panel-title" style={{ fontSize: 15, marginBottom: 8 }}>激活羁绊与宝物</div>
+                <div class="row gap6 wrap mb8">
+                  {selectedRun.synergies && selectedRun.synergies.length > 0 ? (
+                    selectedRun.synergies.map((s, idx) => (
+                      <span key={idx} style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: 4, padding: '2px 6px', fontSize: 12, color: '#fde68a' }}>
+                        ✦ {s.name || s.family} {s.tier}阶 ({s.count})
+                      </span>
+                    ))
+                  ) : (
+                    <span class="faint" style={{ fontSize: 12 }}>无活跃羁绊</span>
+                  )}
+                </div>
+                <div class="row gap6 wrap">
+                  {selectedRun.relics && selectedRun.relics.length > 0 ? (
+                    selectedRun.relics.map((r, idx) => (
+                      <span key={idx} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '2px 6px', fontSize: 12 }}>
+                        {RELIC_MAP[r]?.name || r}
+                      </span>
+                    ))
+                  ) : (
+                    <span class="faint" style={{ fontSize: 12 }}>无宝物</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 全程遭遇流水 */}
+            {selectedRun.battles && selectedRun.battles.length > 0 && (
+              <div class="panel" style={{ padding: 12, background: 'rgba(0,0,0,0.25)', borderRadius: 6 }}>
+                <div class="panel-title" style={{ fontSize: 15, marginBottom: 6 }}>
+                  战斗战报流水 (共 {selectedRun.battles.length} 场遭遇)
+                </div>
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#999' }}>
+                        <th style={{ padding: '4px 6px' }}>幕-关卡</th>
+                        <th style={{ padding: '4px 6px' }}>遭遇敌人</th>
+                        <th style={{ padding: '4px 6px' }}>类型</th>
+                        <th style={{ padding: '4px 6px' }}>战况</th>
+                        <th style={{ padding: '4px 6px' }}>耗时</th>
+                        <th style={{ padding: '4px 6px' }}>战损心数</th>
+                        <th style={{ padding: '4px 6px' }}>本场 MVP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRun.battles.map((b, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '4px 6px' }}>第{b.act}幕-{b.row + 1}</td>
+                          <td style={{ padding: '4px 6px', fontWeight: 'bold' }}>{b.encName || b.encId}</td>
+                          <td style={{ padding: '4px 6px', color: b.kind === 'boss' ? '#f59e0b' : b.kind === 'elite' ? '#a855f7' : '#94a3b8' }}>
+                            {b.kind === 'boss' ? '首领' : b.kind === 'elite' ? '精英' : b.kind === 'event' ? '事件' : '常规'}
+                          </td>
+                          <td style={{ padding: '4px 6px', color: b.win ? '#4ade80' : '#ef4444', fontWeight: 'bold' }}>
+                            {b.win ? '胜利' : `战败${b.bossHp !== undefined ? ` (残血${b.bossHp}%)` : ''}`}
+                          </td>
+                          <td style={{ padding: '4px 6px' }}>{b.time}s</td>
+                          <td style={{ padding: '4px 6px', color: b.heartsLost > 0 ? '#ef4444' : '#94a3b8' }}>
+                            {b.heartsLost > 0 ? `-${b.heartsLost} ❤️` : '0'}
+                          </td>
+                          <td style={{ padding: '4px 6px' }}>
+                            {b.mvp ? `${mobDef(b.mvp.mob).name} (${b.mvp.dmg})` : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div class="row between center" style={{ marginTop: 6 }}>
+              <Btn
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(JSON.stringify(selectedRun, null, 2));
+                    pushToast('本局对战数据 JSON 已复制！', 'gold');
+                  } catch {
+                    pushToast('复制失败', 'bad');
+                  }
+                }}
+              >
+                📋 复制本局战报 JSON
+              </Btn>
+              <Btn onClick={() => setSelectedRun(null)}>关闭</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 导入战报数据弹窗 ── */}
+      {importing && (
+        <Modal width={600} onClose={() => setImporting(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontSize: 20, fontWeight: 'bold' }} class="title-shadow">
+              📥 导入对局遥测数据 JSON
+            </div>
+            <div class="faint" style={{ fontSize: 13 }}>
+              支持粘贴测试人员或其他玩家导出的对战 JSON（单局对象或多局数组）。导入后将合并至本地记录以供复盘分析。
+            </div>
+            <textarea
+              rows={8}
+              value={importText}
+              onInput={(e) => setImportText((e.target as HTMLTextAreaElement).value)}
+              placeholder="在此粘贴战报 JSON 文本..."
+              style={{
+                width: '100%',
+                background: 'rgba(0,0,0,0.4)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#fff',
+                padding: 10,
+                borderRadius: 6,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                resize: 'vertical',
+              }}
+            />
+            <div class="row end gap12">
+              <Btn onClick={() => setImporting(false)}>取消</Btn>
+              <Btn variant="green" onClick={handleImport}>确认导入</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -517,6 +517,23 @@ class LeaderboardHTTPHandler(BaseHTTPRequestHandler):
                 "redis": f"{REDIS_HOST}:{REDIS_PORT}",
             })
 
+        if path == "/api/telemetry":
+            qs = parse_qs(parsed.query)
+            limit = 100
+            try:
+                limit = int(qs.get("limit", ["100"])[0])
+            except Exception:
+                pass
+            tele_file = os.path.join(PROJECT_ROOT, "runs-telemetry.json")
+            runs = []
+            if os.path.exists(tele_file):
+                try:
+                    with open(tele_file, "r", encoding="utf-8") as f:
+                        runs = json.load(f)
+                except Exception:
+                    pass
+            return self._send_json({"ok": True, "count": len(runs), "runs": runs[:limit]}, 200)
+
         if path != "/api/leaderboard":
             return self._send_json({"error": "Not Found"}, 404)
 
@@ -542,6 +559,43 @@ class LeaderboardHTTPHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/telemetry":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                raw = self.rfile.read(length)
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                return self._send_json({"error": "JSON 格式解析失败"}, 400)
+
+            tele_file = os.path.join(PROJECT_ROOT, "runs-telemetry.json")
+            runs = []
+            if os.path.exists(tele_file):
+                try:
+                    with open(tele_file, "r", encoding="utf-8") as f:
+                        runs = json.load(f)
+                except Exception:
+                    runs = []
+            if not isinstance(runs, list):
+                runs = []
+
+            runs = [body] + [r for r in runs if r.get("date") != body.get("date")][:999]
+            try:
+                with open(tele_file, "w", encoding="utf-8") as f:
+                    json.dump(runs, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"[Telemetry Write Error] {e}")
+
+            try:
+                self.redis_exec([
+                    ["LPUSH", "bs:telemetry:runs", json.dumps(body, ensure_ascii=False)],
+                    ["LTRIM", "bs:telemetry:runs", "0", "1999"],
+                ])
+            except Exception:
+                pass
+
+            return self._send_json({"ok": True, "received": True, "total": len(runs)}, 200)
+
         if parsed.path != "/api/leaderboard":
             return self._send_json({"error": "Not Found"}, 404)
 

@@ -5,6 +5,50 @@ import { PLAYABLE_MOBS } from '../data/mobs.ts';
 import { computeSynergies } from '../data/families.ts';
 import { mobDef } from '../data/mobs.ts';
 
+export interface BattleRecord {
+  act: number;
+  row: number;
+  kind: 'battle' | 'elite' | 'boss' | 'event';
+  encId: string;
+  encName: string;
+  win: boolean;
+  time: number;
+  heartsLost: number;
+  bossHp?: number;
+  playerLost?: number;
+  playerLeft?: number;
+  mvp?: { mob: string; dmg: number };
+  itemsUsed?: string[];
+}
+
+export interface DefeatCause {
+  encId: string;
+  encName: string;
+  kind: string;
+  act: number;
+  bossHp?: number;
+  time?: number;
+}
+
+export interface SynergyRecord {
+  family: string;
+  name?: string;
+  tier: number;
+  count: number;
+}
+
+export interface RunTelemetryStats {
+  damage: number;
+  battlesWon: number;
+  battlesLost: number;
+  elitesWon: number;
+  bossesWon: number;
+  emeraldsEarned: number;
+  itemsUsed: number;
+  potionsUsed: number;
+  duration: number; // in seconds
+}
+
 export interface HistoryEntry {
   date: number;
   commander: string;
@@ -13,6 +57,13 @@ export interface HistoryEntry {
   act: number;
   score: number;
   team: { mob: string; star: number }[];
+  /** Detailed telemetry for difficulty review & data modeling */
+  seed?: number;
+  relics?: string[];
+  synergies?: SynergyRecord[];
+  killedBy?: DefeatCause;
+  battles?: BattleRecord[];
+  runStats?: RunTelemetryStats;
 }
 
 export interface Profile {

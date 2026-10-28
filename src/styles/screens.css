@@ -2689,6 +2689,15 @@
   border-bottom: 1px solid #221d28;
   font-size: 15px;
 }
+.hist-row.clickable {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px 8px;
+  transition: background 0.15s ease;
+}
+.hist-row.clickable:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* ───────── Classic ───────── */
 .classic-screen {

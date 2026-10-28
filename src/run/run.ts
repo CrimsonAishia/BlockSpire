@@ -13,6 +13,7 @@ import { MOB_MAP, RARITY_INFO, PLAYABLE_BLUE_MOBS, mobDef, unitCount } from '../
 import { MOB_COST } from '../classic/costs.ts';
 import { buildSide } from '../battle/setup.ts';
 import type { BattleConfig, BattleResult } from '../battle/sim.ts';
+import type { BattleRecord, DefeatCause } from '../meta/profile.ts';
 import { EVENTS, EVENT_MAP } from './events.ts';
 import { generateMap } from './map.ts';
 import { BOSS_BIOME, SIFT_BIOMES, generateTerrain, pickBiome, type BuildOrder, type Terrain } from '../battle/terrain.ts';
@@ -155,6 +156,10 @@ export interface RunStats {
   /** Current and longest streak of blue pulls in a row. */
   blueRun?: number;
   blueBest?: number;
+  /** Granular combat telemetry logs for difficulty modeling */
+  battleLogs?: BattleRecord[];
+  /** Detailed encounter that caused run defeat */
+  lastDefeat?: DefeatCause;
 }
 
 export interface RunState {
@@ -341,6 +346,7 @@ export function createRun(commander: string, omen: number, seed = randomSeed(), 
       battlesWon: 0, battlesLost: 0, elitesWon: 0, bossesWon: 0, crates: 0,
       pulls: { blue: 0, purple: 0, pink: 0, red: 0, gold: 0 },
       emeraldsEarned: 0, damage: 0, nodes: 0, starUps: 0, mvp: {}, startTime: Date.now(),
+      battleLogs: [],
     },
     bosses,
     usedEnc: [],
@@ -1278,6 +1284,35 @@ export function resolveBattle(s: RunState, res: BattleResult) {
   s.stats.potionsUsed = (s.stats.potionsUsed ?? 0) + used.filter((id) => ITEM_MAP[id]?.potion).length;
   battleAchievements(s, p, res, win);
   const row = s.nodeId ? s.map.nodes[s.nodeId].row : 0;
+
+  // ── 记录单场战斗遥测流水 (Battle Telemetry) ──
+  let topMob: string | undefined;
+  let topDmg = 0;
+  for (const c of res.cards) {
+    if (c.team === 0 && c.dmg > topDmg) {
+      topDmg = c.dmg;
+      topMob = c.mob;
+    }
+  }
+  const heartsLost = win ? 0 : (p.kind === 'battle' || p.kind === 'event' ? 1 : 2);
+  const battleLog: BattleRecord = {
+    act: s.act,
+    row,
+    kind: p.kind,
+    encId: p.enc,
+    encName: p.name,
+    win,
+    time: Math.round(res.time * 10) / 10,
+    heartsLost,
+    bossHp: res.bossHp !== undefined ? Math.round(res.bossHp * 100) : undefined,
+    playerLost: res.lost?.[0] ?? 0,
+    playerLeft: res.left?.[0] ?? 0,
+    mvp: topMob && topDmg > 0 ? { mob: topMob, dmg: Math.round(topDmg) } : undefined,
+    itemsUsed: res.itemsUsed ? [...res.itemsUsed] : [],
+  };
+  s.stats.battleLogs = s.stats.battleLogs ?? [];
+  s.stats.battleLogs.push(battleLog);
+
   s.queue.shift();
   const follow: Pending[] = [];
   if (win) {
@@ -1372,7 +1407,17 @@ export function resolveBattle(s: RunState, res: BattleResult) {
     }
     follow.push({ type: 'result', win, kind: p.kind, emeralds: em, heartsLost: lost, summary, totem, golemCost: golemPaid || undefined });
     // Falling in the Sift still ends the run as the dragon slayer.
-    if (s.hearts <= 0) follow.push({ type: s.act >= 4 ? 'victory' : 'defeat' });
+    if (s.hearts <= 0) {
+      s.stats.lastDefeat = {
+        encId: p.enc,
+        encName: p.name,
+        kind: p.kind,
+        act: s.act,
+        bossHp: res.bossHp !== undefined ? Math.round(res.bossHp * 100) : undefined,
+        time: Math.round(res.time * 10) / 10,
+      };
+      follow.push({ type: s.act >= 4 ? 'victory' : 'defeat' });
+    }
     else if (p.kind === 'boss') {
       const start = p.bossHp ?? 1;
       const end = res.bossHp ?? start;

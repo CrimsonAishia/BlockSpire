@@ -1,15 +1,20 @@
 // `npm run dev`: serves the Vercel functions in api/ from the Vite dev server, with an in-memory
 // Redis stand-in (scores are lost when the server restarts).
 import type { Plugin } from 'vite';
+import fs from 'node:fs';
+import path from 'node:path';
 import { handleLeaderboard, type Redis } from '../api/leaderboard.ts';
+import { handleTelemetry } from '../api/telemetry.ts';
 
 /** The handful of Redis commands the leaderboard uses. */
 export function memoryRedis(): Redis {
   const zsets = new Map<string, Map<string, number>>();
   const hashes = new Map<string, Map<string, string>>();
+  const lists = new Map<string, string[]>();
   const counters = new Map<string, number>();
   const zset = (k: string) => zsets.get(k) ?? zsets.set(k, new Map()).get(k)!;
   const hash = (k: string) => hashes.get(k) ?? hashes.set(k, new Map()).get(k)!;
+  const list = (k: string) => lists.get(k) ?? lists.set(k, []).get(k)!;
   const sorted = (k: string) => [...zset(k)].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1));
   const run = (c: (string | number)[]): unknown => {
     const [op, key, ...a] = c.map(String);
@@ -69,6 +74,25 @@ export function memoryRedis(): Redis {
       }
       case 'HEXISTS':
         return hash(key).has(a[0]) ? 1 : 0;
+      case 'LPUSH': {
+        const l = list(key);
+        l.unshift(...a);
+        return l.length;
+      }
+      case 'LTRIM': {
+        const start = Number(a[0]);
+        const stop = Number(a[1]);
+        const l = list(key);
+        const sliced = l.slice(start, stop < 0 ? undefined : stop + 1);
+        lists.set(key, sliced);
+        return 'OK';
+      }
+      case 'LRANGE': {
+        const start = Number(a[0]);
+        const stop = Number(a[1]);
+        const l = list(key);
+        return l.slice(start, stop < 0 ? undefined : stop + 1);
+      }
       default:
         throw new Error(`memoryRedis: ${op} not supported`);
     }
@@ -92,6 +116,51 @@ export function devApi(): Plugin {
           body: req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks),
         });
         const out = await handleLeaderboard(request, process.env.LEADERBOARD_OFF ? null : redis);
+        res.statusCode = out.status;
+        out.headers.forEach((v, k) => res.setHeader(k, v));
+        res.end(await out.text());
+      });
+
+      server.middlewares.use('/api/telemetry', async (req, res) => {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const headers = new Headers();
+        for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
+        const request = new Request(`http://localhost${req.originalUrl ?? req.url}`, {
+          method: req.method,
+          headers,
+          body: req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks),
+        });
+
+        // 本地持久化至 runs-telemetry.json
+        if (req.method === 'POST') {
+          try {
+            const rawBody = Buffer.concat(chunks).toString('utf-8');
+            const data = JSON.parse(rawBody);
+            const teleFile = path.resolve(process.cwd(), 'runs-telemetry.json');
+            let currentList: any[] = [];
+            if (fs.existsSync(teleFile)) {
+              try {
+                currentList = JSON.parse(fs.readFileSync(teleFile, 'utf-8'));
+              } catch {}
+            }
+            if (!Array.isArray(currentList)) currentList = [];
+            const seen = new Set<number>();
+            currentList = [data, ...currentList]
+              .filter((item) => {
+                if (!item.date || seen.has(item.date)) return false;
+                seen.add(item.date);
+                return true;
+              })
+              .slice(0, 1000);
+            fs.writeFileSync(teleFile, JSON.stringify(currentList, null, 2), 'utf-8');
+            console.log(`[DevApi] 自动接收并持久化新对局遥测数据！当前已累计: ${currentList.length} 局`);
+          } catch (err) {
+            console.error('[DevApi] 持久化遥测数据失败:', err);
+          }
+        }
+
+        const out = await handleTelemetry(request, redis);
         res.statusCode = out.status;
         out.headers.forEach((v, k) => res.setHeader(k, v));
         res.end(await out.text());

@@ -1,0 +1,2646 @@
+{
+  "mode": "applied",
+  "files": 438,
+  "keptCurrent": 288,
+  "updatedMetadata": [
+    ".content-cache/animation/manifest.json",
+    ".content-cache/animation/sheets.json",
+    ".content-cache/post-sift-v3.4/combat-manifest.json",
+    ".content-cache/post-sift-v3.4/manifest.json",
+    "assets-src/post-sift-v3.4/combat-manifest.json",
+    "assets-src/post-sift-v3.4/manifest.json",
+    ".content-cache/animation/preview.html",
+    ".content-cache/post-sift-v3.4/combat-preview.html",
+    ".content-cache/post-sift-v3.4/preview.html"
+  ],
+  "moves": [
+    {
+      "source": "public/assets/bg/v34_abyssal_monument_approach.webp",
+      "target": "public/assets/bg/abyssal_monument_approach.webp",
+      "sha256": "c933f5c278a58c783154f4cfa546bee0cf70593a09dd5e503623d02ae914a8b9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_abyssal_monument_boss.webp",
+      "target": "public/assets/bg/abyssal_monument_boss.webp",
+      "sha256": "66ee9fb6659d7fe64ebf74487050e629d197e70491e91e998f8588b4e9f2c8ea",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_abyssal_monument_interior.webp",
+      "target": "public/assets/bg/abyssal_monument_interior.webp",
+      "sha256": "5fbd45f821d8919fbb502bc12df22063db47cc3b13115bb475004c9ebb148dcc",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_broken_citadel_approach.webp",
+      "target": "public/assets/bg/broken_citadel_approach.webp",
+      "sha256": "df8ee3c9983f8fb9d1d2afd20c5ea4a811daf289333eb475f00ed0b66c4c603c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_broken_citadel_boss.webp",
+      "target": "public/assets/bg/broken_citadel_boss.webp",
+      "sha256": "2f016ca2dfd2040157e694a6535d91c70560d711a6fc4029706960fad1659d56",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_broken_citadel_interior.webp",
+      "target": "public/assets/bg/broken_citadel_interior.webp",
+      "sha256": "239c318ae31c46816c131754b0e4a2014c2b430ceb6ed3024b716337bd294b1d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_gale_sanctum_approach.webp",
+      "target": "public/assets/bg/gale_sanctum_approach.webp",
+      "sha256": "1b22a8d9c712bc028bffb3c5cf94c44af1a2fdf0af470e4130f093d1e7bdac79",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_gale_sanctum_boss.webp",
+      "target": "public/assets/bg/gale_sanctum_boss.webp",
+      "sha256": "50b4e4ad3eba628e454ae74e4c8593974f50a0935e9e81898db9a25a742ec0f9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_gale_sanctum_interior.webp",
+      "target": "public/assets/bg/gale_sanctum_interior.webp",
+      "sha256": "cc20a08727ec37d4ff653bcf8437925b5a2336ec9d7be62bff8dabf964ce6913",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_lonely_fortress_approach.webp",
+      "target": "public/assets/bg/lonely_fortress_approach.webp",
+      "sha256": "e4887621cbb1338c13d987637c0e52833b8bc412c04bfdc56dc3d2224c773b8d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_lonely_fortress_boss.webp",
+      "target": "public/assets/bg/lonely_fortress_boss.webp",
+      "sha256": "43a2d9d028fe5986b72c7ad61b12662b0002b8c1a40e3b4d41b2e7bc3c4dfa8f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_lonely_fortress_interior.webp",
+      "target": "public/assets/bg/lonely_fortress_interior.webp",
+      "sha256": "4704bd05ee03aa92f46f808cfdf7fa31d7c46ac683bcdb5ecc366f90429a4496",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_nether_fortress_approach.webp",
+      "target": "public/assets/bg/nether_fortress_approach.webp",
+      "sha256": "c56808ea0e2e1e7b9c7d6a0ed0965f8fb680aaaa230da04520cb46d10d5fc8c5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_nether_fortress_boss.webp",
+      "target": "public/assets/bg/nether_fortress_boss.webp",
+      "sha256": "1f75edb8d5d269e2bf72c4343fedec1e96bd4cbd5c204016e77206e1433818a8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_nether_fortress_interior.webp",
+      "target": "public/assets/bg/nether_fortress_interior.webp",
+      "sha256": "ebf721b125c73445ffc867214209a8313d53d817cab95ed5f3373d7581d7534a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_overgrown_temple_approach.webp",
+      "target": "public/assets/bg/overgrown_temple_approach.webp",
+      "sha256": "1909bca36eb6808b4e5f235e1d93182b0ccfce969392a9ae91d622e2854cc365",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_overgrown_temple_boss.webp",
+      "target": "public/assets/bg/overgrown_temple_boss.webp",
+      "sha256": "ad3cb8ba620067ea38a3f8087ef824a8eec95c27ed8d813a62b0bcabf63b4a6b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/bg/v34_overgrown_temple_interior.webp",
+      "target": "public/assets/bg/overgrown_temple_interior.webp",
+      "sha256": "aa1c58be2c897f02ddf7610ef8bb33662650fcdeb26d19f06670b2dfee94c45f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_blast_splat.webp",
+      "target": "public/assets/effects/blast_splat.webp",
+      "sha256": "3aea16ae767fd6d6099c1992373eb1582d07cf8176f465a5a4e1e0f3a5e25c86",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_proj_arrow.webp",
+      "target": "public/assets/effects/proj_arrow.webp",
+      "sha256": "673e806118ed73ec0d66ae16d7b6c855f23487661c0b5048ce9239eead5b1419",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_proj_blue_fungus.webp",
+      "target": "public/assets/effects/proj_blue_fungus.webp",
+      "sha256": "eff0ab687d40d3755bccdb6e80a4433908654e989df220a4cf0b09daa150f326",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_proj_harpoon.webp",
+      "target": "public/assets/effects/proj_harpoon.webp",
+      "sha256": "f6414c602aa84e3e05c41ad2e73b3c30d7913803d85f808c88f31e309d8fa10f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_proj_pumpkin_seed.webp",
+      "target": "public/assets/effects/proj_pumpkin_seed.webp",
+      "sha256": "1c757eb8b1248a52b7f476ec0b55f4665d35be22c9b7a87bce99a5f5aaad3482",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_snare_goop.webp",
+      "target": "public/assets/effects/snare_goop.webp",
+      "sha256": "b25179328b2d32b6229ddd4127e384714d00a5bfdcad4c6869110c05100bdb3a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_void_blob.webp",
+      "target": "public/assets/effects/void_blob.webp",
+      "sha256": "86d26e3f90bd9d21d9c52bd38a68bf0364682ed0b7ea95aed9791ac1a9dd4561",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/effects/v34_wind_spiral.webp",
+      "target": "public/assets/effects/wind_spiral.webp",
+      "sha256": "ebef3a659217d8f94c99a33a5ce8249e2a835aebcea3a9004f2219cb3badb3b4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_abyssal_monument_reference.webp",
+      "target": "public/assets/events/abyssal_monument_reference.webp",
+      "sha256": "8e9cf8e1c5a937fe8aed4b5d60f42b2353cfd9226c0e2802d9f35f542312eb86",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_broken_citadel_reference.webp",
+      "target": "public/assets/events/broken_citadel_reference.webp",
+      "sha256": "53f528eee3b775dbbffa6f2cce5fea1abe6bc83cc7fab004c87c2914724099df",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_basalt_vents.webp",
+      "target": "public/assets/events/event_basalt_vents.webp",
+      "sha256": "710125db956a4d83c72ad9a562f2aa805dfa0b7020f7f9e2fae3653b86a0fd49",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_citadel_conduits.webp",
+      "target": "public/assets/events/event_citadel_conduits.webp",
+      "sha256": "be3e5a2dd52431f3e4b581b11a7c5f8c4ee628222adb417247132fddf9cb1e5e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_coral_locks.webp",
+      "target": "public/assets/events/event_coral_locks.webp",
+      "sha256": "6caa00bbf67961d174b01dc21e7ef8c95003ac0c0e9a7e3e7c26278b4aa58c65",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_ender_gates.webp",
+      "target": "public/assets/events/event_ender_gates.webp",
+      "sha256": "39b12862f1350088839bab61685fd95e3c7210c680d5e64ed9f54b7b4abcfc8c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_frozen_supplies.webp",
+      "target": "public/assets/events/event_frozen_supplies.webp",
+      "sha256": "4e51bcc0f3301d22044941a8b69a5b877e6bf595e33dbe14ab4c45a12f4d696f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_gale_windmills.webp",
+      "target": "public/assets/events/event_gale_windmills.webp",
+      "sha256": "df8b42f90b288f4d846a1b1b9d6ec8ac38bdaf63ee4f63c55cd4ab51cd12ec17",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_ice_braziers.webp",
+      "target": "public/assets/events/event_ice_braziers.webp",
+      "sha256": "480e9572533bfbd0f42e21912f55aee3ea9017842c54b1fd94b68af605a13ade",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_ice_crossing.webp",
+      "target": "public/assets/events/event_ice_crossing.webp",
+      "sha256": "b27faae382c538148619d5ab0871ed0814f670144aa170c6ea591e913b4401b4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_jungle_rescue.webp",
+      "target": "public/assets/events/event_jungle_rescue.webp",
+      "sha256": "2b90d7a0dee40d68a4f58214be73898d450a7be12f973d27b0da08454d90f43a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_mine_lanes.webp",
+      "target": "public/assets/events/event_mine_lanes.webp",
+      "sha256": "aed852b1cf0f26435904bb0be9869b9c8aec73b613244223577bb569be007967",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_piglin_trade.webp",
+      "target": "public/assets/events/event_piglin_trade.webp",
+      "sha256": "a400763d6778b8f63da3114ddfef13f84708719682c4c566fa55464ede3b174e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_rampart_beacon.webp",
+      "target": "public/assets/events/event_rampart_beacon.webp",
+      "sha256": "ecac3e86937801603ca2895a63ec44cd37993506ce9314537e582a83af3f2aa2",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_root_pods.webp",
+      "target": "public/assets/events/event_root_pods.webp",
+      "sha256": "b2e22057a78fe211751d89f5bfd3c0e0f0086551ef51323403056b0a7529ee0d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_sanctum_seals.webp",
+      "target": "public/assets/events/event_sanctum_seals.webp",
+      "sha256": "2a20b306cd552cef3549055243d3093dc2735d993a4885d6e299ac6332491ef1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_shield_furnace.webp",
+      "target": "public/assets/events/event_shield_furnace.webp",
+      "sha256": "9c0e64d6d95aa3a3ffc3743e78104c438c76ac3d94921b6c336e1d31da4159ab",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_sunken_cache.webp",
+      "target": "public/assets/events/event_sunken_cache.webp",
+      "sha256": "e47a827e27798cff013ae034f58ed1398b5439aea3c18abe3f44696d289157ca",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_vine_gates.webp",
+      "target": "public/assets/events/event_vine_gates.webp",
+      "sha256": "5e9e010129443eaca712732b3615352f73fff69fd293f23a48371cb1cc9de42b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_event_void_archive.webp",
+      "target": "public/assets/events/event_void_archive.webp",
+      "sha256": "59cd2a5f8103633f72b3cdcbc1ec21c21896db464e7530af24d99e03ad701d8f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_gale_sanctum_reference.webp",
+      "target": "public/assets/events/gale_sanctum_reference.webp",
+      "sha256": "d6b79d9a9152ce763b6ebf9264a00a8a3b8fa9f9bc96be6918b8be8603abc41d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_lonely_fortress_reference.webp",
+      "target": "public/assets/events/lonely_fortress_reference.webp",
+      "sha256": "fa28b4cb0789ff38f8a1e810fc7a359479aa0320803c2ac01f4fbc8e499c8960",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_nether_fortress_reference.webp",
+      "target": "public/assets/events/nether_fortress_reference.webp",
+      "sha256": "a5f8ae29fbf344cc26aab7b2f0f292b4351bb23b810c0d48c996d9933ca2a18e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/events/v34_overgrown_temple_reference.webp",
+      "target": "public/assets/events/overgrown_temple_reference.webp",
+      "sha256": "8e55afe4f3fa1fa861b9740da3200f2c2439c937222f69aaf0851de9a04121f2",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_archer_armor.webp",
+      "target": "public/assets/icons/archer_armor.webp",
+      "sha256": "f43cd3d99e6f075097f3448e1b5c5efa1faeea5b7ce01884cf8ab83e17ae4317",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_armored_caravan.webp",
+      "target": "public/assets/icons/armored_caravan.webp",
+      "sha256": "6c46527d5af1209be910caa1ced9580a9c4aa8f236fadb71a90dcf3dd8af6539",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_assassin_armor.webp",
+      "target": "public/assets/icons/assassin_armor.webp",
+      "sha256": "f2224c2d26bad7b0b3e9617d78e29bcdc7ae5b5632ba8e37d655f5184cf81eac",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_axolotl_escort.webp",
+      "target": "public/assets/icons/axolotl_escort.webp",
+      "sha256": "7dd1b3f6e6c2afce8ddb37bd21dac6f3d7089d441d09dd69d89e5c156534d8af",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_bastion_lines.webp",
+      "target": "public/assets/icons/bastion_lines.webp",
+      "sha256": "367f8fc5ddc33251c60ba88ba65bf8b3a1a40b2c152f51feb70bc59cee3e2adf",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_battle_robe.webp",
+      "target": "public/assets/icons/battle_robe.webp",
+      "sha256": "98f0925894a2f7159c373c1c0acb34dae99852e88f106d16ab732a38599d08d6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_bird_scouts.webp",
+      "target": "public/assets/icons/bird_scouts.webp",
+      "sha256": "3b368e4f802c45bf45bbe1274fad4ce7504f0a15c1dc4575f83f9cc62e9b770a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_bone_cavalry.webp",
+      "target": "public/assets/icons/bone_cavalry.webp",
+      "sha256": "4d35126989db65eeb74dfb30a65cb0bc131542cabee67cb983fb210dc6fda8cf",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_boneclub_unique.webp",
+      "target": "public/assets/icons/boss_boneclub_unique.webp",
+      "sha256": "2a393b1d3033946e089d8afdf7c1fcb86f217a421333291447e91c476d1020ea",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_chill_gale_knife.webp",
+      "target": "public/assets/icons/boss_chill_gale_knife.webp",
+      "sha256": "bb8be585f7695c11e127b59ef47dc95dfb7558c39b082d8655ba72343459edf6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_coral_unique.webp",
+      "target": "public/assets/icons/boss_coral_unique.webp",
+      "sha256": "503b6d72cb2aa906d6bdc3f0c41f2c538b533153cab26fc13e490b066dec8d88",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_encrusted_anchor.webp",
+      "target": "public/assets/icons/boss_encrusted_anchor.webp",
+      "sha256": "24eabbd06f05be864fa5612bdf9b927bae37677ccec18515c4c5a0f630f8d237",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_frost_scythe.webp",
+      "target": "public/assets/icons/boss_frost_scythe.webp",
+      "sha256": "3691033d69b1276bbe93b4ecfacb35276ad85f2c6d6580f52dcf51b923a571ba",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_gale_bow.webp",
+      "target": "public/assets/icons/boss_gale_bow.webp",
+      "sha256": "a63a58a024b6cb72002dac158f177e023b0ac13f06490bbe7565afacd9cf72e1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_gilded_piglin_armor.webp",
+      "target": "public/assets/icons/boss_gilded_piglin_armor.webp",
+      "sha256": "8ee1f213c2f8b16991ef9f78ca672fed9da6a2becd548ae7b5857192ea8309e3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_hunters_promise.webp",
+      "target": "public/assets/icons/boss_hunters_promise.webp",
+      "sha256": "68137692cf1a1511e2ae82fbc557079299270ab296130749102ea2ed737a6cfe",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_mechanized_sawblade.webp",
+      "target": "public/assets/icons/boss_mechanized_sawblade.webp",
+      "sha256": "bbc34c87bf2cea60b5fed175d0dbe68291dc4a466e4806255ae66990f45f2fe0",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_nimble_turtle.webp",
+      "target": "public/assets/icons/boss_nimble_turtle.webp",
+      "sha256": "0f8d14edd3d66e3609cb1e98380e7d73e54c5bf066b4e5e00892be14ab9e2d98",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_opulent_armor.webp",
+      "target": "public/assets/icons/boss_opulent_armor.webp",
+      "sha256": "d5fc99b4ec60cb1cc0d50384722e94e5fe9de78e715f2761e771fde391c18007",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_shadow_walker.webp",
+      "target": "public/assets/icons/boss_shadow_walker.webp",
+      "sha256": "a8a70bd870bcbbea51776bc02fb8a8e4e97befd6c68bb1d801d3fbdae7790285",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_stalwart_armor.webp",
+      "target": "public/assets/icons/boss_stalwart_armor.webp",
+      "sha256": "242207cb7ebc10e19eccba466a84a9dd57e8b82ee220823df91d8ecf0a9b2565",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_sturdy_shulker.webp",
+      "target": "public/assets/icons/boss_sturdy_shulker.webp",
+      "sha256": "9b82ee3fe38bf534e416dd2b5ad3013ed5578aa8bdd61fb89d227400769ede50",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_swift_striker.webp",
+      "target": "public/assets/icons/boss_swift_striker.webp",
+      "sha256": "89e4676e00d0273fe0041d78e212e29eff56137a5e582eb9308850a082e9c46e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_unstable_robes.webp",
+      "target": "public/assets/icons/boss_unstable_robes.webp",
+      "sha256": "a8ae9a6a69055b5f95dbde336340d94dc3806b6e7c3434feac9cd78da611b73c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_vine_whip.webp",
+      "target": "public/assets/icons/boss_vine_whip.webp",
+      "sha256": "6a36c1b2f174cd500716c88421916973313da9c5f3111c5cf127655ea007ba8c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_boss_winter_soul_bow.webp",
+      "target": "public/assets/icons/boss_winter_soul_bow.webp",
+      "sha256": "25e18ae966f388d08b718f53e28fe6706e6b6f631ff55424160a5905c5dda85c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_canopy_hunt.webp",
+      "target": "public/assets/icons/canopy_hunt.webp",
+      "sha256": "3b10b7183382984f66ee6261a779ec390366c34704f4c1b294fc1e947b9f5c92",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_caravan.webp",
+      "target": "public/assets/icons/caravan.webp",
+      "sha256": "9685dc23702ed502b22977141f0a0aaa89118b2c25f95c08d14de3f71d800bb1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_champion_armor.webp",
+      "target": "public/assets/icons/champion_armor.webp",
+      "sha256": "8ed8208951578a5a7e63e8ec78e3534348a611269b487a3fab0befd3bcf3cfdd",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_construct_sentries.webp",
+      "target": "public/assets/icons/construct_sentries.webp",
+      "sha256": "a8d83bee2fdd2cd2c2267ad6bd75a3216b077c46cccd53a78effb0a54af2de56",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_dark_armor.webp",
+      "target": "public/assets/icons/dark_armor.webp",
+      "sha256": "11da04707243a63b0ca8714bb71a934cc8abf6a29730722d44a297134f576310",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_dark_wings.webp",
+      "target": "public/assets/icons/dark_wings.webp",
+      "sha256": "66f8f020f003018febab0c094bb238a6926348cd17f6d3d8c1006ba6f2f34242",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_deep_glimmer.webp",
+      "target": "public/assets/icons/deep_glimmer.webp",
+      "sha256": "a60efa4f5730e2c54b9cbb729ef1862d09db73f87578ba3187d4a39e16004663",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_duplication_tome.webp",
+      "target": "public/assets/icons/duplication_tome.webp",
+      "sha256": "a7bcc0975db9fa65eec97f61cd720eff3c9438c5e5a42c2ab5ead703e1f9e8aa",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_elements_satchel.webp",
+      "target": "public/assets/icons/elements_satchel.webp",
+      "sha256": "4e97a3c4136cf9173c87d2f168274ea614114ad8c61d791dab2a1d7fb53cfe92",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_enchanters_tome.webp",
+      "target": "public/assets/icons/enchanters_tome.webp",
+      "sha256": "c05bdc5720cb17a168b93892f75c05f3ac227497a5228ff5a5e9277c93f13e8f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_basalt_vents_icon.webp",
+      "target": "public/assets/icons/event_basalt_vents_icon.webp",
+      "sha256": "a6108e3406259c919c7ebc37344a4bc1f23b93db2b54b4a0af0d93436ee5128d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_citadel_conduits_icon.webp",
+      "target": "public/assets/icons/event_citadel_conduits_icon.webp",
+      "sha256": "fe1b6055c36c096702eb534a48b6f48fdb643087b63320de0e588415d085a7a8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_coral_locks_icon.webp",
+      "target": "public/assets/icons/event_coral_locks_icon.webp",
+      "sha256": "7fe3062ad16d9aad8173e31b50ae8971e344659fcf894f24db00744f722d1bf1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_ender_gates_icon.webp",
+      "target": "public/assets/icons/event_ender_gates_icon.webp",
+      "sha256": "5ac6bc254434e05a8b1eaf833e186b0ad5a2378525e18b54cb492eeedd318d95",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_frozen_supplies_icon.webp",
+      "target": "public/assets/icons/event_frozen_supplies_icon.webp",
+      "sha256": "f468b0e5f95ba325a77f7fe697be8ef57924bbfe188ee06e327591cc37924df1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_gale_windmills_icon.webp",
+      "target": "public/assets/icons/event_gale_windmills_icon.webp",
+      "sha256": "affd2e3cd8a6a876640c3c4c642316bfaca45922ec13a5a36e6e5bebef8ea946",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_ice_braziers_icon.webp",
+      "target": "public/assets/icons/event_ice_braziers_icon.webp",
+      "sha256": "9148b584a05818f508b725d72641cb75546de77a1c5376702816aa4c0a6881ab",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_ice_crossing_icon.webp",
+      "target": "public/assets/icons/event_ice_crossing_icon.webp",
+      "sha256": "884278449d461e98b3367211a062d2f23f8166fa78d6d3fd3f2c9ce97bb1717c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_jungle_rescue_icon.webp",
+      "target": "public/assets/icons/event_jungle_rescue_icon.webp",
+      "sha256": "23ea74ebdc73dd961b2f3dafc175528529bde8de8f222fc3ba523fae7069651f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_mine_lanes_icon.webp",
+      "target": "public/assets/icons/event_mine_lanes_icon.webp",
+      "sha256": "ab5473ee478ac01c3601589c4758832da8fb5dd841cdc00168be593f7d673309",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_piglin_trade_icon.webp",
+      "target": "public/assets/icons/event_piglin_trade_icon.webp",
+      "sha256": "f6e7a4796ad84dd9a3be799951131b55001819f49951622304ba1daa03060fca",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_rampart_beacon_icon.webp",
+      "target": "public/assets/icons/event_rampart_beacon_icon.webp",
+      "sha256": "487f5c47644c4a3351e19a402f64faf398ffdb032f25038adf139446eadf0c11",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_root_pods_icon.webp",
+      "target": "public/assets/icons/event_root_pods_icon.webp",
+      "sha256": "ab591e0d0ffe14c3d9a02373f05c5ffb150e6eff4cd16c3a5dd6673cfe30ba94",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_sanctum_seals_icon.webp",
+      "target": "public/assets/icons/event_sanctum_seals_icon.webp",
+      "sha256": "f632449fbcbe71703f49f3c61cfa12d96b7c900511bbb867ac0374c56d4a23d8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_shield_furnace_icon.webp",
+      "target": "public/assets/icons/event_shield_furnace_icon.webp",
+      "sha256": "84e9f43fe1925444605e089a93a72942644efda969e7de211a62f351e4897b3c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_sunken_cache_icon.webp",
+      "target": "public/assets/icons/event_sunken_cache_icon.webp",
+      "sha256": "81c0f1c9952f9b3fcf87ed697337945b89ee8374ceada8143d80057db5b70bf4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_vine_gates_icon.webp",
+      "target": "public/assets/icons/event_vine_gates_icon.webp",
+      "sha256": "7038a04979225ed3b3c44ad956b84213eee130e28d0993f479367f1c1ff2e4b4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_event_void_archive_icon.webp",
+      "target": "public/assets/icons/event_void_archive_icon.webp",
+      "sha256": "09197d7f0f331967f597534b7d7075f12cdd1c31c68cc9aed84dce341deaf3f5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_evocation_robe.webp",
+      "target": "public/assets/icons/evocation_robe.webp",
+      "sha256": "983afc33acf6079a3955fdc399d6ee151867cc4225eb1ff2fb9a3570805e4933",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_fishing_rod.webp",
+      "target": "public/assets/icons/fishing_rod.webp",
+      "sha256": "4284509695025aa7755bb1cccb7ff079018de32838335acc854c1f1b1ca46f07",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_forest_watch.webp",
+      "target": "public/assets/icons/forest_watch.webp",
+      "sha256": "ff20fb93ac4413e909f928fa47deb9b5543a52c3f4ee48869b0ca16112d0ad98",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_frostbite_armor.webp",
+      "target": "public/assets/icons/frostbite_armor.webp",
+      "sha256": "aa6ea47f89926380bb2af06219e47cb1973643987d4239c0a2256de2ef8df339",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_frost_patrol.webp",
+      "target": "public/assets/icons/frost_patrol.webp",
+      "sha256": "43ee2dce599eb176f86a2f4237e468bbdf5ac2d7e125a9f53cd1feda5a8e863e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_full_metal_armor.webp",
+      "target": "public/assets/icons/full_metal_armor.webp",
+      "sha256": "7ddb5213532e93016d49655f6b6acf85479aabdcdefed0e076be6e19322c0dc0",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_fungus_legion.webp",
+      "target": "public/assets/icons/fungus_legion.webp",
+      "sha256": "dae82680bd2622a88938fe7207c1de98729a7c2139bc273a0a0ca5bf263b11ca",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_ghost_cloak.webp",
+      "target": "public/assets/icons/ghost_cloak.webp",
+      "sha256": "b45806e506af33b03f68e4134ead9e067c4c29c0b51568ff8951bf537d6a76df",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_ghost_flame.webp",
+      "target": "public/assets/icons/ghost_flame.webp",
+      "sha256": "9148b584a05818f508b725d72641cb75546de77a1c5376702816aa4c0a6881ab",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_grim_armor.webp",
+      "target": "public/assets/icons/grim_armor.webp",
+      "sha256": "cecfd70bfb3fbb7ca4b5f1d1030fc8b5d22477174d92569c50bfea19b583bdda",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_guardian_eye.webp",
+      "target": "public/assets/icons/guardian_eye.webp",
+      "sha256": "a5a8649e24b83a8b5b99a8548d26f836f31bd1520b992987f5f7d851fbacf28b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_harpoon_quiver.webp",
+      "target": "public/assets/icons/harpoon_quiver.webp",
+      "sha256": "366868df32b910c34e39b5b4527aa2a9cde6526b97dfb365a58dbc1597da29d3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_harvester.webp",
+      "target": "public/assets/icons/harvester.webp",
+      "sha256": "d84a82b936ad1fa71b58125264180d64509ce223ef05cc5235403c6233382e09",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_ice_wand.webp",
+      "target": "public/assets/icons/ice_wand.webp",
+      "sha256": "be34ef17ac9c6a431d26765cd4ad308971d23b7b09441b88ea5192517fdad782",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_jungle_venom.webp",
+      "target": "public/assets/icons/jungle_venom.webp",
+      "sha256": "dae82680bd2622a88938fe7207c1de98729a7c2139bc273a0a0ca5bf263b11ca",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_love_medallion.webp",
+      "target": "public/assets/icons/love_medallion.webp",
+      "sha256": "75ad6dd1ab6b7d68864f9328a1a71fcdf2a92492cc5731f27f9baabb762ef678",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_mercenary_armor.webp",
+      "target": "public/assets/icons/mercenary_armor.webp",
+      "sha256": "0ebc8917b98c6d273f9210ac4e0486b0965504bc99ff61674722217cc73a93ab",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_mystery_armor.webp",
+      "target": "public/assets/icons/mystery_armor.webp",
+      "sha256": "a77738f3ee8be1949d3df4422181c036b47629d6bf42eec2993ac5deb79638c5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_nether_crossfire.webp",
+      "target": "public/assets/icons/nether_crossfire.webp",
+      "sha256": "34508ced1c59a2b62b5be7161645606f9bb09abf017befd078bc510fc88a3b65",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_nourishment_satchel.webp",
+      "target": "public/assets/icons/nourishment_satchel.webp",
+      "sha256": "267de3f5c0b809b1f9b6ba2147e1d9db1a0997548c47bed8bdc3cb89b00e6d2b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_ocelot_armor.webp",
+      "target": "public/assets/icons/ocelot_armor.webp",
+      "sha256": "2eb3d8be0d6f089ee37d502b4e9d5cf5381ab996bf804ccced070a88d4ad3360",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_powershaker.webp",
+      "target": "public/assets/icons/powershaker.webp",
+      "sha256": "dded5d386a147ebba6ee43a6fbf9c66bc496d34baa255b765b27d8753751c02f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_rainbow_grass.webp",
+      "target": "public/assets/icons/rainbow_grass.webp",
+      "sha256": "7e447da76dc55fdfd2025357bb6cc32461aa6999f43651616af9b31acffb52e8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_rampart_banner.webp",
+      "target": "public/assets/icons/rampart_banner.webp",
+      "sha256": "0fe3ffdcde2cc402f8abed830761985ba5aacd04d997f64eb461eedb2825463d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_reinforced_mail.webp",
+      "target": "public/assets/icons/reinforced_mail.webp",
+      "sha256": "3b9c499fc522b36bd38b1b84b366e30d388292d27f7b07aa7a7c4e47b9814ac3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_satchel_need.webp",
+      "target": "public/assets/icons/satchel_need.webp",
+      "sha256": "34270fb56319b758b18f0f248fda776ae6ca88cf3af7d4741d60485c64c1b43a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_scale_mail.webp",
+      "target": "public/assets/icons/scale_mail.webp",
+      "sha256": "b061f5a76bfb432f9176cb4afa072fef98d2d63d5f591bf080fabe756d5094f8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_sea_routes.webp",
+      "target": "public/assets/icons/sea_routes.webp",
+      "sha256": "7673427617f032b9afd525ea1ee43e50976af89e989559628a198d588efb0970",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_shadow_shifter.webp",
+      "target": "public/assets/icons/shadow_shifter.webp",
+      "sha256": "65249fd862b4ad3f36d3412b6577c4465c17653fc6335bc3aa1f694356bff3af",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_shield_totem.webp",
+      "target": "public/assets/icons/shield_totem.webp",
+      "sha256": "d3e7d5d2b126b0ce1148541729cd3075be4ca18a9ff025e3f651324360bad7df",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_snow_armor.webp",
+      "target": "public/assets/icons/snow_armor.webp",
+      "sha256": "352aa9320979ea3baf4d0bc88ba97514c7dd1ef708e53d0cf139ec48bae34724",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_snow_guides.webp",
+      "target": "public/assets/icons/snow_guides.webp",
+      "sha256": "884278449d461e98b3367211a062d2f23f8166fa78d6d3fd3f2c9ce97bb1717c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_soul_lanterns.webp",
+      "target": "public/assets/icons/soul_lanterns.webp",
+      "sha256": "b04e8b2ea9e4bd3759bc7b88cc1596d126d1a8a2d7673988df99f7422817a2bb",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_soul_robe.webp",
+      "target": "public/assets/icons/soul_robe.webp",
+      "sha256": "1838ba969be2d2fa0b3b7548e0c7c521ec808c1825100f97e532ab65a81cdf5b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_spelunker_armor.webp",
+      "target": "public/assets/icons/spelunker_armor.webp",
+      "sha256": "e2fcee01273c5c5f1b808f60fc476e3629d63d876a5a19ca11cf6c381286d6a4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_spinblade.webp",
+      "target": "public/assets/icons/spinblade.webp",
+      "sha256": "be7c05bb5f49ab82f3a7805ae542c01ce222d3510774893d2ab7c30449122343",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_spore_grenade.webp",
+      "target": "public/assets/icons/spore_grenade.webp",
+      "sha256": "64cd55d481940e46a902077935a3c06746515d472f617603ac22ba526ee627a6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_sunken_escort.webp",
+      "target": "public/assets/icons/sunken_escort.webp",
+      "sha256": "70f527e30e96d2f615e7bc1c129b9d791d640771be9c04c0bdb5d35bc9fe8dc1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_thorn_wall.webp",
+      "target": "public/assets/icons/thorn_wall.webp",
+      "sha256": "7038a04979225ed3b3c44ad956b84213eee130e28d0993f479367f1c1ff2e4b4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_thundering_quiver.webp",
+      "target": "public/assets/icons/thundering_quiver.webp",
+      "sha256": "5ae07b0ce923e10964c58cfb744f848df9a46c51eb735af2009aa12b02703d52",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_torment_quiver.webp",
+      "target": "public/assets/icons/torment_quiver.webp",
+      "sha256": "f8a0a7d644646e4135ccea5dbff224b05101b7a366721ddad4f2d0cca14cf4b5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_updraft_tome.webp",
+      "target": "public/assets/icons/updraft_tome.webp",
+      "sha256": "5397cb72e03921379bd60d01a0b9ea7b4086b8eef1cfd26758dfad8be844ee5d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_vine_colony.webp",
+      "target": "public/assets/icons/vine_colony.webp",
+      "sha256": "4d35126989db65eeb74dfb30a65cb0bc131542cabee67cb983fb210dc6fda8cf",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_void_hunt.webp",
+      "target": "public/assets/icons/void_hunt.webp",
+      "sha256": "e069f0890b2cf8da3e6eb9fc6c20035e432a337ac79de81833612f5fe366926c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_void_quiver.webp",
+      "target": "public/assets/icons/void_quiver.webp",
+      "sha256": "b9970af91f888209a4fe9ab8f11e808792cd7aa8421dc904ea0488c30a7bc768",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_void_relay.webp",
+      "target": "public/assets/icons/void_relay.webp",
+      "sha256": "fe1b6055c36c096702eb534a48b6f48fdb643087b63320de0e588415d085a7a8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_water_breathing.webp",
+      "target": "public/assets/icons/water_breathing.webp",
+      "sha256": "d6beadcff8e4ec0455918d7a8035370ef93a33ebd65d3214930374ea5f455d6c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_weakening_gong.webp",
+      "target": "public/assets/icons/weakening_gong.webp",
+      "sha256": "2e809baff2a61464b31660ce4ca64742796e9167090b2dfda0e2fb52a567f0c3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_wind_horn.webp",
+      "target": "public/assets/icons/wind_horn.webp",
+      "sha256": "1def22fc2ec2295197fd929a3be9501dc5308b8ea632c74dba56be06a2c1ce65",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_wolf_armor.webp",
+      "target": "public/assets/icons/wolf_armor.webp",
+      "sha256": "2725f33004453f3f4181afa38a9d63c7f34a67c3bf151e0cfb0a5d74953cff84",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_wonderful_wheat.webp",
+      "target": "public/assets/icons/wonderful_wheat.webp",
+      "sha256": "2a586f9aa0cb8b38808f844b154854fe7734c4c5685f6bfb4c9ed51b9d8adb60",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/icons/v34_young_raid.webp",
+      "target": "public/assets/icons/young_raid.webp",
+      "sha256": "0a7637f8db9c077bed6a67bd4172fc66f4e062dbdb0b6a9aa451a90a7b5f03c7",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_abomination_vine.webp",
+      "target": "public/assets/mobs/abomination_vine.webp",
+      "sha256": "29bd51869694f4024e4593fe172b4fbfea437e209357026542cefcff1a1ce0ef",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_ancient_guardian.webp",
+      "target": "public/assets/mobs/ancient_guardian.webp",
+      "sha256": "d710222036a3765a5de77e155874547215012e49463991b3430544e4a07cf692",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_armored_mountaineer.webp",
+      "target": "public/assets/mobs/armored_mountaineer.webp",
+      "sha256": "a0b3a816ca65b5cca4922678d70469d3aadd090d6ac250dcb01941d30451452d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_armored_piglin.webp",
+      "target": "public/assets/mobs/armored_piglin.webp",
+      "sha256": "917fae7f3dbc1a4d9ddd56d1e38ea815a751868dc7cde1b5c0ccd9564f3f26db",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_baby_ghast.webp",
+      "target": "public/assets/mobs/baby_ghast.webp",
+      "sha256": "f0c02da6446dbf0bc3781b2c3669c6b3a14e91cae7dc87213d2cce1ef4e9d783",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_baby_zombie.webp",
+      "target": "public/assets/mobs/baby_zombie.webp",
+      "sha256": "4ffab78a08b51f1a175fbed7288763862d71d7b88ac961127475077f815dd8e9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_bat.webp",
+      "target": "public/assets/mobs/bat.webp",
+      "sha256": "8d898bcea819264e45c9650eb3d5ac44e5eb14a824761f2c5d5d6bc521d79cc3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_blastling.webp",
+      "target": "public/assets/mobs/blastling.webp",
+      "sha256": "fe1ff557cea4c8e7b4887413cf0c2cf0cb3ca8b5cfba19a732e3b9ca6e2ff041",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_chicken_jockey.webp",
+      "target": "public/assets/mobs/chicken_jockey.webp",
+      "sha256": "a4b1e346c31801b1e3a8113695b56c2bc174572be5a861fe4b0659dc4d857252",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_dolphin.webp",
+      "target": "public/assets/mobs/dolphin.webp",
+      "sha256": "0f6c74753486544bdc4b2c20ac0e9e435b19b4dae510559eefa3b8aeb6100eef",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_enderling.webp",
+      "target": "public/assets/mobs/enderling.webp",
+      "sha256": "2cea7b8d73372d34062864660542ea831f5821edd598a788bd7b7dc93dc3a1c6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_endersent.webp",
+      "target": "public/assets/mobs/endersent.webp",
+      "sha256": "a77f8f8e2b007b333e8602606d61f975d0bf7b47379d505f6cf30497dddb8e77",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_fungus_thrower.webp",
+      "target": "public/assets/mobs/fungus_thrower.webp",
+      "sha256": "b89de27e21de519ae31751d747420cac9353f84a873762ae21d4076670e80311",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_glow_squid.webp",
+      "target": "public/assets/mobs/glow_squid.webp",
+      "sha256": "c375e5e8cf86620df3ab87a91e5891a70b0256aa8fe9f30cc18baf9be4c5d1a8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_gold_axolotl.webp",
+      "target": "public/assets/mobs/gold_axolotl.webp",
+      "sha256": "64404badf8ae42c572a9fdbaa941c70d0337076fa179a24830403bfc2b980642",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_jungle_abomination.webp",
+      "target": "public/assets/mobs/jungle_abomination.webp",
+      "sha256": "67402ff76a0d198b368659bb301c6b19ed2ef1363143f65de67b9a180c307c1c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_jungle_zombie.webp",
+      "target": "public/assets/mobs/jungle_zombie.webp",
+      "sha256": "52712ed13beb9d1c7547a5c6ed11d1be1d9e0b14e6168e6b35025b7b5c0f2f4c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_llama.webp",
+      "target": "public/assets/mobs/llama.webp",
+      "sha256": "620e93b07f240671ad582159f334a5ed43b36f82d512467ce130d23352b46ff3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_mob_spawner.webp",
+      "target": "public/assets/mobs/mob_spawner.webp",
+      "sha256": "5a702b0e5de156241300fca32d5d11d2ce93ca519b765189166e7ee0f1a14eb9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_mooshroom.webp",
+      "target": "public/assets/mobs/mooshroom.webp",
+      "sha256": "12da3d7fbb9e9f1f56a3f49171e7250fe33223d6be5dec2f5980b07bffe48c6c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_ocelot.webp",
+      "target": "public/assets/mobs/ocelot.webp",
+      "sha256": "9fa59b466bb6b265940cfdbb5aaeff1b898f35715df67e96f9cb5291cbf34e42",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_panda.webp",
+      "target": "public/assets/mobs/panda.webp",
+      "sha256": "626d0f3456abd55ed0181d942308c3e1116bbd0faf8a3823a99d603a14c45012",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_parrot.webp",
+      "target": "public/assets/mobs/parrot.webp",
+      "sha256": "1070f2fb4e12195f48645a2008579b7b5c3d4363aa25ae5a2e25ad03f50dd643",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_piglin_hunter.webp",
+      "target": "public/assets/mobs/piglin_hunter.webp",
+      "sha256": "cdd0b9507ca8bad4caf06b66d36714675d3c10c4efdc1b2e833f2154b3109dea",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_piglin_swordsman.webp",
+      "target": "public/assets/mobs/piglin_swordsman.webp",
+      "sha256": "33d42781b8e8ef48c973db25abfe2f92e874d6cbb08e185556d7e2673130f60f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_pufferfish.webp",
+      "target": "public/assets/mobs/pufferfish.webp",
+      "sha256": "ea1fad1e980ce2fa79983c3440af1b1cac8e514911bd8a357fea33f82898a332",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_pumpkin_turret.webp",
+      "target": "public/assets/mobs/pumpkin_turret.webp",
+      "sha256": "d737c8640e268f6fa115a50a78b0dc4ac017a916d4aa6808a5a2f01c35350a40",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_quick_vine.webp",
+      "target": "public/assets/mobs/quick_vine.webp",
+      "sha256": "b4b197983230bdf2b3a4bcd126007d095045ab7c611648c23fc8336fd3aec502",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_rampart_captain.webp",
+      "target": "public/assets/mobs/rampart_captain.webp",
+      "sha256": "90ba90e2ced241f87678115f1c6b10f26e19fa99a9e91e1541db7d4bd4c30e30",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_raven.webp",
+      "target": "public/assets/mobs/raven.webp",
+      "sha256": "ff1611c4fbb9e40e8fd5b487a45e98aa9efeea401ae2b641686571d8080d6445",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_skeleton_horseman.webp",
+      "target": "public/assets/mobs/skeleton_horseman.webp",
+      "sha256": "02b23b3d1956eb7f78f71251b2ac8732b2490a8d17dfaf00ce4cbd4b257fda34",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_snareling.webp",
+      "target": "public/assets/mobs/snareling.webp",
+      "sha256": "6befd53a5d8175b05be056480ddf0202b7c52a456771c0ec9707dac73475ad5d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_snow_fox.webp",
+      "target": "public/assets/mobs/snow_fox.webp",
+      "sha256": "1afc00b384c830e4e3f687128254db3ac8887a1f171bc875510c734c29c5710a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_soul_wizard.webp",
+      "target": "public/assets/mobs/soul_wizard.webp",
+      "sha256": "1341443e75d2dc181f68c5c9825056360b662128851259451dedef68d0ee8ef4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_sunken_skeleton.webp",
+      "target": "public/assets/mobs/sunken_skeleton.webp",
+      "sha256": "89e3719f4f1876d9f19ffe8b0630ccfafcf8d6a92212c06ece0a1b479d67a98d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_tempest_golem.webp",
+      "target": "public/assets/mobs/tempest_golem.webp",
+      "sha256": "ea6548899787232de3f892ecc50e85c928caae55c7f92ef797fe62a34fe42baa",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_tower_wraith.webp",
+      "target": "public/assets/mobs/tower_wraith.webp",
+      "sha256": "429a184b537827b83af86c969a2dae64efa6b775b2bd6e8c19884049b018c7a3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_tropical_slime.webp",
+      "target": "public/assets/mobs/tropical_slime.webp",
+      "sha256": "374a078c52b516c4bf1f5564a5ac2b806172808e547abe29637505f259e46160",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_turtle.webp",
+      "target": "public/assets/mobs/turtle.webp",
+      "sha256": "1d96f7f9e0d4bb36131a8b1c3c0a2717631bbbd8603adcc495b4ab1f805dc0bb",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_vengeful_heart.webp",
+      "target": "public/assets/mobs/vengeful_heart.webp",
+      "sha256": "39c47ca506cae5e080bf026421c988e3839951ec773942ef7e58f9a257487918",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_wildfire.webp",
+      "target": "public/assets/mobs/wildfire.webp",
+      "sha256": "79cb400d2f0cb5ad18cc37934e944ecb9ed7d3a5d1011e5930df4185a3cb33e1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/mobs/v34_wretched_wraith.webp",
+      "target": "public/assets/mobs/wretched_wraith.webp",
+      "sha256": "e605731423b85c5526b189083f876dfd03a558f6f8d32f58edf181c755db83a0",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_basalt_spike.webp",
+      "target": "public/assets/props/basalt_spike.webp",
+      "sha256": "72928ab8d33e01dc0e68b6508a50613b5684aa29f84d8523154d8cfc91e41adb",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_coral_vase.webp",
+      "target": "public/assets/props/coral_vase.webp",
+      "sha256": "797b1859953cfcbde2cae48122bf83e38d513e703af8bb47ee74574de7c1f57e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_gale_bench.webp",
+      "target": "public/assets/props/gale_bench.webp",
+      "sha256": "c37fc8fcbd090529ae6ccc65b9fb362010cff9f86962c9bca41c92af72b9ccb5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_ice_pile.webp",
+      "target": "public/assets/props/ice_pile.webp",
+      "sha256": "3b4aefd6ad2b61af13720565cc38a1fe1363ac584aae1a2ad3acc630878ffc86",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_jungle_plant.webp",
+      "target": "public/assets/props/jungle_plant.webp",
+      "sha256": "efcf35443a203314044dcbf91b2ece713dae4fb542a8e68c7077ff3418ccf0a3",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/props/v34_purpur_lamp.webp",
+      "target": "public/assets/props/purpur_lamp.webp",
+      "sha256": "c5517a4d3c712c03204d22c7b7edfb1db8f360e607746ea6b9c3209d4ef39f20",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_abomination_vine.webp",
+      "target": "public/assets/sprites/abomination_vine.webp",
+      "sha256": "c56c95d098926e58aff2b48854419dce7e1a70b83feb9f3220982f9c90a0bdfa",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_abomination_vine_lite.webp",
+      "target": "public/assets/sprites/abomination_vine_lite.webp",
+      "sha256": "b4070ad91d7e700f04a79c6c071fcd9046700c748a77e0267f770958b811bd6b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_ancient_guardian.webp",
+      "target": "public/assets/sprites/ancient_guardian.webp",
+      "sha256": "d08cf704ab88bc610bb4ad0560b5d4a120a6d44d633336376c573c95100df113",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_ancient_guardian_lite.webp",
+      "target": "public/assets/sprites/ancient_guardian_lite.webp",
+      "sha256": "b569f18230502e8622b4872e611b5666500595f0322e738cf6cf86d94acbcb4a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_armored_mountaineer.webp",
+      "target": "public/assets/sprites/armored_mountaineer.webp",
+      "sha256": "e1079e8405bd06dc32ba419c2a80dc10d355bed9a0bf79b2020d8ee6e6ce52df",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_armored_mountaineer_lite.webp",
+      "target": "public/assets/sprites/armored_mountaineer_lite.webp",
+      "sha256": "a2493653f3de7c04594db1ddd198812b40b10a7abd4147b7b700f27fbcc84c40",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_armored_piglin.webp",
+      "target": "public/assets/sprites/armored_piglin.webp",
+      "sha256": "aab4717a26e881a4e7bfc7ec92b5bf2e44645e34b1a9dc80d2551104d37bc08f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_armored_piglin_lite.webp",
+      "target": "public/assets/sprites/armored_piglin_lite.webp",
+      "sha256": "92849ddf50b5bdd91b7b087ef4d74cd8d51c953d1a2375d53f54e996ec56dacc",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_baby_ghast.webp",
+      "target": "public/assets/sprites/baby_ghast.webp",
+      "sha256": "9aae027f16996f97842c8b7f68c44f00dd34f57eace296ab2a33384489e84f8f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_baby_ghast_lite.webp",
+      "target": "public/assets/sprites/baby_ghast_lite.webp",
+      "sha256": "1f0901953cee185109b399debf0830817f6a807c19e60befa832d38a26d6f2ce",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_baby_zombie.webp",
+      "target": "public/assets/sprites/baby_zombie.webp",
+      "sha256": "b8ad3e7eb363bebda86cc367fcb1a3f70a992a5cba2e4f8ddd66a3c79372af3b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_baby_zombie_lite.webp",
+      "target": "public/assets/sprites/baby_zombie_lite.webp",
+      "sha256": "c21d74e9cdf73f720e3cceda50620afde89139d792be29a2711a21d48b17cb59",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_bat.webp",
+      "target": "public/assets/sprites/bat.webp",
+      "sha256": "409c44ae373562727f7977e684e7917ce00b9081a03f0791e753614cdd23cf0c",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_bat_lite.webp",
+      "target": "public/assets/sprites/bat_lite.webp",
+      "sha256": "978d47d91f78c2a31f613d3715725001b4d76b980fde1b79e7dfc4940c35505a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_blastling.webp",
+      "target": "public/assets/sprites/blastling.webp",
+      "sha256": "d81f3ac8b5a806db7bbe02d9775a553d55075a3c4ed166f37d5a050ae8e63e30",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_blastling_lite.webp",
+      "target": "public/assets/sprites/blastling_lite.webp",
+      "sha256": "d1e26e3088cf147157444f1dfdec5abb5304d985aaa234706a1076e97e2be53e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_chicken_jockey.webp",
+      "target": "public/assets/sprites/chicken_jockey.webp",
+      "sha256": "a8379e53c9c2bed583a6458876c7ae79bdbf6854547c98ad51e7ec4921d09760",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_chicken_jockey_lite.webp",
+      "target": "public/assets/sprites/chicken_jockey_lite.webp",
+      "sha256": "0d917defe65dfa7b214dd58159a7c96bc9797d415e1cd0c7d28a9b7b1986780e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_dolphin.webp",
+      "target": "public/assets/sprites/dolphin.webp",
+      "sha256": "31d8984a51f0654ec4eda6b285f63ad34629e46f07d2c38b4abbd7a7e3b1f095",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_dolphin_lite.webp",
+      "target": "public/assets/sprites/dolphin_lite.webp",
+      "sha256": "4cd195fc28e45ab5fabb329edbeec95412f1f17a49b293cfb7be32ebdf830ac1",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_enderling.webp",
+      "target": "public/assets/sprites/enderling.webp",
+      "sha256": "ac1fbb28b82622d9e41af58701ec6b75a4fb7470be4a7e20298d64e6e2e3c96b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_enderling_lite.webp",
+      "target": "public/assets/sprites/enderling_lite.webp",
+      "sha256": "4b8d48485e4e597b8a1df72799ae98dcbf7167c6a557c79d89fd3e5c5f5d1592",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_endersent.webp",
+      "target": "public/assets/sprites/endersent.webp",
+      "sha256": "1863489c03a522ea2b5ee1f2bfac0a70318fe5b374fc652c99185bbfde086f35",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_endersent_lite.webp",
+      "target": "public/assets/sprites/endersent_lite.webp",
+      "sha256": "9b614144f1b1441f6dfbf368c8853ed9e2b3047820c10d05b1e49467aeed86f6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_fungus_thrower.webp",
+      "target": "public/assets/sprites/fungus_thrower.webp",
+      "sha256": "1dced72cd265e241053dc1bb03f3634810e03693d4856206a26190fcaa5abcb6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_fungus_thrower_lite.webp",
+      "target": "public/assets/sprites/fungus_thrower_lite.webp",
+      "sha256": "1087277e71c1c8d84e507d0774ec86b8a21e45243b9984900dbeb5805e734acf",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_glow_squid.webp",
+      "target": "public/assets/sprites/glow_squid.webp",
+      "sha256": "1fb1e2b975584d948b4e448d8253f114174069f4b165cf7a2905e5ca1ee739a8",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_glow_squid_lite.webp",
+      "target": "public/assets/sprites/glow_squid_lite.webp",
+      "sha256": "70b0001b476175da11f161d84b93ebd349e20fa2049901fcc1d5dab70951b394",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_gold_axolotl.webp",
+      "target": "public/assets/sprites/gold_axolotl.webp",
+      "sha256": "2f7a7f27344a80938bfece0f30c36c49ffbf2f39a6179a8c3b389b599e3236ad",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_gold_axolotl_lite.webp",
+      "target": "public/assets/sprites/gold_axolotl_lite.webp",
+      "sha256": "bc230f35a7e5b9a1b21d137089bff07f08ca3b5a853c4a0f6a82811ed2c44f59",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_jungle_abomination.webp",
+      "target": "public/assets/sprites/jungle_abomination.webp",
+      "sha256": "11f2e03b4946c0ebac1a5016792da504362ed1e80fd5e4c7b8ab98c6d0a2668b",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_jungle_abomination_lite.webp",
+      "target": "public/assets/sprites/jungle_abomination_lite.webp",
+      "sha256": "de5432ca49f3cd138411d4a07821d24b1cb472cae3a3c84b5f5865d58ada1688",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_jungle_zombie.webp",
+      "target": "public/assets/sprites/jungle_zombie.webp",
+      "sha256": "15678a5d2a17bedb55188e9837782ddb6c8249122c163ec0e2ff481da7e56bcb",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_jungle_zombie_lite.webp",
+      "target": "public/assets/sprites/jungle_zombie_lite.webp",
+      "sha256": "88120ebdf4b81376fda4361a2b253d86f88752776ae9b581a1299ec42d890a4e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_llama.webp",
+      "target": "public/assets/sprites/llama.webp",
+      "sha256": "0c64705871deaac8fbf674f8b2282ccb6e718fada544149f9d5a3cb7aa960046",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_llama_lite.webp",
+      "target": "public/assets/sprites/llama_lite.webp",
+      "sha256": "ddcd80d500ae616b402cfac2e27a3720263b5b287b9bc03e84c2311c647d0768",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_mob_spawner.webp",
+      "target": "public/assets/sprites/mob_spawner.webp",
+      "sha256": "7add26569a2b98856d8d9720267cd4a3fd5e31fa62fed2eab559647420b6db35",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_mob_spawner_lite.webp",
+      "target": "public/assets/sprites/mob_spawner_lite.webp",
+      "sha256": "1e1e69c2819245a1f6635beba75419bb05e71cd7f097d8cac2228534b37a64c9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_mooshroom.webp",
+      "target": "public/assets/sprites/mooshroom.webp",
+      "sha256": "878c38754e097413d576c8c8ad382b881c4ba34a74d1235e6338179520037f97",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_mooshroom_lite.webp",
+      "target": "public/assets/sprites/mooshroom_lite.webp",
+      "sha256": "c635be6fdf0055b174086b97a1611e01457888a19d187fa26c50561a895d8f2a",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_ocelot.webp",
+      "target": "public/assets/sprites/ocelot.webp",
+      "sha256": "00bf5d189d77132f7d2dcbb5da578c9e9fc7924ee3f81981f1091b4e3101533d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_ocelot_lite.webp",
+      "target": "public/assets/sprites/ocelot_lite.webp",
+      "sha256": "0d437201795c3bec6edf7ff0b0206ccc9f6143965dd942b5be0625ad645c8779",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_panda.webp",
+      "target": "public/assets/sprites/panda.webp",
+      "sha256": "fdb25f21fe9a7714b54f1d74e72987a776a4440b53408852194ce169e42fa127",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_panda_lite.webp",
+      "target": "public/assets/sprites/panda_lite.webp",
+      "sha256": "35cdac2f5c43885de575a7a2a801fa3519481138b9e2323b01d1848a41e94f4e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_parrot.webp",
+      "target": "public/assets/sprites/parrot.webp",
+      "sha256": "45416498bbe1153715126fffee8711babcea3d2934e5f0a29af07cfcd0abfbb7",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_parrot_lite.webp",
+      "target": "public/assets/sprites/parrot_lite.webp",
+      "sha256": "dab1f23da46bc71de696cdf9e2bd0ba1b6ae0e3cbd8ad675401ba32e58468a66",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_piglin_hunter.webp",
+      "target": "public/assets/sprites/piglin_hunter.webp",
+      "sha256": "8b0791caa2f6ab6f107c45ef344d78ce4367b1a0432ee89f980b93b03fda8a13",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_piglin_hunter_lite.webp",
+      "target": "public/assets/sprites/piglin_hunter_lite.webp",
+      "sha256": "216c74e9b63230e6310b0321243b4de25c15fa2d12ced9f517e231180aa93acc",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_piglin_swordsman.webp",
+      "target": "public/assets/sprites/piglin_swordsman.webp",
+      "sha256": "26072a40d4d72e930c7ab0b45b15011aa163ca86786e251b84c291740c643581",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_piglin_swordsman_lite.webp",
+      "target": "public/assets/sprites/piglin_swordsman_lite.webp",
+      "sha256": "247cbe02bd1095220e6ebe7a8085c6d465dda3f9e5a13be5892ce08dcd01c11e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_pufferfish.webp",
+      "target": "public/assets/sprites/pufferfish.webp",
+      "sha256": "4ce75d21da4bcda62aabb021253d3932497c7fd4667ce47ea9a27e9dd1597190",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_pufferfish_lite.webp",
+      "target": "public/assets/sprites/pufferfish_lite.webp",
+      "sha256": "32bea6ec02c1b070fffca6cb816e83ddd5a66ce05f2212f9c6ebd82acbbceb01",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_pumpkin_turret.webp",
+      "target": "public/assets/sprites/pumpkin_turret.webp",
+      "sha256": "6150321164030143c14315a6148a15780b8861b05415a36300cabf71d2cc1cc0",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_pumpkin_turret_lite.webp",
+      "target": "public/assets/sprites/pumpkin_turret_lite.webp",
+      "sha256": "26cff49b8f04564179ce0a1cfdbb3883b982e8dbace248c4b98325a1826eaccd",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_quick_vine.webp",
+      "target": "public/assets/sprites/quick_vine.webp",
+      "sha256": "d798038c2206a0161af501dbc176e7cdce4ead33da0c1c6c79e1a3acf26b49e0",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_quick_vine_lite.webp",
+      "target": "public/assets/sprites/quick_vine_lite.webp",
+      "sha256": "c0c044c33a0baa8e5d5c8f1dfde33d500ef85508f05545795324e557a1b486f9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_rampart_captain.webp",
+      "target": "public/assets/sprites/rampart_captain.webp",
+      "sha256": "1e56bf589cad8133f1f4929adf30e0a7919faf52051601e173787984bbe1538d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_rampart_captain_lite.webp",
+      "target": "public/assets/sprites/rampart_captain_lite.webp",
+      "sha256": "1d56e1f0e1cff01d21461911468bc0622018fd78f59cb2360002a9f49d013caf",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_raven.webp",
+      "target": "public/assets/sprites/raven.webp",
+      "sha256": "0a96da89e402540040fc82e33267caaa442c9d3aa2556a96d0639c5da5855227",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_raven_lite.webp",
+      "target": "public/assets/sprites/raven_lite.webp",
+      "sha256": "931378ce0c5882cca818d6d7d13359ef470e5709731ed878b45b31079d48de7d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_skeleton_horseman.webp",
+      "target": "public/assets/sprites/skeleton_horseman.webp",
+      "sha256": "35f87b625a868c96634870882060aeacdd60d4b2f03324110718a082375f4c15",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_skeleton_horseman_lite.webp",
+      "target": "public/assets/sprites/skeleton_horseman_lite.webp",
+      "sha256": "dde62eba58997fef47a84fb8dcb79f40b8a621479c295b7833fb142051cdf7a4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_snareling.webp",
+      "target": "public/assets/sprites/snareling.webp",
+      "sha256": "eb7db36a81b2de7b5dfe41ca52ec6811ab1d640a88bcd81780ba56755e431c28",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_snareling_lite.webp",
+      "target": "public/assets/sprites/snareling_lite.webp",
+      "sha256": "00ef9b464385e5da96ed4a5729cda98c61c6586655139d58d9c60f87e06319fa",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_snow_fox.webp",
+      "target": "public/assets/sprites/snow_fox.webp",
+      "sha256": "bc10a7256a98f65ea543fe0dc558a19502661af71f04f8f7946ca6e12ac6c494",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_snow_fox_lite.webp",
+      "target": "public/assets/sprites/snow_fox_lite.webp",
+      "sha256": "16f6d34aa6d5cf026679e31528e046f325e247975348680dd6cdb4cf2e0b9877",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_soul_wizard.webp",
+      "target": "public/assets/sprites/soul_wizard.webp",
+      "sha256": "abb8b218c5db76d4983716c30842735d199b18a0a365ce58d3a71aada0fa9322",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_soul_wizard_lite.webp",
+      "target": "public/assets/sprites/soul_wizard_lite.webp",
+      "sha256": "aff06f5935ba3d2d988b4693cf1e53784c8c58f53d2c26deafd4f409be1c7643",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_sunken_skeleton.webp",
+      "target": "public/assets/sprites/sunken_skeleton.webp",
+      "sha256": "d612f83eee89de3ca0d0a777752114af2df6ede9f4e0fff6a54577874c5d75a5",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_sunken_skeleton_lite.webp",
+      "target": "public/assets/sprites/sunken_skeleton_lite.webp",
+      "sha256": "1426a665aad358653d5194c2147235b393d441e769e526f2dbd3472bc3b49f12",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tempest_golem.webp",
+      "target": "public/assets/sprites/tempest_golem.webp",
+      "sha256": "13a869e8bf8e513d5764b2a61baca3d086ab4bdc834cb29f69c926659ce1c9d6",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tempest_golem_lite.webp",
+      "target": "public/assets/sprites/tempest_golem_lite.webp",
+      "sha256": "cba308fca2e7ca2a603a9905b7389a173ae1f7c2758aec08985b62e3d6902245",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tower_wraith.webp",
+      "target": "public/assets/sprites/tower_wraith.webp",
+      "sha256": "3a64917071d1da874d1f78397c5ce1e4618b63208855ecd9151fd444b1fcfc97",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tower_wraith_lite.webp",
+      "target": "public/assets/sprites/tower_wraith_lite.webp",
+      "sha256": "1bde5ae96f7605a9359c286b2145a1d7b3b08eb04c0912e05d66c8b7822ff4ee",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tropical_slime.webp",
+      "target": "public/assets/sprites/tropical_slime.webp",
+      "sha256": "790081f82a4e32c72260d2c036fa705116617ab0f5a42b859a34b25c1175252d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_tropical_slime_lite.webp",
+      "target": "public/assets/sprites/tropical_slime_lite.webp",
+      "sha256": "60ae6d144ecf3281d3844af80c4f534163dbea47743c64056b4390f4c4563815",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_turtle.webp",
+      "target": "public/assets/sprites/turtle.webp",
+      "sha256": "a028e9c1c669477f6c655b007333926c5557fb15cb949508b48020194187a8c9",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_turtle_lite.webp",
+      "target": "public/assets/sprites/turtle_lite.webp",
+      "sha256": "1cba4788fd8d3434a5ac1614a2b2ed9d8ffaa9489292e200c987e5f5892472b4",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_vengeful_heart.webp",
+      "target": "public/assets/sprites/vengeful_heart.webp",
+      "sha256": "5c2f1b51e6b44891dad5b6db2a1c7b8c559462ebec7d93ce6552e5ffbbd9e108",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_vengeful_heart_lite.webp",
+      "target": "public/assets/sprites/vengeful_heart_lite.webp",
+      "sha256": "9749b5c0df8b3fcb5d35fff016659f49fcf0717b3c16805e3fdf80131c89804d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_wildfire.webp",
+      "target": "public/assets/sprites/wildfire.webp",
+      "sha256": "98381fb3c9810074e0f92a0b0404e541bb3f1e7573d25df7b0944626a4c8352d",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_wildfire_lite.webp",
+      "target": "public/assets/sprites/wildfire_lite.webp",
+      "sha256": "725163bb40bc520af57e286c08562737a422ea0de4b14cf8bdd8b46e9e86033e",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_wretched_wraith.webp",
+      "target": "public/assets/sprites/wretched_wraith.webp",
+      "sha256": "beeaa050829b12e85d176512febe72adf896af241116cd6ef186b27f0ff0506f",
+      "action": "deduplicate"
+    },
+    {
+      "source": "public/assets/sprites/v34_wretched_wraith_lite.webp",
+      "target": "public/assets/sprites/wretched_wraith_lite.webp",
+      "sha256": "d3afa1c62be9bf78fd27d7e3e6a30e8f3dc1f5e0faad915f587000d97b53b14d",
+      "action": "deduplicate"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_corrupted_cauldron.webp",
+      "target": ".content-cache/animation/motions/corrupted_cauldron.webp",
+      "sha256": "d188baa0adae1e3626bdb3bb8105e984675d75994f3ce5efcd08058b73f40364",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_drowned_necromancer.webp",
+      "target": ".content-cache/animation/motions/drowned_necromancer.webp",
+      "sha256": "45b416f4c98d1af6e3ec27431587e0c7417ae989fcab8801c387087130d4929e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_enchanter.webp",
+      "target": ".content-cache/animation/motions/enchanter.webp",
+      "sha256": "4a59cfceca2c40ad16816ea240f3de51363c01549f04c9d76528902611fc90ba",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_geomancer.webp",
+      "target": ".content-cache/animation/motions/geomancer.webp",
+      "sha256": "6e985887704dc97dc6c821e70ba96c21404e8564b5e5987bc75a8c76bdbdf516",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_iceologer.webp",
+      "target": ".content-cache/animation/motions/iceologer.webp",
+      "sha256": "001eb608748c04c43a741e8a5e35290fb52624272472caeb39d6ab691e52bb49",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_key_golem.webp",
+      "target": ".content-cache/animation/motions/key_golem.webp",
+      "sha256": "d2e52d70edb534b798752ecab6bc2409bf65d98a5b9ef9400adbe2b3ec623b73",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_leaper.webp",
+      "target": ".content-cache/animation/motions/leaper.webp",
+      "sha256": "2d6c44b2837f0cea93bf467e9ca7b0ae82494acd8241194cc47b65c21d22af79",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_mountaineer.webp",
+      "target": ".content-cache/animation/motions/mountaineer.webp",
+      "sha256": "54090c6fe01a4bc5d3e8cd40639c43264caaa6bfe3ff5405232134231faf7ce6",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_nameless_one.webp",
+      "target": ".content-cache/animation/motions/nameless_one.webp",
+      "sha256": "a01ba521414de34bfdcdde843101a24b598b241214da76c16d5861998259d677",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_necromancer.webp",
+      "target": ".content-cache/animation/motions/necromancer.webp",
+      "sha256": "e6edabfff5ff67ec25259d659d80539bd83c2170ba34982c852ad18b004cb7c8",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_poison_quill_vine.webp",
+      "target": ".content-cache/animation/motions/poison_quill_vine.webp",
+      "sha256": "5188ee90530973cc79fa9b5868fb929fb4dc77bd0590cb4a38d4607727c64751",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_redstone_cube.webp",
+      "target": ".content-cache/animation/motions/redstone_cube.webp",
+      "sha256": "6a7cc93939c0c56a63bb124448292325daefaa420b7bd4521b555224957bddda",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_redstone_golem.webp",
+      "target": ".content-cache/animation/motions/redstone_golem.webp",
+      "sha256": "19df51db24217c0d56a8fc4bf8dda5f6bb241fdd99796689b86a6ba244eb4adf",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_redstone_monstrosity.webp",
+      "target": ".content-cache/animation/motions/redstone_monstrosity.webp",
+      "sha256": "cdcfb938e0cfc872d84c769d4dca7116268c0099f044b7c5132058775c3d745e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_royal_guard.webp",
+      "target": ".content-cache/animation/motions/royal_guard.webp",
+      "sha256": "a7c5c8ab3b3c1412b1d7b02d4ce6586540e598d6cb85e4dbf133bea2ad59e1c9",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_skeleton_vanguard.webp",
+      "target": ".content-cache/animation/motions/skeleton_vanguard.webp",
+      "sha256": "67c2e56af7527c125d64039a7039d09a315a7504b264e1aa7f082d43ab33e4b5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_soul_wisp.webp",
+      "target": ".content-cache/animation/motions/soul_wisp.webp",
+      "sha256": "d41caa8cdc74cdbd81be23c9b5bce789785e3ad0f18e7e34a2b524a955bc0447",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_squall_golem.webp",
+      "target": ".content-cache/animation/motions/squall_golem.webp",
+      "sha256": "0866e00c1ede3d5fa9350221e09fb665efbfab0df05a497b211b08a9d2e28fff",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_whisperer.webp",
+      "target": ".content-cache/animation/motions/whisperer.webp",
+      "sha256": "52533d1df24bd19607256ab8eba1cdec16abbdd7494e1e0e975e6b3e8510fcfe",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_windcaller.webp",
+      "target": ".content-cache/animation/motions/windcaller.webp",
+      "sha256": "7d04ce53d24ff1a9d2362aaa5a4fb6bb80e4efed0fef44933ec7ddd4bbb8d5e0",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/motions/d33_wraith.webp",
+      "target": ".content-cache/animation/motions/wraith.webp",
+      "sha256": "d3022a487a2f4298045ebc97a6a5a7831167d3e438b0f239bd4e1b28272d6186",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_corrupted_cauldron.webp",
+      "target": ".content-cache/animation/portraits/corrupted_cauldron.webp",
+      "sha256": "a9f72b92bfcfd37ed73fa07ae4032d84fd9a7c300440a00bc0f239dd100afac2",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_drowned_necromancer.webp",
+      "target": ".content-cache/animation/portraits/drowned_necromancer.webp",
+      "sha256": "e0c075c7b6803b1d0f4b6b29843c8cd0a658aa12d20ae8779e5045c2907f4def",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_enchanter.webp",
+      "target": ".content-cache/animation/portraits/enchanter.webp",
+      "sha256": "47666eb652d80cf77be2c187cb21b19a2971ae9ff468d77f7b3eee2199d3bf8f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_geomancer.webp",
+      "target": ".content-cache/animation/portraits/geomancer.webp",
+      "sha256": "a43882e54b193ee849c2756d4d0307fb92c8f03e2be61c3b6dba57e0917c9916",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_iceologer.webp",
+      "target": ".content-cache/animation/portraits/iceologer.webp",
+      "sha256": "3d77b5fc0881f89d97645edee743298cb714d67a29ee158a36ba92b0e3a66927",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_key_golem.webp",
+      "target": ".content-cache/animation/portraits/key_golem.webp",
+      "sha256": "fbcaf8100baea87aa9ccfd0dbd94c241e705630a861fc3a26b30e6983f92c700",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_leaper.webp",
+      "target": ".content-cache/animation/portraits/leaper.webp",
+      "sha256": "e3acc7bdd4c236ee761785c219f6cf78d5f0fcf4315df14a5b164c46ee725e14",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_mountaineer.webp",
+      "target": ".content-cache/animation/portraits/mountaineer.webp",
+      "sha256": "ce73c63e808522244ab0ac96327c4465dd9cba7fa9d3e17d69b02435960cce94",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_nameless_one.webp",
+      "target": ".content-cache/animation/portraits/nameless_one.webp",
+      "sha256": "350322a0109cea0aafa3d9e8c64439c1e92896313c3d4d718035475efc421c68",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_necromancer.webp",
+      "target": ".content-cache/animation/portraits/necromancer.webp",
+      "sha256": "9d8fc3fb374ea35736f6f9fe829534f0bce121f5210a6a31f469e54ba390a741",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_poison_quill_vine.webp",
+      "target": ".content-cache/animation/portraits/poison_quill_vine.webp",
+      "sha256": "7c5fb83839ddabe7c866a2c9820ac046537ead52a10d9baf9449dd285aa5eafc",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_redstone_cube.webp",
+      "target": ".content-cache/animation/portraits/redstone_cube.webp",
+      "sha256": "a16bf00e1472f58f0571e6ac927be9bd974c482b2384e07b44248d705b9c58a3",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_redstone_golem.webp",
+      "target": ".content-cache/animation/portraits/redstone_golem.webp",
+      "sha256": "abbbdfb02c4940b0c9d2d12c19ad97851e4cf48b2c2034586d313f58650cb1a1",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_redstone_monstrosity.webp",
+      "target": ".content-cache/animation/portraits/redstone_monstrosity.webp",
+      "sha256": "8abdff2561442f1010c8a9d58d6bc8adfdd4189af1b63ffa5b7cc183585d6321",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_royal_guard.webp",
+      "target": ".content-cache/animation/portraits/royal_guard.webp",
+      "sha256": "182b72fde396501379266aaee9719ef9de4168cddd6aa71b7d9ff870fca7af43",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_skeleton_vanguard.webp",
+      "target": ".content-cache/animation/portraits/skeleton_vanguard.webp",
+      "sha256": "14d885231e14abc00d5596d2d49e0edc60cab34a9920393cc06209745ceca1da",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_soul_wisp.webp",
+      "target": ".content-cache/animation/portraits/soul_wisp.webp",
+      "sha256": "062b8e8b637ddbc09fd0d153cc5e5ae5e9f423ac8575bb50d037cd27d9969f62",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_squall_golem.webp",
+      "target": ".content-cache/animation/portraits/squall_golem.webp",
+      "sha256": "25ac4d8ee8dfd5f1f9dd303bb51da1d27b92f4142ae765229d3536f2b04b83dc",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_whisperer.webp",
+      "target": ".content-cache/animation/portraits/whisperer.webp",
+      "sha256": "f3b1bd33c527ed50ff39ee321eedd3654c948d56d2a52c967fff5eba64c7dab5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_windcaller.webp",
+      "target": ".content-cache/animation/portraits/windcaller.webp",
+      "sha256": "37dec6c37d2a417f6a1d40da5a5ede3b5fa96aa58538be57f995783e2723cf2b",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/portraits/d33_wraith.webp",
+      "target": ".content-cache/animation/portraits/wraith.webp",
+      "sha256": "399704fae127fd646985362b325774d98c797787e753630d940f60aeaca7f5f0",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_corrupted_cauldron.webp",
+      "target": ".content-cache/animation/sprites/corrupted_cauldron.webp",
+      "sha256": "32210fc5cafa8b4e08b7b26c4a14fe9278bb0e8d4d58d10651d51b97c54623b1",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_corrupted_cauldron_lite.webp",
+      "target": ".content-cache/animation/sprites/corrupted_cauldron_lite.webp",
+      "sha256": "af81cc73e163669350a95366385accdde7174c8e4e19ffc9c54038deafe6f18d",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_drowned_necromancer.webp",
+      "target": ".content-cache/animation/sprites/drowned_necromancer.webp",
+      "sha256": "2ebcef6e796ae3f80bdfafda4c9478a3df3090e925ef08c9e3aaa7739ee50ae7",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_drowned_necromancer_lite.webp",
+      "target": ".content-cache/animation/sprites/drowned_necromancer_lite.webp",
+      "sha256": "80054200c7ddb8e59f95a05426adcd75709bbdaa2cf6eb52a096d264d830ee19",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_enchanter.webp",
+      "target": ".content-cache/animation/sprites/enchanter.webp",
+      "sha256": "9eab89d4dc1783d024d6072eaadcb5a0d275c27c2367deace227f25fdd437fe2",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_enchanter_lite.webp",
+      "target": ".content-cache/animation/sprites/enchanter_lite.webp",
+      "sha256": "b3df0b1f97da952b74b2c8b3690ccc042d8e4d8ea6c4e028de30a6d9e43f9c27",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_geomancer.webp",
+      "target": ".content-cache/animation/sprites/geomancer.webp",
+      "sha256": "701ed338464906d96d6bc440036d405039c0c127ea4cd406037b76eb81979826",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_geomancer_lite.webp",
+      "target": ".content-cache/animation/sprites/geomancer_lite.webp",
+      "sha256": "b7abcbfdec896b55de8ba657c6651bdd2148dbb4c629d932f78607145b7764b8",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_iceologer.webp",
+      "target": ".content-cache/animation/sprites/iceologer.webp",
+      "sha256": "7835dcdb819f2d5975811b022ab9f31e11294793bbf4ced8256cfac9b48bd08b",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_iceologer_lite.webp",
+      "target": ".content-cache/animation/sprites/iceologer_lite.webp",
+      "sha256": "92c61ba0310e2b5e24de0982c9aa02a11325dc32f60cb980c1627754cc1033e0",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_key_golem.webp",
+      "target": ".content-cache/animation/sprites/key_golem.webp",
+      "sha256": "a0257ba77e6722b81df54f5f21c4f3174a3d6e2e51d025661a0dc704cdd81784",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_key_golem_lite.webp",
+      "target": ".content-cache/animation/sprites/key_golem_lite.webp",
+      "sha256": "0a4363b6d33bbb2dcbc93615336337d5ad95c763bb6d8fdd6a69dd16504271c2",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_leaper.webp",
+      "target": ".content-cache/animation/sprites/leaper.webp",
+      "sha256": "94d4c1b2ad843013b54ed0d3c1e68f3c64512bcaf4478b78833e9ed08ba3b35c",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_leaper_lite.webp",
+      "target": ".content-cache/animation/sprites/leaper_lite.webp",
+      "sha256": "6d8b5417ccefe10564681c8a7daed99b2f05c43c094b397d8634a94cd5318e2e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_mountaineer.webp",
+      "target": ".content-cache/animation/sprites/mountaineer.webp",
+      "sha256": "c6e7cbd9950959def5fac567949a9941fd567eabcddc42dd74a9f8f537ddc5f8",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_mountaineer_lite.webp",
+      "target": ".content-cache/animation/sprites/mountaineer_lite.webp",
+      "sha256": "1951abc28d972ab91b5b7b6131aebcd2348c7e5854e0476c774470ea52b82765",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_nameless_one.webp",
+      "target": ".content-cache/animation/sprites/nameless_one.webp",
+      "sha256": "f21ee346380bc918a09c4d22324f7c11cf929524e4d933f143756457dc8f0da9",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_nameless_one_lite.webp",
+      "target": ".content-cache/animation/sprites/nameless_one_lite.webp",
+      "sha256": "a512df6e3d625efa0afbe1a9d72ba679360d74329c29fde84b13e9a961598948",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_necromancer.webp",
+      "target": ".content-cache/animation/sprites/necromancer.webp",
+      "sha256": "86e86a5d1a2314f21c1eb8ba797a2afcc8744008cdba2490abfb7161a438db27",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_necromancer_lite.webp",
+      "target": ".content-cache/animation/sprites/necromancer_lite.webp",
+      "sha256": "1120615e838ada5aeb6e0083f21852349f58bc8a66e47dd4b6bfa0c72873819f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_poison_quill_vine.webp",
+      "target": ".content-cache/animation/sprites/poison_quill_vine.webp",
+      "sha256": "e4a1d9540fbe4c61ec716ac10f8cd0478e709fd09bbaa26f1f0a57f481408fa3",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_poison_quill_vine_lite.webp",
+      "target": ".content-cache/animation/sprites/poison_quill_vine_lite.webp",
+      "sha256": "ca412d5fdbc34c86dadf0bb52e29507087b45d9ef523ef95c2c3253994719ada",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_cube.webp",
+      "target": ".content-cache/animation/sprites/redstone_cube.webp",
+      "sha256": "54170a3170258016dfcf0bb8c7e68b27c69abb363dc10b985eb12f16b4d3c777",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_cube_lite.webp",
+      "target": ".content-cache/animation/sprites/redstone_cube_lite.webp",
+      "sha256": "c9b18fa8ca8eb90e388a18f96d78929274e5efa0cc9b08cae725a191f6aa7321",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_golem.webp",
+      "target": ".content-cache/animation/sprites/redstone_golem.webp",
+      "sha256": "1f131064c61a3d1c9b9716fe903709825cb595ada0b1a94a57734f73af717dad",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_golem_lite.webp",
+      "target": ".content-cache/animation/sprites/redstone_golem_lite.webp",
+      "sha256": "0abc5453c5fcf79fde12f1dbe3bb57a6473c6522f29e099398e0639c22e4b0f7",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_monstrosity.webp",
+      "target": ".content-cache/animation/sprites/redstone_monstrosity.webp",
+      "sha256": "7179aa395cef6a45c181b4c40ed689419ae578d733545f86552035d1097498e1",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_redstone_monstrosity_lite.webp",
+      "target": ".content-cache/animation/sprites/redstone_monstrosity_lite.webp",
+      "sha256": "9ffa3d1e2f769ee73265f30654f2ee69a41aecb29555e701e2ef2a68afd00dbc",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_royal_guard.webp",
+      "target": ".content-cache/animation/sprites/royal_guard.webp",
+      "sha256": "942c4c338cf44e43f8231eb2c7ff46d96873a0124916072e59a8459fe4712d6d",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_royal_guard_lite.webp",
+      "target": ".content-cache/animation/sprites/royal_guard_lite.webp",
+      "sha256": "013d4ccd947dc8e808e914d3b99683c19348517fa2c3b7dfc6be47073b886b54",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_skeleton_vanguard.webp",
+      "target": ".content-cache/animation/sprites/skeleton_vanguard.webp",
+      "sha256": "fd9a854400fdf8b2a2b0022ef3a643f3865385a8f5046611c523f2730dcc8303",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_skeleton_vanguard_lite.webp",
+      "target": ".content-cache/animation/sprites/skeleton_vanguard_lite.webp",
+      "sha256": "daa453b692af6b22cb7bf143c80793f08ad9bcbc66ba0da30ff2c7d4472dbff5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_soul_wisp.webp",
+      "target": ".content-cache/animation/sprites/soul_wisp.webp",
+      "sha256": "d10f686d49593d272fd7dd3d7d10bbce1e64c66b373cacb8ac10c1b9c368dcd6",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_soul_wisp_lite.webp",
+      "target": ".content-cache/animation/sprites/soul_wisp_lite.webp",
+      "sha256": "1a4a642483dc05db8d788ece648819bc0b49d877cf6366cbb0b2579c1efaf989",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_squall_golem.webp",
+      "target": ".content-cache/animation/sprites/squall_golem.webp",
+      "sha256": "810eceaa7b2c6631fa2d261de40882b6af1ac50d2d8097f7f9710fe3a2451f55",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_squall_golem_lite.webp",
+      "target": ".content-cache/animation/sprites/squall_golem_lite.webp",
+      "sha256": "f96dcc935c1f8cb974083dac5afae91de25630f5705950e9794e13f3da7dbaea",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_whisperer.webp",
+      "target": ".content-cache/animation/sprites/whisperer.webp",
+      "sha256": "1fa82d42e1831c694cc2d0a69c5376874320aa01ac98f7fb0cdbd37ed68e1e0f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_whisperer_lite.webp",
+      "target": ".content-cache/animation/sprites/whisperer_lite.webp",
+      "sha256": "084efc553d325bf4f15aa43e23dd6b03a94e10fa4c90f2cd67603f58d1322d78",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_windcaller.webp",
+      "target": ".content-cache/animation/sprites/windcaller.webp",
+      "sha256": "38bf863e64a60d411eb1a14b555d41f9f53965d36f636e3c92942f9d8c4aac99",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_windcaller_lite.webp",
+      "target": ".content-cache/animation/sprites/windcaller_lite.webp",
+      "sha256": "0ab30350db485e562daf21f22df187ace1209404f2b1f861f3a785c1473c3d89",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_wraith.webp",
+      "target": ".content-cache/animation/sprites/wraith.webp",
+      "sha256": "f2468eb26681295857eeda388582dc74c3ea00561e3f821103a06468caf8e416",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/animation/sprites/d33_wraith_lite.webp",
+      "target": ".content-cache/animation/sprites/wraith_lite.webp",
+      "sha256": "4e899d010793df74bb3a318b511963c77e518cd032f5483a846fce26464098ae",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_fungus_cloud.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/fungus_cloud.webp",
+      "sha256": "90006318fdc4eb608f754f45c91e2d7d92171287fe4d286f09687bcd17234552",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_goo_bolt.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/goo_bolt.webp",
+      "sha256": "b43d015eb87efe459e5f08d6584cbfb4e610e2f666f69ee2d2b5d814eea91234",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_goo_hit.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/goo_hit.webp",
+      "sha256": "96f0476d3a6fdaf8701dd9991c2e80e8c2694890b65f95e3c7cf0a51f2bf0448",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_ink.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/ink.webp",
+      "sha256": "b8035e8f17ac61295c2bca8d697f0af2e6fbeb35c1bda20c0605c27f4b66c57f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_laser_beam.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/laser_beam.webp",
+      "sha256": "a5da087f7d6e8b965d11046ff78d75874ba0c509cffe2743cce386063ceda223",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_soul_bolt.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/soul_bolt.webp",
+      "sha256": "e3a1bbd4e8f4d1344f45b9c0e19a815dbfb511ac8ce729d6dcf7ac1428465dd5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_spit.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/spit.webp",
+      "sha256": "2600c666e358bc51e3de0de6763f058461f56f17a05a66e5e2b539e8c9c494d4",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/combat-effects/v34_void_beam.webp",
+      "target": ".content-cache/post-sift-v3.4/combat-effects/void_beam.webp",
+      "sha256": "12d12b514f24649d77d939b435eb1914bdf9f603462fec923f82affb05b6041e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_abomination_vine.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/abomination_vine.webp",
+      "sha256": "a813ee38a41575fc5090376d30cdd00ed627c6c72dad83c0910a43aff228838f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_ancient_guardian.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/ancient_guardian.webp",
+      "sha256": "c1f2284e9f3c6e2a29e9bae1e3c6b6a0b491c39e0ed7636657d3ef6505e2500e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_armored_mountaineer.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/armored_mountaineer.webp",
+      "sha256": "3b7fa9be47196e7946ea1c652eeea7b95461b404ff8cd03fef189328a4d3363b",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_armored_piglin.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/armored_piglin.webp",
+      "sha256": "d35f02f56c8f03017d094c25f60fac4f2a5339c388f515d29e137f0d1cc630bd",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_baby_ghast.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/baby_ghast.webp",
+      "sha256": "c42945e2c67b5be02c0c2c74159884b5bba57cf43c5e4141b5ea0b954f4d8b84",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_baby_zombie.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/baby_zombie.webp",
+      "sha256": "f3eff48fec92c789dad9697e0a2bb9ff9faaf1ace7a0f958215b31dfaf2a0699",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_bat.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/bat.webp",
+      "sha256": "2e108d92be1129d3293d0f5e4a54ab3d63ccd58e4f8e78183474ed57e7b51e0f",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_blastling.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/blastling.webp",
+      "sha256": "ec3423f1f94fadf9d656be639dbbcea850de94fae33405bb0481c7b255f2ceee",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_chicken_jockey.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/chicken_jockey.webp",
+      "sha256": "7f94b94e971ae2c2e78e8504c9c71662e63369a80af6ceeb502c70200fc579f1",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_dolphin.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/dolphin.webp",
+      "sha256": "8294a7be6be370017108bf54c302a3f57c797407f9aeefb11728ca8baf897d1c",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_enderling.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/enderling.webp",
+      "sha256": "4f1ae2c95d2f67007b90797870ac10dbc1b3b8b88b172d3fb61949da280901e5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_endersent.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/endersent.webp",
+      "sha256": "c913f6bd900957beab4f81a63d79b6cde1ef81fa848ac4de01c3cb017c5da5f1",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_fungus_thrower.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/fungus_thrower.webp",
+      "sha256": "dae95e41882049c7ebf4b2aede605ca97bbd0dad5da2fb6dc1064464ef2b76b7",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_glow_squid.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/glow_squid.webp",
+      "sha256": "b50903eed039791d90cb20e400a1f2fa0a46a8d576e409326794142adfd43c9e",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_gold_axolotl.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/gold_axolotl.webp",
+      "sha256": "7e49891fa0b1ecddae49913411a02af12bcdf1dc86f081ac62035c66e2316694",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_jungle_abomination.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/jungle_abomination.webp",
+      "sha256": "e84ae90d451ff93d24a338f088d2650e8e18ff6b8567423165e8924cc2ce924b",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_jungle_zombie.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/jungle_zombie.webp",
+      "sha256": "4b834cd011a1e46d6fbb273547c513fb60f230f4c4e6925035c4561dc32cd4e5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_llama.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/llama.webp",
+      "sha256": "8ec43790174c5bfd8d2d918a263c566e14b7cbd36849432c7e4444c15141bc19",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_mob_spawner.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/mob_spawner.webp",
+      "sha256": "eeb6d202581518c9a1ca7323533cc55abe2ccdd22846c94f670fd40643d25289",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_mooshroom.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/mooshroom.webp",
+      "sha256": "950872a81f2b8c9dcc0bd591355bfb42b366ea2746a7701e05ce7b6f7a7ff406",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_ocelot.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/ocelot.webp",
+      "sha256": "df9b393e334b036eb16e29b7f2be7b174cadfe490425f4b9ad5b50bfaa97b4a3",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_panda.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/panda.webp",
+      "sha256": "4dc83677706938ac1374b926901608366dc2a5eb6be946a8f3bdeafe962ad587",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_parrot.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/parrot.webp",
+      "sha256": "d7f2b3a08ff7738cd25975135224196cc55f16cb534d09448cf09c2237b4f355",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_piglin_hunter.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/piglin_hunter.webp",
+      "sha256": "76a7cabe38dfea04c370ba84ae086ec206f8d7ab741b0d99c15f33cc990c4781",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_piglin_swordsman.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/piglin_swordsman.webp",
+      "sha256": "d172f3fb8c60e36c9901cd12f5c25f258d65ce192928426082dadc24053040c0",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_pufferfish.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/pufferfish.webp",
+      "sha256": "94c780059f6027346f8363dc8280a0bc23423e6468bf1d0cc52713ff60d1a004",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_pumpkin_turret.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/pumpkin_turret.webp",
+      "sha256": "bbdba5ddee4cf55224401adbb7256eab2d4527426f0a2a2f6e7dee6b83fe76ed",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_quick_vine.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/quick_vine.webp",
+      "sha256": "6b2cb7aed85b5d005fd5cc14a5d9ca7b0f27754ef555268023d982e09496b454",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_rampart_captain.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/rampart_captain.webp",
+      "sha256": "baeb163748fa79c01058227020f32d979279dea0e9bb6f6af9b53a69b78b35b5",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_raven.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/raven.webp",
+      "sha256": "43fa823f250b0828a5ed27e84d9084ad1a160d5cb614e3386db72e79d2180571",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_skeleton_horseman.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/skeleton_horseman.webp",
+      "sha256": "70cf7ce5da7234b77c27713f8e3fe7456ff4a4cfe5ae7cda8e0fd5171d407990",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_snareling.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/snareling.webp",
+      "sha256": "6dfb0bc26f94818b71036c4f37f554bd84d045d927f7204421eb46ce6e66206a",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_snow_fox.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/snow_fox.webp",
+      "sha256": "e6b13a4ad9b9f5bf8feb693a14a513e4df11bfdf79c5a65e53eb6f373a1ea1c4",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_soul_wizard.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/soul_wizard.webp",
+      "sha256": "a8d1ac8200b96b8d2fcd8fe3854df745c468cabbd3a52ba4759a9fe18f44cce7",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_sunken_skeleton.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/sunken_skeleton.webp",
+      "sha256": "c52fcb38f0c537e8453a1c2e621016358df83de3cf3ec7b86bc2035ad61408f4",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_tempest_golem.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/tempest_golem.webp",
+      "sha256": "3c21db7befeb6c930bdf9cf2be312c1d15eee8c5e5baf6d7058bcdff2339bf31",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_tower_wraith.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/tower_wraith.webp",
+      "sha256": "cec440815c31c459f6d9565008896a10aa0cc72884fe627a444296064e55ff4b",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_tropical_slime.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/tropical_slime.webp",
+      "sha256": "fc6449b0ac152d1a15f7a6d9be7051a697e57a5d5c0b6ddd6d62ef623ce96ea6",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_turtle.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/turtle.webp",
+      "sha256": "6e89709eea9fe8b7874547ec03ecc7279114353454d29026144a608fa0851e92",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_vengeful_heart.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/vengeful_heart.webp",
+      "sha256": "b49a870a270dd47de5773a77b6ae124155e6fc39f025a16d90ae42cb1ce5f44c",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_wildfire.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/wildfire.webp",
+      "sha256": "05039ad0f556af2e817be929ad5b96bd6dced8003b4f7fc5a15aa1cf66476db9",
+      "action": "rename"
+    },
+    {
+      "source": ".content-cache/post-sift-v3.4/motions/v34_wretched_wraith.webp",
+      "target": ".content-cache/post-sift-v3.4/motions/wretched_wraith.webp",
+      "sha256": "9d4ca083d65ee766e1fea65e70337fb323efd657c58a7a468c569f9ff9d71785",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_basalt_spike.png",
+      "target": "assets-src/post-sift-v3.4/masters/basalt_spike.png",
+      "sha256": "84768b164ef2f8ed2fde8cd71449bdf0d4b839eb02f67d35fd636bb10226dd49",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_coral_vase.png",
+      "target": "assets-src/post-sift-v3.4/masters/coral_vase.png",
+      "sha256": "f72fc05d5e2f51bc1d35d5f8581f28c9e243fba73c4d0d3648efc12d77e11f8d",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_diamond_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/diamond_chest.png",
+      "sha256": "a1691b7197c369d53c2a553f0d2e4b73c657b0317d60373311106bede851fed3",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_fancy_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/fancy_chest.png",
+      "sha256": "3243b316436aef292bbe61ae3663ac94fc032c55b0c0335757066589b4db9796",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_gale_bench.png",
+      "target": "assets-src/post-sift-v3.4/masters/gale_bench.png",
+      "sha256": "44bf5ebeb1aee1effeb3348da1b1ec216220e4c728bb7a5b97372e23381d1b39",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_ice_pile.png",
+      "target": "assets-src/post-sift-v3.4/masters/ice_pile.png",
+      "sha256": "cb555348ba34cd701b0c1c2d546c4c8aa4cce7cd99c998c5118ca7aa2689651f",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_jungle_plant.png",
+      "target": "assets-src/post-sift-v3.4/masters/jungle_plant.png",
+      "sha256": "7e2e4cb3b23f7bb56022274781fd2bd14824e38ba3ad997f02107e9b7c5b301f",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_mission_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/mission_chest.png",
+      "sha256": "25d95a9340fb8e66932638224f24e48a775c172dee6f8a3e28475af453fae7ff",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_piglin_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/piglin_chest.png",
+      "sha256": "1eba420683afa041399f09ab8355245b201c7b38b4ce9c1542b490cf5f45163f",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_proj_arrow.png",
+      "target": "assets-src/post-sift-v3.4/masters/proj_arrow.png",
+      "sha256": "03aaf42a3a4a15177a37219558bb6ad16f6c36205a6c728d13adb522c90a6c03",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_proj_blue_fungus.png",
+      "target": "assets-src/post-sift-v3.4/masters/proj_blue_fungus.png",
+      "sha256": "10b0aa4c5bb9ec226c95f97839b24262dbf5cc5c084d3e6dcb903e2d609e972e",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_proj_harpoon.png",
+      "target": "assets-src/post-sift-v3.4/masters/proj_harpoon.png",
+      "sha256": "c749e2cc09962668ea0d51a16e0fabafc7a13eb576f163f7e10e4c32c98ae53b",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_proj_pumpkin_seed.png",
+      "target": "assets-src/post-sift-v3.4/masters/proj_pumpkin_seed.png",
+      "sha256": "7e3d37ce259ff65c1ed336a4172e2236ce44e8efceb976d459c9ccbed23daeae",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_purpur_lamp.png",
+      "target": "assets-src/post-sift-v3.4/masters/purpur_lamp.png",
+      "sha256": "ffa2b8f489dcd5b5d939dade2bd7cb33368f67b5efa7c26b79a4fba8d01a1aac",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_raid_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/raid_chest.png",
+      "sha256": "f70c385d0ce702954b115f62dba37f167df6f96ac5dcb2f4d797613c5dd622ab",
+      "action": "rename"
+    },
+    {
+      "source": "assets-src/post-sift-v3.4/masters/v34_wooden_chest.png",
+      "target": "assets-src/post-sift-v3.4/masters/wooden_chest.png",
+      "sha256": "8f46ef5979ab82f8a23cf568d55424e5ee8df48f1eb8673d42a7b731455203d7",
+      "action": "rename"
+    }
+  ]
+}

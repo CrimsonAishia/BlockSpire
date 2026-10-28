@@ -10,6 +10,8 @@
 // rate-limited per IP. Keep scoreOf / the daily rotation in sync with src/run/run.ts and
 // src/run/daily.ts.
 
+import { difficultyPolicy } from '../src/data/difficulty.ts';
+
 /** Runs a pipeline of Redis commands and returns their results in order. */
 export type Redis = (cmds: (string | number)[][]) => Promise<unknown[]>;
 
@@ -73,7 +75,7 @@ export interface RunSummary {
 }
 
 export function scoreOf(r: Pick<RunSummary, 'floor' | 'elites' | 'bosses' | 'gold' | 'red' | 'won' | 'omen'>) {
-  return Math.round((r.floor * 10 + r.elites * 30 + r.bosses * 120 + r.gold * 60 + r.red * 20 + (r.won ? 500 : 0)) * (1 + 0.2 * r.omen));
+  return Math.round((r.floor * 10 + r.elites * 30 + r.bosses * 120 + r.gold * 60 + r.red * 20 + (r.won ? 500 : 0)) * difficultyPolicy(r.omen).scoreMul);
 }
 
 const int = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
@@ -82,13 +84,13 @@ function checkRun(v: unknown): RunSummary | string {
   if (!v || typeof v !== 'object') return '缺少对局数据';
   const r = v as Record<string, unknown>;
   if (typeof r.commander !== 'string' || !COMMANDERS.includes(r.commander)) return '统领无效';
-  if (!int(r.omen, 0, 5) || !int(r.act, 1, 4) || typeof r.won !== 'boolean') return '对局数据无效';
+  if (!int(r.omen, 0, 5) || !int(r.act, 1, 7) || typeof r.won !== 'boolean') return '对局数据无效';
   const act = r.act as number;
   if (!int(r.floor, (act - 1) * 14, act * 14)) return '层数无效';
   if (!int(r.bosses, act - 1, act) || (r.won && (r.bosses as number) < 3)) return '首领数无效';
   if (!int(r.elites, 0, 8 * act) || !int(r.crates, 0, 60 * act)) return '对局数据无效';
-  if (!int(r.gold, 0, 30) || !int(r.red, 0, 60) || (r.gold as number) + (r.red as number) > (r.crates as number)) return '开箱数据无效';
-  if (!Array.isArray(r.team) || r.team.length > 5) return '阵容无效';
+  if (!int(r.gold, 0, r.crates as number) || !int(r.red, 0, r.crates as number) || (r.gold as number) + (r.red as number) > (r.crates as number)) return '开箱数据无效';
+  if (!Array.isArray(r.team) || r.team.length > 7) return '阵容无效';
   for (const c of r.team) if (!Array.isArray(c) || typeof c[0] !== 'string' || !/^[a-z_]{2,32}$/.test(c[0]) || !int(c[1], 1, 3)) return '阵容无效';
   if (r.mins !== undefined && !int(r.mins, 0, 1_000_000)) return '用时无效';
   if (r.daily !== undefined && (typeof r.daily !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.daily))) return '日期无效';
@@ -203,7 +205,7 @@ async function submit(redis: Redis, body: Record<string, unknown>, ip: string, n
     ['HSET', NAMES, pid, name],
   ]);
   const rawAvatar = typeof body.avatar === 'string' ? body.avatar.slice(0, 500) : '';
-  const entry = JSON.stringify({ commander: run.commander, avatar: rawAvatar, omen: run.omen, won: run.won, act: run.act, floor: run.floor, team: run.team.slice(0, 5), at: now });
+  const entry = JSON.stringify({ commander: run.commander, avatar: rawAvatar, omen: run.omen, won: run.won, act: run.act, floor: run.floor, team: run.team.slice(0, 7), at: now });
   const cmds: (string | number)[][] = [];
   keys.forEach((k, i) => {
     if (Number(added[i]) > 0) cmds.push(['HSET', `bs:e:${k}`, pid, entry]);
