@@ -312,6 +312,9 @@
   cursor: grab;
   touch-action: none;
 }
+.arena-host.hover-unit {
+  cursor: pointer;
+}
 .arena-screen.dragging .arena-host {
   cursor: grabbing;
 }

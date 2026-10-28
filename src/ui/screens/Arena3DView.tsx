@@ -127,6 +127,7 @@ export function Arena3DView({
   /** Touch aiming: a first tap placed the preview ring and waits for a confirming tap. */
   const [pending, setPending] = useState(false);
   const [camMoved, setCamMoved] = useState(false);
+  const [unitHovered, setUnitHovered] = useState(false);
   const slots = [...items, ...temp];
   const skill = config.sides[0].skill;
   const skillKinds = skill ? SKILL_SLOTS[skill.id] : [];
@@ -155,6 +156,8 @@ export function Arena3DView({
     aim: null as Aim,
     canUse: false,
     side: deploySide,
+    lastMouse: null as null | { x: number; y: number },
+    unitHovered: false,
   });
   R.current.side = deploySide;
   R.current.paused = paused;
@@ -377,6 +380,15 @@ export function Arena3DView({
               c.finished = true;
               onFinish(b.result());
             }
+          }
+        }
+        if (c.lastMouse && !c.pointer?.moved && c.aim === null && c.fightStarted && !c.finished) {
+          const u = arena.pickUnit(c.lastMouse.x, c.lastMouse.y);
+          arena.setHoverUnit(u);
+          const hoverable = !!u;
+          if (c.unitHovered !== hoverable) {
+            c.unitHovered = hoverable;
+            setUnitHovered(hoverable);
           }
         }
         arena.frame(c.fightStarted && !c.paused ? Math.min(1, acc / DT) : 1, c.fightStarted ? (c.paused ? 0 : dt * Math.min(c.speed, 2) * arena.timeScale()) : dt);
@@ -627,6 +639,7 @@ export function Arena3DView({
       return;
     }
     const mouse = e.pointerType === 'mouse';
+    if (mouse) c.lastMouse = p;
     const ptr = c.pointer?.id === e.pointerId ? c.pointer : null;
     if (ptr && !ptr.moved && Math.hypot(e.clientX - ptr.sx, e.clientY - ptr.sy) > (mouse ? 5 : 10)) {
       ptr.moved = true;
@@ -635,6 +648,11 @@ export function Arena3DView({
     }
     if (ptr && !c.drag) {
       if (ptr.moved) {
+        if (c.unitHovered) {
+          c.unitHovered = false;
+          setUnitHovered(false);
+          a.setHoverUnit(null);
+        }
         if (ptr.button === 0) a.orbit(p.x - ptr.x, p.y - ptr.y);
         else a.pan(p.x - ptr.x, p.y - ptr.y);
         ptr.x = p.x;
@@ -646,6 +664,20 @@ export function Arena3DView({
     if (c.aim !== null) {
       if (mouse) showAim(aimAt(p));
       return;
+    }
+    if (mouse && !ptr?.moved) {
+      const u = a.pickUnit(p.x, p.y);
+      const hoverable = !!u;
+      a.setHoverUnit(u);
+      if (c.unitHovered !== hoverable) {
+        c.unitHovered = hoverable;
+        setUnitHovered(hoverable);
+      }
+      if (c.phase === 'deploy' && hoverable) {
+        setHover(null);
+        a.setHover(null);
+        return;
+      }
     }
     if (c.phase !== 'deploy') return;
     if (c.drag) {
@@ -734,6 +766,17 @@ export function Arena3DView({
     const ptr = c.pointer?.id === e.pointerId ? c.pointer : null;
     if (!ptr) return;
     c.pointer = null;
+    if (e.pointerType === 'mouse' && c.arena && c.aim === null) {
+      const p = local(e);
+      c.lastMouse = p;
+      const u = c.arena.pickUnit(p.x, p.y);
+      const hoverable = !!u;
+      c.arena.setHoverUnit(u);
+      if (c.unitHovered !== hoverable) {
+        c.unitHovered = hoverable;
+        setUnitHovered(hoverable);
+      }
+    }
     if (!act || ptr.moved) return;
     // Touch has no hover: a tap on the ground while deploying shows what that terrain does.
     if (c.aim === null && c.phase === 'deploy' && e.pointerType !== 'mouse') return terrainTip(local(e));
@@ -759,7 +802,7 @@ export function Arena3DView({
   return (
     <div class={`screen arena-screen ${dragging ? 'dragging' : ''}`}>
       <div
-        class="arena-host"
+        class={`arena-host ${unitHovered ? 'hover-unit' : ''}`}
         ref={hostRef}
         onPointerDown={onPointerDown as never}
         onPointerMove={onPointerMove as never}
@@ -769,6 +812,12 @@ export function Arena3DView({
         onPointerLeave={(e: PointerEvent) => {
           // A lifted finger "leaves" too; a tapped terrain tip stays until the next touch.
           if (e.pointerType !== 'mouse') return;
+          R.current.lastMouse = null;
+          if (R.current.unitHovered) {
+            R.current.unitHovered = false;
+            setUnitHovered(false);
+          }
+          R.current.arena?.setHoverUnit(null);
           R.current.arena?.setHover(null);
           setHover(null);
         }}

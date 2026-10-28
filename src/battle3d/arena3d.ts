@@ -354,6 +354,7 @@ export class Arena3D {
   keyPan = { x: 0, y: 0 };
   deployGroup = new THREE.Group();
   hoverBox: THREE.LineSegments;
+  hoverUnitId: number | null = null;
   private tmpV = new THREE.Vector3();
   private raycaster = new THREE.Raycaster();
   private colorCache = new Map<string, THREE.Color>();
@@ -1299,11 +1300,12 @@ export class Arena3D {
       }
       if (fuse && Math.sin(this.time * 24) > 0) flash = 0.6;
       const alphaV = u.alpha * (u.invisT > 0 ? 0.4 : 1) * deadFade;
+      const isHover = this.hoverUnitId === u.id && u.alive;
       const oc = this.outColor.copy(u.shield > 1 ? SHIELD_COLOR : TEAM_COLOR[u.team]);
       // ★3 creepers are charged: the outline crackles cyan.
       if (id === 'creeper' && (u.star >= 3 || u.ref.charged)) oc.lerp(CHARGED, 0.5 + Math.sin(this.time * 9 + u.id) * 0.5);
       // Structures go without an outline, except wall dispensers (so they read as a team's turret).
-      const outlineOn = u.alive && (!u.structure || id === 'dispenser') ? 1 : 0;
+      const outlineOn = u.alive && (!u.structure || id === 'dispenser' || isHover) ? 1 : 0;
       let y = v.gy + alt;
       v.pos.set(x, y, z);
       {
@@ -1483,8 +1485,15 @@ export class Arena3D {
         P.tint.copy(tc);
         P.tintAmt = tint;
         P.alpha = alphaV;
-        P.outline.copy(oc);
-        P.outlineOn = outlineOn ? (u.boss ? 2.6 : 1.8) : 0;
+        if (isHover) {
+          oc.setRGB(1.0, 1.0, 1.0);
+          P.outline.copy(oc);
+          P.outlineOn = u.boss ? 4.2 : 3.4;
+          P.flash = Math.max(flash, 0.08);
+        } else {
+          P.outline.copy(oc);
+          P.outlineOn = outlineOn ? (u.boss ? 2.6 : 1.8) : 0;
+        }
         P.shadow = 0.3 * deadFade * Math.max(0, 1 - alt / 4);
         this.spriteR.add(spriteOf(u.mob), sp.tex, sp.cols, sp.rows, P);
       }
@@ -2268,18 +2277,38 @@ export class Arena3D {
     return null;
   }
 
-  /** Nearest living unit of a team to a screen point within a radius. */
-  pickUnit(px: number, py: number, team: 0 | 1, maxDist = 46): Unit | null {
+  /** Nearest living unit (or of a specific team) to a screen point within bounds or radius. */
+  pickUnit(px: number, py: number, team?: 0 | 1 | null, maxDist = 46): Unit | null {
     let best: Unit | null = null;
     let bd = maxDist;
+    let bestCamDist = Infinity;
     for (const v of this.views.values()) {
       const u = v.u;
-      if (!u.alive || u.team !== team) continue;
-      const [sx, sy] = this.project(v.pos.x, v.pos.y + v.h * 0.5, v.pos.z);
-      const d = Math.hypot(sx - px, sy - py);
-      if (d < bd) {
-        bd = d;
-        best = u;
+      if (!u.alive || (team !== undefined && team !== null && u.team !== team)) continue;
+      const [sx, sy, ok] = this.project(v.pos.x, v.pos.y + v.h * 0.5, v.pos.z);
+      if (!ok) continue;
+      const [, by, okB] = this.project(v.pos.x, v.pos.y, v.pos.z);
+      const [, ty, okT] = this.project(v.pos.x, v.pos.y + v.h, v.pos.z);
+      const screenH = okB && okT ? Math.abs(by - ty) : 40;
+      const halfW = Math.max(16, screenH * 0.45);
+      const halfH = Math.max(16, screenH * 0.55);
+      const dx = Math.abs(sx - px);
+      const dy = Math.abs(sy - py);
+      const score = Math.hypot(dx / (halfW + 6), dy / (halfH + 6));
+      const camDist = v.pos.distanceTo(this.camera.position);
+      if (score <= 1.0) {
+        if (!best || camDist < bestCamDist || bd > 0) {
+          best = u;
+          bestCamDist = camDist;
+          bd = 0;
+        }
+      } else if (bd > 0) {
+        const d = Math.hypot(dx, dy);
+        if (d < bd && d < Math.max(maxDist, halfH)) {
+          bd = d;
+          best = u;
+          bestCamDist = camDist;
+        }
       }
     }
     return best;
@@ -2356,6 +2385,10 @@ export class Arena3D {
     const h = this.b.terrain.h[cell.cy * GW + cell.cx];
     this.hoverBox.position.set(cell.cx - GW / 2 + 0.5, h - 0.48, cell.cy - GD / 2 + 0.5);
     (this.hoverBox.material as THREE.LineBasicMaterial).color.setHex(ok ? 0x7dff9f : 0xff5a5a);
+  }
+
+  setHoverUnit(u: Unit | number | null) {
+    this.hoverUnitId = typeof u === 'number' ? u : u ? u.id : null;
   }
 
   /** Screen position above a unit (for DOM labels). */
