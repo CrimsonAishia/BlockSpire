@@ -1,8 +1,8 @@
 import type { Pending, RunState } from '../../run/run.ts';
-import { chooseRelic } from '../../run/run.ts';
-import { RELIC_MAP, RELIC_TIER_INFO } from '../../data/items.ts';
+import { choosePotion, chooseRelic } from '../../run/run.ts';
+import { ITEM_KIND_NAME, ITEM_TIER_INFO, POTION_MAP, RELIC_MAP, RELIC_TIER_INFO } from '../../data/items.ts';
 import { url } from '../assets.ts';
-import { Btn, HeartIcon } from '../components/common.tsx';
+import { Btn, HeartIcon, itemIcon } from '../components/common.tsx';
 import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
 import { RichText } from '../components/rich.tsx';
@@ -69,3 +69,44 @@ export function BossReward({ s, p }: { s: RunState; p: Extract<Pending, { type: 
     </div>
   );
 }
+
+function PotionTile({ id, onPick }: { id: string; onPick: () => void }) {
+  const p = POTION_MAP[id];
+  if (!p) return null;
+  const t = ITEM_TIER_INFO[p.tier];
+  return (
+    <div class={`relic-tile tier-${p.tier}`} style={{ '--tc': p.color || t.color } as never} onClick={() => (sfx('buy'), onPick())}>
+      <div class="rt-glow" />
+      <img src={itemIcon(id)} class="pixelated float" />
+      <div class="rt-name" style={{ color: p.color || t.color }}>
+        {p.name}
+      </div>
+      <div class="rt-tier">
+        {t.name} · {ITEM_KIND_NAME[p.kind]}
+        {p.radius > 0 ? ` · 半径 ${p.radius} 格` : ''}
+      </div>
+      <div class="rt-desc">
+        <RichText text={p.desc} />
+      </div>
+    </div>
+  );
+}
+
+export function PotionChoice({ p }: { s: RunState; p: Extract<Pending, { type: 'potion_choice' }>; v?: number }) {
+  return (
+    <div class="screen choice-screen">
+      <div class="choice-head">
+        <div class="choice-title title-shadow">{p.title ?? '选择特供道具'}</div>
+        <div class="subtle">战斗中点击下方物品栏（或按对应数字键）使用道具。</div>
+      </div>
+      <div class="relic-tiles">
+        {p.choices.map((id) => (
+          <PotionTile key={id} id={id} onPick={() => act((r) => choosePotion(r, id))} />
+        ))}
+        {!p.choices.length && <div class="subtle">这里空空如也……</div>}
+      </div>
+      <div class="choice-foot">{(p.skippable || !p.choices.length) && <Btn onClick={() => act((r) => choosePotion(r, null))}>跳过</Btn>}</div>
+    </div>
+  );
+}
+

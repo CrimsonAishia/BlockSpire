@@ -124,6 +124,7 @@ export type Pending =
     }
   | { type: 'card_decide'; mob: string; star: 1; dust: number }
   | { type: 'relic_choice'; title: string; choices: string[]; skippable: boolean }
+  | { type: 'potion_choice'; title?: string; choices: string[]; skippable: boolean }
   | { type: 'shop'; stock: ShopItem[]; reroll: number; /** Villager orders left in this shop. */ orders?: number }
   | { type: 'event'; id: string; result?: string; resultTone?: 'good' | 'bad' | 'neutral'; data: Record<string, number> }
   | { type: 'rest'; actions: number; done: string[] }
@@ -1768,6 +1769,21 @@ export function chooseRelic(s: RunState, id: string | null) {
   if (p.type !== 'relic_choice' && p.type !== 'boss_reward') return;
   s.queue.shift();
   if (id) gainRelic(s, id);
+}
+
+export function choosePotion(s: RunState, id: string | null) {
+  const p = s.queue[0];
+  if (p.type !== 'potion_choice') return;
+  s.queue.shift();
+  if (id) {
+    if (s.potions.length < s.potionSlots) {
+      s.potions.push(id);
+    } else {
+      s.potions[s.potions.length - 1] = id;
+    }
+    const name = POTION_MAP[id]?.name ?? id;
+    toast(s, `获得道具【${name}】`, 'good');
+  }
 }
 
 // ───────────────────────── shop ─────────────────────────

@@ -1251,10 +1251,10 @@ export class Battle {
     if (u.atkTimer < 0) u.atkTimer = 0;
     const smart = this.smart[u.team];
     if (smart && TAC.dodge && (dodgeStep(this, u, dt) || retreatStep(this, u, dt) || kiteStep(this, u, dt))) return;
-    u.retarget -= dt;
-    if (!u.target || !u.target.alive || u.retarget <= 0 || u.target.invisT > 0 || !this.canReach(u, u.target)) {
-      const specialized = b.target ? b.target(u, this) : null;
-      u.target = (u.speed <= 0 ? specialized : (specialized ?? this.findTarget(u)));
+    const targetOutOfReach = u.speed <= 0 && !!u.target && Math.hypot(u.target.x - u.x, u.target.y - u.y) > this.reach(u, u.target);
+    if (!u.target || !u.target.alive || u.retarget <= 0 || u.target.invisT > 0 || !this.canReach(u, u.target) || targetOutOfReach) {
+      const specialized = b.target ? b.target(u, this) : undefined;
+      u.target = specialized !== undefined ? specialized : (u.speed <= 0 ? this.findTarget(u, (e) => Math.hypot(e.x - u.x, e.y - u.y) <= this.reach(u, e)) : this.findTarget(u));
       u.retarget = 0.35 + this.rng.next() * 0.2;
     }
     // Ranged units on their side's built platform hold it: they shoot whatever is in range

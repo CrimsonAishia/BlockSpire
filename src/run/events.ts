@@ -861,6 +861,7 @@ EVENTS.push(
             tone: 'good',
             then: [{
               type: 'potion_choice',
+              title: '商人的特供道具',
               choices: ['death_cap_mushroom', 'iron_hide_charm', 'light_feather'],
               skippable: false,
             }],

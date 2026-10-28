@@ -6,7 +6,7 @@ import { MapView } from './MapView.tsx';
 import { BattleStage } from './BattleStage.tsx';
 import { RunCrateOpen, StarterView, CrateChoice, CardDecide, StarterStrategyView, StarterPickView } from './RunCrates.tsx';
 import { BattleResultView } from './BattleResultView.tsx';
-import { RelicChoice, BossReward } from './RelicChoice.tsx';
+import { RelicChoice, BossReward, PotionChoice } from './RelicChoice.tsx';
 import { ShopView } from './ShopView.tsx';
 import { EventView } from './EventView.tsx';
 import { RestView, PickCardView, EnchantChoiceView, MessageView } from './MiscViews.tsx';
@@ -85,6 +85,9 @@ export function RunView() {
         break;
       case 'relic_choice':
         body = <RelicChoice s={s} p={p} v={v} />;
+        break;
+      case 'potion_choice':
+        body = <PotionChoice s={s} p={p} v={v} />;
         break;
       case 'boss_reward':
         body = <BossReward s={s} p={p} v={v} />;

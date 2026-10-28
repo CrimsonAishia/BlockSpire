@@ -1023,8 +1023,7 @@ export const BEHAVIORS: Record<string, Behavior> = {
         return;
       }
       // Nothing in reach (it cannot walk): teleport toward the fight instead of idling.
-      const r = b.rangeOf(u);
-      const inRange = foes.some((e) => dist(u, e) <= r + e.radius);
+      const inRange = foes.some((e) => dist(u, e) <= b.reach(u, e));
       u.ab.idle = inRange ? 0 : u.ab.idle + 0.5;
       if (u.ab.idle >= 1 && u.ab.tpcd <= 0) shulkerHop(u, b, foes, 0.7);
     },
