@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { MOBS, PLAYABLE_MOBS, RARITY_INFO, ROLE_INFO, mobDef, starStatMul, unitCount } from '../../data/mobs.ts';
-import { DEVELOPMENT_RULES, DIFFICULTY_POLICIES } from '../../data/difficulty.ts';
+import { DIFFICULTY_POLICIES } from '../../data/difficulty.ts';
 import { CRATES } from '../../data/crates.ts';
 import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_MAP, RELIC_TIER_INFO, COMMANDER_MAP } from '../../data/items.ts';
 import { COMMANDERS } from '../../data/commanders.ts';
@@ -562,7 +562,6 @@ const RULES: [string, string[]][] = [
   ['不祥之兆（难度）', [
     '普通难度通关后解锁「不祥之兆」挑战等级 I~V，参考杀戮尖塔的进阶：每一级保留之前的全部规则，再加上新的规则。',
     'I 增加精英与编队协同；II 精英获得词缀与战术；III 开局少 1 颗心、商店涨价 10%，第二幕起出现必经精英；IV 物价上涨至 15%，后续精英固定双战术；V 首领半血狂暴，第三幕起双精英闸门与终局连战。',
-    DEVELOPMENT_RULES,
     `不祥 III／IV／V 在统领原有资金之外，分别提供一次性起始补助 ${DIFFICULTY_POLICIES.slice(3).map((p) => p.startingEmeraldBonus).join('／')} 绿宝石。难度不会提高开箱幸运；各级敌方强化与通关积分倍率见出发界面。每位统领分别记录最高通关难度，并获得铜（I–II）、银（III–IV）、金（V）统领边框。`,
   ]],
   ['筛界（第四维度）', [

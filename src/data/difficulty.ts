@@ -358,5 +358,3 @@ export function act1FormationPolicy(row: number, kind: 'battle' | 'elite' | 'bos
     threatBudget: (6 + 0.35 * Math.max(0, Math.min(12, row))) * budgetMul * (elite ? 1.2 : 1),
   };
 }
-
-export const DEVELOPMENT_RULES = '第一幕发展期：普通战前四层全一星；中段至多一张二星，后段三卡至多两张二星、四卡至多一张二星；普通战无红金卡。前四层无附魔，此后至多一张一级附魔。难度额外属性在第一幕释放 50%–70%，第二幕释放 75%–90%，第三幕起完整生效。不祥 III–V 至少有一条无精英路线能在第 3–5 层购物。';

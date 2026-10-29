@@ -1,6 +1,5 @@
 import { useState } from 'preact/hooks';
 import { COMMANDERS, COMMANDER_MAP, OMENS, RELICS, difficultyPolicy } from '../../data/items.ts';
-import { DEVELOPMENT_RULES } from '../../data/difficulty.ts';
 import { SKILL_INFO } from '../../data/commanders.ts';
 import { url } from '../assets.ts';
 import { Btn, Emerald, HeartIcon, RelicTipContent, Tip } from '../components/common.tsx';
@@ -143,7 +142,7 @@ export function NewRun() {
                       <span class="omen-badge-new">本级新增</span>
                       <div class="omen-new-list">
                         {policy.newRules.map((r) => (
-                          <span key={r} class="omen-rule-item">☠ {r}</span>
+                          <span key={r} class="omen-rule-item" title={r}>☠ {r}</span>
                         ))}
                       </div>
                     </div>
@@ -154,7 +153,6 @@ export function NewRun() {
                       {policy.startingEmeraldBonus > 0 && <span class="omen-stat-chip gold">💎 起始补助 <b>+{policy.startingEmeraldBonus}</b></span>}
                       <span class="omen-stat-sub">通关后解锁下一级并点亮该统领勋标</span>
                     </div>
-                    <div class="omen-stat-sub">{DEVELOPMENT_RULES}</div>
                   </>
                 )}
               </div>
