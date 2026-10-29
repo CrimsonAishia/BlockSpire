@@ -34,7 +34,7 @@ export function tacticTargets(b: Battle, team: 0 | 1, p: Point, target: Unit | n
   return { ok: units.length > 0, reason: units.length ? undefined : ally ? '范围内没有可用的友军' : '请选择合法的敌方目标', units };
 }
 
-/** Safe ground route; never order a retreat through walls, cliffs or dangerous liquids. */
+/** Safe route only; previewRetreat validates command direction before reserving and committing a cast. */
 export function retreatPath(b: Battle, u: Unit, p: Point, maxDistance: number): Point[] | null {
   if (!validPoint(p) || (u.team === 0 ? p.x >= ARENA_W / 2 : p.x < ARENA_W / 2)) return null;
   const t = b.terrain;
@@ -70,6 +70,10 @@ export function retreatPath(b: Battle, u: Unit, p: Point, maxDistance: number): 
 }
 
 export function previewRetreat(b: Battle, units: Unit[], p: Point): TacticPreview {
+  // Forward is fixed by team, never by the unit's current facing. Check every selected unit.
+  if (units.some(u => (p.x - u.x) * (u.team === 0 ? 1 : -1) > 1e-6)) {
+    return { ok: false, reason: '集合点必须在所有选中友军的后方或侧方，不能向前进攻', units };
+  }
   const range = b.sides[units[0]?.team ?? 0].plan.tactic?.variant === 'cover' ? 110 : 140;
   const ok = units.length > 0 && units.every(u => u.alive && retreatPath(b, u, p, range));
   return { ok, reason: ok ? undefined : '集合点须在我方安全地面，且所有选中友军都能在撤退距离内到达', units };

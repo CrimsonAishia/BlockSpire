@@ -1051,7 +1051,7 @@ export function Arena3DView({
       {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0 || !!tacticDef) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方集合点：黄色圈为选中友军，旗帜为目的地；绿色可达，红色不可达' + (touchUI && pending ? ' · 再点圈内确认' : '') : '① 点击选择要撤退的友军（此步不消耗军令）') : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
+          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : '① 点击选择要撤退的友军（此步不消耗军令）') : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面{touchUI ? '' : '（Q / E）'}</div>}
           {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
             军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点

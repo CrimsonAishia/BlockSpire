@@ -42,7 +42,7 @@ export const TACTIC_DEFS: Record<TacticId, TacticDef> = {
     name: '战术撤退',
     category: 'defense',
     icon: 'skill_tactic_horn',
-    desc: '半径 120 范围内最多 4 个友军：向所选集结点撤退，移速 +40%，持续 3 秒。撤退期间专心跑位不攻击。',
+    desc: '半径 120 范围内最多 4 个友军：向己方安全区域内、所有选中友军后方或侧方的集结点撤退，不能向前进攻；移速 +40%，持续 3 秒。撤退期间专心跑位不攻击。',
     windup: 0.6,
     radius: 120,
     maxTargets: 4,
