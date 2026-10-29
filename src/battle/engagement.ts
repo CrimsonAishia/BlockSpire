@@ -17,29 +17,52 @@ function board(b: Battle) {
 const location = (c: Claim): Point => ({ x: c.target.x + Math.cos(c.angle) * c.radius, y: c.target.y + Math.sin(c.angle) * c.radius });
 export function releaseContact(b: Battle, u: Unit) { boards.get(b)?.delete(u); }
 
+function contactRadius(b: Battle, u: Unit, t: Unit): number {
+  const margin = Math.max(4, Math.min(12, b.moveSpeedOf(t) * 0.2));
+  return Math.max((u.radius + t.radius) * 0.96, b.reach(u, t) - margin);
+}
+
+/** Follow a reserved angle every step; only choosing a new angle is rate limited. */
+export function followContact(b: Battle, u: Unit, t: Unit): Point | null {
+  const c = boards.get(b)?.get(u);
+  if (!c || c.target !== t || c.until < b.t) return null;
+  c.radius = contactRadius(b, u, t);
+  const p = location(c);
+  return canStand(b, u, p.x, p.y) ? p : null;
+}
+
+/** Unreserved recovery approach. Physical steering still prevents pushing through bodies. */
+export function contactApproach(b: Battle, u: Unit, t: Unit): Point | null {
+  const angle = Math.atan2(u.y - t.y, u.x - t.x), radius = contactRadius(b, u, t);
+  const p = { x: t.x + Math.cos(angle) * radius, y: t.y + Math.sin(angle) * radius };
+  return canStand(b, u, p.x, p.y) ? p : null;
+}
+
 export function contactGoal(b: Battle, u: Unit, t: Unit, renew = false, accept: (p: Point) => boolean = () => true): Point | null {
   const claims = board(b), old = claims.get(u);
   const nearby = neighbors(b, t, Math.max(110, b.reach(u, t) + u.radius * 2));
   const free = (p: Point) => {
     if (!accept(p) || !canStand(b, u, p.x, p.y)) return false;
     for (const [a, c] of claims) {
-      if (a === u || a.flying !== u.flying) continue;
+      if (a === u || a.team !== u.team || a.flying !== u.flying) continue;
       const q = location(c);
       if (Math.hypot(q.x - p.x, q.y - p.y) < (u.radius + a.radius) * 0.98 + 2) return false;
     }
     for (const a of nearby) {
       if (a === u || a === t || a.flying !== u.flying || a.ghost) continue;
-      // Approaching allies will yield; settled fighters and enemies occupy real space.
-      if ((a.team !== u.team || !a.moving) && Math.hypot(a.x - p.x, a.y - p.y) < (u.radius + a.radius) * 0.94) return false;
+      // Waiting allies must not mutually block every reservation before combat starts.
+      const fighting = a.target?.alive && Math.hypot(a.x - a.target.x, a.y - a.target.y) <= b.reach(a, a.target);
+      if ((a.team !== u.team || a.speed <= 0 || (!a.moving && fighting)) && Math.hypot(a.x - p.x, a.y - p.y) < (u.radius + a.radius) * 0.94) return false;
     }
     return true;
   };
   if (!renew && old?.target === t) {
+    old.radius = contactRadius(b, u, t);
     const p = location(old);
     if (free(p) && old.radius <= b.reach(u, t)) { old.until = b.t + 0.75; return p; }
   }
   claims.delete(u);
-  const radius = Math.max((u.radius + t.radius) * 1.02, b.reach(u, t) - 2);
+  const radius = contactRadius(b, u, t);
   const count = Math.max(6, Math.min(24, Math.floor(2 * Math.PI * radius / (u.radius * 2 + 4))));
   let best = Infinity, chosen: Claim | null = null;
   for (let k = -1; k < count; k++) {

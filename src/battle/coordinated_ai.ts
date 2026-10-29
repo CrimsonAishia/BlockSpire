@@ -3,7 +3,7 @@ import type { Battle } from './sim.ts';
 import type { Behavior } from './ai.ts';
 import type { Unit } from './unit.ts';
 import { TAC, retreatStep } from './tactics.ts';
-import { contactGoal, releaseContact } from './engagement.ts';
+import { contactApproach, contactGoal, followContact, releaseContact } from './engagement.ts';
 import { canStand, forgetRoute, planPath, type Point } from './navigation.ts';
 import { movePlanned } from './steering.ts';
 import { safetyStep } from './evasion.ts';
@@ -68,7 +68,15 @@ function makeBrain(b: Battle, u: Unit): Brain {
       if (u.atkTimer <= 0) { brain.attack(); return done('attack', true); }
       return State.FAILED;
     },
-    Move: () => move(b, u, brain) ? State.SUCCEEDED : State.FAILED,
+    Move: () => {
+      const moved = move(b, u, brain), t = u.target;
+      // Resolve contact before the target gets its next movement step.
+      if (!u.isRanged && u.atkTimer <= 0 && t?.alive && t.team !== u.team && b.canReach(u, t)
+        && Math.hypot(t.x - u.x, t.y - u.y) <= b.reach(u, t) && b.canSee(u, t)) {
+        brain.attack(); return done('attack', true);
+      }
+      return moved ? State.SUCCEEDED : State.FAILED;
+    },
     Wait: () => { u.moving = false; return done('wait', true); },
   }, { getDeltaTime: () => brain.dt, random: () => b.rng.next() });
   brains.set(u, brain);
@@ -91,11 +99,17 @@ function move(b: Battle, u: Unit, brain: Brain): boolean {
   if (b.t - brain.checked >= 0.6) {
     const gap = brain.goal ? Math.hypot(brain.goal.x - u.x, brain.goal.y - u.y) : distance;
     const progress = Math.hypot(u.x - brain.x, u.y - brain.y);
-    brain.stalled = progress < 3 && gap > 8 ? brain.stalled + b.t - brain.checked : 0;
+    const needsContact = distance > b.reach(u, t) || !b.canSee(u, t);
+    brain.stalled = progress < 3 && (gap > 1 || needsContact) ? brain.stalled + b.t - brain.checked : 0;
     brain.x = u.x; brain.y = u.y; brain.checked = b.t;
   }
   const stuck = brain.stalled >= 0.6;
-  if (stuck) { forgetRoute(u); releaseContact(b, u); releaseFiringSpot(b, u); brain.goal = null; brain.stalled = 0; }
+  if (stuck) {
+    if (brain.goal && Math.hypot(brain.goal.x - u.x, brain.goal.y - u.y) < 8) {
+      brain.rejected.push({ point: { ...brain.goal }, until: b.t + 1.5, version: b.terrain.ver });
+    }
+    forgetRoute(u); releaseContact(b, u); releaseFiringSpot(b, u); brain.goal = null; brain.stalled = 0;
+  }
   if (u.isRanged) {
     if (!TAC.ranged) { brain.action = 'approach'; return distance > b.reach(u, t) && moveTo(b, u, t, brain); }
     const visible = b.canSee(u, t);
@@ -117,7 +131,8 @@ function move(b: Battle, u: Unit, brain: Brain): boolean {
     if (threatened(b, u)) return false;
   } else if (distance < b.reach(u, t) + 90) {
     if (due || stuck) brain.goal = contactGoal(b, u, t, stuck, p => accepted(b, brain, p));
-    if (!brain.goal && !brain.behavior.target && u.tauntT <= 0 && due) {
+    else brain.goal = followContact(b, u, t);
+    if (!brain.goal && !brain.behavior.target && u.tauntT <= 0 && (due || stuck)) {
       const candidates = [...b.live[(1 - u.team) as 0 | 1]].filter(e => e !== t && e.invisT <= 0 && b.canReach(u, e))
         .sort((a, c) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(c.x - u.x, c.y - u.y)).slice(0, 4);
       for (const other of candidates) {
@@ -128,12 +143,13 @@ function move(b: Battle, u: Unit, brain: Brain): boolean {
       }
     }
     brain.action = 'flank';
-    if (due) brain.nextPlan = b.t + 0.3 + (u.id % 4) / 30;
-    return brain.goal ? moveTo(b, u, brain.goal, brain) : false;
+    if (due || stuck) brain.nextPlan = b.t + 0.3 + (u.id % 4) / 30;
+    const goal = brain.goal ?? contactApproach(b, u, t);
+    return goal ? moveTo(b, u, goal, brain, 1, true) : false;
   }
   brain.action = 'approach';
   if (due) brain.nextPlan = b.t + 0.3 + (u.id % 4) / 30;
-  return moveTo(b, u, t, brain);
+  return moveTo(b, u, t, brain, 1, !u.isRanged);
 }
 
 function available(b: Battle, brain: Brain, target: Unit): boolean {
@@ -148,8 +164,8 @@ function accepted(b: Battle, brain: Brain, point: Point): boolean {
   return !brain.rejected.some(p => Math.hypot(p.point.x - point.x, p.point.y - point.y) < 18);
 }
 
-function moveTo(b: Battle, u: Unit, goal: Point, brain: Brain, mul = 1): boolean {
-  const result = movePlanned(b, u, goal, brain.dt, mul);
+function moveTo(b: Battle, u: Unit, goal: Point, brain: Brain, mul = 1, pursue = false): boolean {
+  const result = movePlanned(b, u, goal, brain.dt, mul, pursue);
   if (result.status !== 'unreachable' || !u.target) return result.moved;
   // A bad firing/contact spot does not establish that the whole enemy is unreachable.
   if (goal !== u.target && Math.hypot(u.target.x - goal.x, u.target.y - goal.y) > 1) {

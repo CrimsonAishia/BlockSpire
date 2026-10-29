@@ -47,13 +47,13 @@ export function moveToward(b: Battle, u: Unit, goal: Point, dt: number, mul = 1)
   return movePlanned(b, u, goal, dt, mul).moved;
 }
 
-export function movePlanned(b: Battle, u: Unit, goal: Point, dt: number, mul = 1): { moved: boolean; status: PathStatus } {
+export function movePlanned(b: Battle, u: Unit, goal: Point, dt: number, mul = 1, pursue = false): { moved: boolean; status: PathStatus } {
   const path = planPath(b, u, goal), next = path.point;
   if (!next) { u.moving = false; return { moved: false, status: path.status }; }
-  return { moved: steerTo(b, u, next, dt, mul), status: path.status };
+  return { moved: steerTo(b, u, next, dt, mul, pursue && Math.hypot(next.x - goal.x, next.y - goal.y) < 1), status: path.status };
 }
 
-export function steerTo(b: Battle, u: Unit, goal: Point, dt: number, mul = 1): boolean {
+export function steerTo(b: Battle, u: Unit, goal: Point, dt: number, mul = 1, pursue = false): boolean {
   if (u.stunned || u.speed <= 0 || dt <= 0) { u.moving = false; return false; }
   const distance = Math.hypot(goal.x - u.x, goal.y - u.y);
   if (distance < 1) { u.moving = false; return false; }
@@ -64,6 +64,8 @@ export function steerTo(b: Battle, u: Unit, goal: Point, dt: number, mul = 1): b
   d.arrive.target.set(goal.x, 0, goal.y);
   d.arrive.calculate(v, d.force);
   d.force.add(v.velocity);
+  // A moving contact is a pursuit goal: slowing down before reaching it loses every swing.
+  if (pursue) d.force.set((goal.x - u.x) / distance * speed, 0, (goal.y - u.y) / distance * speed);
   const arriveSpeed = Math.min(speed, d.force.length());
   const nearby = neighbors(b, u, Math.max(80, u.radius * 3));
   v.neighbors.length = 0;

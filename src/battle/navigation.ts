@@ -82,7 +82,15 @@ export function planPath(b: Battle, u: Unit, goal: Point, detail = false): PathR
     route = { goal: { ...goal }, start: { x: u.x, y: u.y }, points, remaining, at: 0, until: b.t + 0.9, version: b.terrain.ver, immunity };
     routes.set(u, route);
   }
-  while (route.at < route.points.length && Math.hypot(route.points[route.at].x - u.x, route.points[route.at].y - u.y) < 7) route.at++;
+  const end = route.points.length - 1;
+  if (end >= 0 && Math.hypot(route.goal.x - goal.x, route.goal.y - goal.y) > 0.01) {
+    const from = end > 0 ? route.points[end - 1] : u;
+    if (!clearWalk(b, u, from, goal)) { routes.delete(u); return { status: 'pending' }; }
+    route.goal = { ...goal }; route.points[end] = { ...goal };
+    route.at = Math.min(route.at, end);
+    for (let i = end - 1; i >= 0; i--) route.remaining[i] = route.remaining[i + 1] + travelCost(b, u, route.points[i], route.points[i + 1]);
+  }
+  while (route.at < route.points.length && Math.hypot(route.points[route.at].x - u.x, route.points[route.at].y - u.y) < (route.at === route.points.length - 1 ? 1 : 7)) route.at++;
   if (route.at >= route.points.length) return { status: route.points.length ? 'arrived' : 'unreachable' };
   // Skip redundant corners only when the whole segment is safe.
   while (route.at + 1 < route.points.length) {
