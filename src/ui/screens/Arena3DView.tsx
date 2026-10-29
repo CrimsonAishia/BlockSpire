@@ -8,9 +8,10 @@ import { ARENA_W } from '../../battle/unit.ts';
 import { tacticTargets, previewRetreat } from '../../battle/tactic_targets.ts';
 import { canTame, type SkillKind } from '../../battle/skills.ts';
 import { itemRadius } from '../../battle/items.ts';
+import { formatTacticCopy } from '../tactic-copy.ts';
 import { ITEM_MAP } from '../../data/items.ts';
 import { SKILL_INFO, type SkillId } from '../../data/commanders.ts';
-import { tacticConfig, ORDER_REFILL_AT, ORDER_TOTAL, TACTIC_VARIANTS, cannonCost, type TacticId } from '../../data/tactics.ts';
+import { tacticConfig, ORDER_REFILL_AT, ORDER_TOTAL, TACTIC_VARIANTS, COMMANDER_VARIANTS, TACTIC_GUIDE, cannonCost, type TacticId } from '../../data/tactics.ts';
 import { Emerald, PotionTipContent, Stars, Tip, itemIcon } from '../components/common.tsx';
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
@@ -166,6 +167,7 @@ export function Arena3DView({
   const [unitHovered, setUnitHovered] = useState(false);
   const slots = [...items, ...temp];
   const skill = config.sides[0].skill;
+  const mainVariant = Object.values(COMMANDER_VARIANTS).flat().find(v => v.id === config.sides[0].mainVariant);
   const skillKinds = skill ? SKILL_SLOTS[skill.id] : [];
   const speed = settings.value.speed;
   const R = useRef({
@@ -1051,7 +1053,7 @@ export function Arena3DView({
       {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0 || !!tacticDef) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : '① 点击选择要撤退的友军（此步不消耗军令）') : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
+          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面{touchUI ? '' : '（Q / E）'}</div>}
           {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
             军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点
@@ -1072,10 +1074,11 @@ export function Arena3DView({
                           <div class="tt-title" style={{ color: info.color }}>
                             {info.name}
                           </div>
-                          <div class="tt-line">{info.desc}</div>
+                          <div class="tt-line">{mainVariant ? '基础效果：' : ''}{info.desc}</div>
+                          {mainVariant && <div class="tt-line">当前精进 · {mainVariant.name}：{formatTacticCopy(mainVariant.desc, config.sides[0].act ?? 1)}</div>}
                           {k === 'golem' && <div class="tt-sec tt-gold">费用：{golemCost ? `${golemCost} 绿宝石（与钱炮共用战内余额）` : '免费（钟楼）'}</div>}
                           {k === 'tame' && <div class="tt-sec tt-gray">可驯服的敌人头顶会出现橙色爱心。首领和建筑不能驯服。</div>}
-                          <div class="tt-sec tt-gray">统领技能 · 本场剩余 {skillLeft} 次</div>
+                          <div class="tt-sec tt-gray">统领主技能 · 本场剩余 {skillLeft} 次</div>
                         </div>
                       )}
                     >
@@ -1104,14 +1107,15 @@ export function Arena3DView({
                         {tacticDef.name}
                         {tacticVariant && <span style={{ color: '#ffeaa7', marginLeft: 6 }}>[{tacticVariant.name}]</span>}
                       </div>
-                      <div class="tt-line">{tacticDef.desc}</div>
-                      {tacticVariant && <div class="tt-line">{tacticVariant.desc}</div>}
+                      <div class="tt-line">{tacticVariant ? '基础效果：' : ''}{formatTacticCopy(tacticDef.desc, config.sides[0].act ?? 1)}</div>
+                      {tacticVariant && <div class="tt-line">当前精进（覆盖对应基础数值）：{formatTacticCopy(tacticVariant.desc, config.sides[0].act ?? 1)}</div>}
                       <div class="tt-sec tt-gold">军令点数：当前可用 {ordersLeft}，本场共 {ORDER_TOTAL} · 前摇 {tacticDef.windup}s</div>
                       {tacticCd > 0 && <div class="tt-sec tt-yellow">战术冷却中：剩余 {tacticCd.toFixed(1)} 秒</div>}
                       {tacticCost > 0 && (
                         <div class="tt-sec tt-gold">单发费用：{tacticCost} 绿宝石（战内消耗，本场已耗 {hud?.cannonSpent ?? 0}）</div>
                       )}
-                      <div class="tt-sec tt-gray">副战术 · 消耗 1 点军令，共享 8 秒冷却</div>
+                      <div class="tt-sec tt-gray">{TACTIC_GUIDE.orders}</div>
+                      <div class="tt-line tt-gray">{TACTIC_GUIDE.casting}</div>
                     </div>
                   )}
                 >
@@ -1219,7 +1223,7 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
     return `点击战场投放「${def?.name}」${def?.target === 'own' ? '（只能放在我方半场）' : ''} · ${cancel}`;
   }
   if (aim.k === 'tactic') {
-    return `点击战场释放副战术（消耗 1 点军令）· ${cancel}`;
+    return `点击指定目标，确认后开始施放前摇（消耗 1 点军令）· ${cancel}`;
   }
   switch (aim.s) {
     case 'wall':

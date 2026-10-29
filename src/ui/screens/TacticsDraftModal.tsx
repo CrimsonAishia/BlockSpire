@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
 import { chooseDraftTactic } from '../../run/run.ts';
-import { TACTIC_DEFS, type TacticId } from '../../data/tactics.ts';
+import { TACTIC_DEFS, TACTIC_GUIDE, type TacticId } from '../../data/tactics.ts';
 import { url } from '../assets.ts';
 import { Btn } from '../components/common.tsx';
 import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
+import { formatTacticCopy } from '../tactic-copy.ts';
 
 type DraftPending = Extract<Pending, { type: 'tactics_draft' }>;
 
@@ -33,7 +34,8 @@ export function TacticsDraftModal({ s, p }: { s: RunState; p: DraftPending; v?: 
       <div class="choice-head">
         <div class="choice-title title-shadow">{title}</div>
         <div class="subtle" style={{ fontSize: 16 }}>
-          挑选一项统领副战术。每位统领至多收藏 3 项副战术，每场战斗前可自由切换装备 1 项。
+          {TACTIC_GUIDE.loadout}
+          <div>{TACTIC_GUIDE.orders}</div>
         </div>
       </div>
 
@@ -83,7 +85,7 @@ export function TacticsDraftModal({ s, p }: { s: RunState; p: DraftPending; v?: 
                 {isOffense ? '⚔ 进攻型战术' : '🛡 防守型战术'} · 前摇 {tdef.windup}s
               </div>
               <div class="rt-desc" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
-                {tdef.desc}
+                {formatTacticCopy(tdef.desc, s.act)}
               </div>
             </div>
           );

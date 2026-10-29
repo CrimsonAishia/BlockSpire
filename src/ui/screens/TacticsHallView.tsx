@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
 import { studyHallTactic, refineSkillVariant, leaveHall } from '../../run/run.ts';
-import { TACTIC_DEFS, type TacticId } from '../../data/tactics.ts';
+import { TACTIC_DEFS, TACTIC_GUIDE, type TacticId } from '../../data/tactics.ts';
 import { url } from '../assets.ts';
 import { Btn } from '../components/common.tsx';
 import { act } from './RunView.tsx';
 import { sfx } from '../../audio/audio.ts';
+import { formatTacticCopy } from '../tactic-copy.ts';
 
 type HallPending = Extract<Pending, { type: 'tactics_hall' }>;
 
@@ -117,7 +118,8 @@ export function TacticsHallView({ s, p }: { s: RunState; p: HallPending; v?: num
         {tab === 'study' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div class="subtle" style={{ fontSize: 14 }}>
-              从殿堂战术秘录中选择领悟一项副战术。已有战术满 3 项时需指定替换一项：
+              免费选择 1 项新副战术，满库时需替换旧战术；完成后本次殿堂服务结束。
+              <div>{TACTIC_GUIDE.orders}</div>
             </div>
 
             {p.offer.studyChoices.length === 0 ? (
@@ -171,7 +173,7 @@ export function TacticsHallView({ s, p }: { s: RunState; p: HallPending; v?: num
                         {isOffense ? '⚔ 进攻战术' : '🛡 防守战术'} · 前摇 {tdef.windup}s
                       </div>
                       <div class="rt-desc" style={{ fontSize: 12, lineHeight: 1.4, marginTop: 6 }}>
-                        {tdef.desc}
+                        {formatTacticCopy(tdef.desc, s.act)}
                       </div>
                     </div>
                   );
@@ -190,7 +192,7 @@ export function TacticsHallView({ s, p }: { s: RunState; p: HallPending; v?: num
                 }}
               >
                 <div style={{ color: '#ff7675', fontSize: 13, marginBottom: 6 }}>
-                  ⚠ 当前战术库已满（3/3），请选择替换哪项旧战术：
+                  ⚠ 战术库已满（3/3）：请选择被替换的旧战术，其精进变体也会遗忘：
                 </div>
                 <div class="row gap8 center wrap">
                   {tState.tactics.map((tid) => {
@@ -244,7 +246,7 @@ export function TacticsHallView({ s, p }: { s: RunState; p: HallPending; v?: num
         {tab === 'refine' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div class="subtle" style={{ fontSize: 14 }}>
-              选择一项统领身份本领或已收藏副战术，从两项互斥精进变体中选择其一。每个技能至多激活一项变体：
+              选择主技能或已有副战术，再选 1 个精进变体。精进会消耗本次殿堂服务；改选将覆盖原变体，收益与代价同时生效，未提及的基础规则保留。
             </div>
 
             {/* 目标技能选择 */}
@@ -337,7 +339,7 @@ export function TacticsHallView({ s, p }: { s: RunState; p: HallPending; v?: num
                         {v.name}
                       </div>
                       <div class="subtle" style={{ fontSize: 13, lineHeight: 1.5 }}>
-                        {v.desc}
+                        {formatTacticCopy(v.desc, s.act)}
                       </div>
                     </div>
                   );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
 import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy, equipTactic, signWager, cancelWager, markBattleStarted, chooseBrew } from '../../run/run.ts';
-import { TACTIC_DEFS, TACTIC_VARIANTS, wagerStake, wagerProfit, type TacticId } from '../../data/tactics.ts';
+import { TACTIC_DEFS, TACTIC_VARIANTS, TACTIC_GUIDE, cannonCost, tacticConfig, wagerStake, wagerProfit, type TacticId } from '../../data/tactics.ts';
 import { mobDef, unitCount, RARITY_INFO } from '../../data/mobs.ts';
 import { sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
@@ -13,6 +13,7 @@ import { act } from './RunView.tsx';
 import { overlay } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
 import { RichText } from '../components/rich.tsx';
+import { formatTacticCopy } from '../tactic-copy.ts';
 import { Hint } from '../components/hints.tsx';
 import { ComboList } from './TeamPanel.tsx';
 import { AFFIX_MAP, ENCHANT_MAP, ITEM_MAP, enchantName } from '../../data/items.ts';
@@ -434,7 +435,10 @@ function DeployHud({
                         {tdef?.name}
                         {variant && <span style={{ color: '#ffeaa7', marginLeft: 6 }}>[{variant.name}]</span>}
                       </div>
-                      <div class="tt-line">{tdef?.desc}{variant ? `；${variant.desc}` : ''}</div>
+                      <div class="tt-line">{variant ? '基础效果：' : ''}{formatTacticCopy(tdef?.desc ?? '', s.act)}</div>
+                      {variant && <div class="tt-line">当前精进（覆盖对应基础数值）：{formatTacticCopy(variant.desc, s.act)}</div>}
+                      {tdef && <div class="tt-sec tt-gray">前摇 {tacticConfig(tdef.id, vId).windup} 秒；{TACTIC_GUIDE.orders}</div>}
+                      {tid === 'cannon' && <div class="tt-sec tt-gold">本幕每发实际费用：{cannonCost(s.act, vId)} 绿宝石</div>}
                       <div class="tt-sec tt-gold">{p.started || p.attempt > 1 || p.endgamePhase2 ? '本节点战斗装备已锁定' : isEquipped ? '✓ 当前已装备出战' : '点击切换装备此战术'}</div>
                     </div>
                   )}
@@ -465,17 +469,18 @@ function DeployHud({
             {s.tacticsState.wagers?.active ? (
               <div class="row gap8 center" style={{ background: 'rgba(255, 215, 0, 0.15)', padding: '4px 10px', borderRadius: 4, border: '1px solid #ffd700' }}>
                 <span class="gold-t" style={{ fontSize: 13, fontWeight: 'bold' }}>
-                  📜 风投生效中（押金 {s.tacticsState.wagers.active.stake}，18s内获胜净赚 +{s.tacticsState.wagers.active.profit}）
+                  📜 合同已签（押金 {s.tacticsState.wagers.active.stake}；首次尝试 18 秒内胜利净赚 {s.tacticsState.wagers.active.profit}）
                 </span>
                 <button
                   class="btn"
+                  disabled={p.started || p.endgamePhase2}
                   style={{ padding: '2px 8px', fontSize: 12, background: 'rgba(214, 48, 49, 0.4)', borderColor: '#d63031', color: '#ff7675' }}
                   onClick={() => {
                     sfx('click');
                     act((r) => cancelWager(r));
                   }}
                 >
-                  取消签署
+                  {p.started || p.endgamePhase2 ? '押金已锁定' : '取消签署'}
                 </button>
               </div>
             ) : (
@@ -484,7 +489,7 @@ function DeployHud({
                   <div>
                     <div class="tt-title gold-t">风险投资合同（专长 B）</div>
                     <div class="tt-line">下注 {wagerStake(s.act)} 绿宝石。若在 18 秒内首次尝试获胜，返还本金并净赚 {wagerProfit(s.act)} 绿宝石！</div>
-                    <div class="tt-sec tt-red">其他结果（超时、失败、重试）将损失本金。</div>
+                    <div class="tt-sec tt-red">超时或失败将损失本金。只能在首次尝试开战前签署；开战后不能撤押，连续阶段合计计时。</div>
                     <div class="tt-sec tt-gray">每幕至多签署 2 次（当前已签 {s.tacticsState?.wagers?.act === s.act ? s.tacticsState.wagers.count : 0}/2 次）。</div>
                   </div>
                 )}

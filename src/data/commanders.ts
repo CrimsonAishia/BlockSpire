@@ -15,7 +15,7 @@ export interface CommanderDef {
   /** One line on how this commander wins. */
   style: string;
   /** Battle skill (hotbar). */
-  skill: { id: SkillId; name: string; desc: string; charges: number };
+  skill: { id: SkillId; name: string; summary: string; desc: string; charges: number };
   /** What changes on the map / in shops. */
   mechanic?: { name: string; desc: string };
   /** Plain passives. */
@@ -28,6 +28,7 @@ export const COMMANDERS: CommanderDef[] = [
     style: '地形流：砌墙把敌人引进窄口，给远程垫高台——让战场替你打仗。',
     skill: {
       id: 'build', name: '建造', charges: 4,
+      summary: '每场建造 4 次：筑墙挡敌、垫高远程，并为掩体附近的友军提供减伤；布阵时也能使用。',
       desc: '每场 4 次，布阵时就能建：「圆石墙」砌一道 3 格长、2 格高的墙，挡住敌人的行走和投射物（我方的箭能越墙射出）；「土台」把 3×3 区域垫高 2 格，站上去的远程会坚守高台、居高临下。紧挨己方墙壁或站在土台上的友军受到伤害 -20%。只能建在我方半场，不能把路完全堵死，墙会被爆炸炸毁。',
     },
     desc: ['初始 7 颗心、100 绿宝石：最皮实的统领，适合第一次游玩。', '每场战斗胜利额外获得 4 绿宝石。'],
@@ -38,7 +39,8 @@ export const COMMANDERS: CommanderDef[] = [
     style: '收服流：把打残的敌人拉进队伍，组出补给箱开不到的阵容。',
     skill: {
       id: 'tame', name: '驯服', charges: 1,
-      desc: '每场 1 次：点一个生命足够低的非首领敌人，它立刻倒戈为你作战。门槛：军规/受限 ≤60%，保密 ≤45%，隐秘/特殊 ≤30%；野兽再 +20%。',
+      summary: '每场驯服 1 个残血的非首领敌人，让它倒戈为你作战。',
+      desc: '每场 1 次：点一个生命足够低的非首领敌人，它立刻倒戈为你作战。门槛：军规/受限 ≤60%，保密 ≤45%，隐秘/特殊 ≤30%；野兽门槛再放宽 20 个百分点，最高 95%。驯服时自带回复 30% 最大生命，并清除常见异常；建筑不能驯服。',
     },
     mechanic: { name: '收服', desc: '战斗胜利时，被驯服的生物如果还活着，可以把它收为 ★1 卡牌（重复的会合成升星）。精英战的强敌也能收服。' },
     desc: ['开箱时品质升档几率 +10%。', '野兽单位生命与攻击力 +15%。'],
@@ -49,7 +51,8 @@ export const COMMANDERS: CommanderDef[] = [
     style: '经济流：钱就是战力——指定订购想要的生物，危急时花钱雇铁傀儡。',
     skill: {
       id: 'golem', name: '雇佣铁傀儡', charges: 1,
-      desc: '每场 1 次：花费绿宝石（第一幕 25，之后每幕 +15）在我方半场召唤一只村庄铁傀儡，本场有效。',
+      summary: '每场可雇佣 1 只铁傀儡支援战斗；第一幕费用 25 绿宝石，之后随幕数上涨。',
+      desc: '每场 1 次：花费绿宝石（第一幕 25，之后每幕 +15），在我方半场的安全地面召唤铁傀儡，本场有效。成功召唤即占用可用余额，与钱炮共用；未能召唤不扣费。',
     },
     mechanic: { name: '订购', desc: '商店多一个「订购」：从本幕补给箱的生物池里指定买一只（基础价格：军规 50 / 受限 85 / 保密 150，随幕数上涨并享受商店折扣），每家商店 1 次。' },
     desc: ['初始绿宝石 120。', '商店价格 -20%，每层结束获得 10% 利息（最多 15）。'],
@@ -60,7 +63,8 @@ export const COMMANDERS: CommanderDef[] = [
     style: '药剂流：每场都有免费药水，药效更强，异常状态伤害更高——靠道具运营取胜。',
     skill: {
       id: 'brew', name: '坩埚', charges: 1,
-      desc: '每场开战时熬好 1 瓶限定药水，出现在物品栏旁，只在本场可用，不占格子。',
+      summary: '每场获得 1 瓶免费的随机临时药水，不占物品格，仅限本场使用。',
+      desc: '每场战斗备好 1 瓶随机临时药水，在物品栏使用，不占库存格；连续首领阶段只保留未使用的份数，不重新熬制。',
     },
     mechanic: { name: '药剂学', desc: '你使用的药水效果 +20%，喷溅与滞留药水范围 +20%；友方中毒与燃烧伤害 +30%。' },
     desc: ['物品栏 +1，开局携带 2 瓶随机药水。'],
@@ -72,6 +76,6 @@ export const COMMANDER_MAP: Record<string, CommanderDef> = Object.fromEntries(CO
 export const SKILL_INFO: Record<string, { name: string; icon: string; color: string; desc: string }> = {
   wall: { name: '圆石墙', icon: 'skill_wall', color: '#9a9a9a', desc: '在我方半场砌一道 3 格长、2 格高的墙：挡住敌人的行走与投射物，我方的箭可以越墙射出；紧挨墙的友军受到伤害 -20%。' },
   platform: { name: '土台', icon: 'skill_platform', color: '#a07a4a', desc: '把 3×3 区域垫高 2 格：站上去的远程会坚守高台、居高临下，站在上面的友军受到伤害 -20%。' },
-  tame: { name: '驯服', icon: 'skill_tame', color: '#ff8a3d', desc: '点一个生命足够低的敌人，它立刻倒戈为你作战。' },
-  golem: { name: '雇佣铁傀儡', icon: 'skill_golem', color: '#d9d5cd', desc: '花费绿宝石，在我方半场召唤一只铁傀儡。' },
+  tame: { name: '驯服', icon: 'skill_tame', color: '#ff8a3d', desc: '点选残血敌人使其倒戈。基础门槛：军规/受限 ≤60%，保密 ≤45%，隐秘/特殊 ≤30%；野兽再放宽 20 个百分点，最高 95%。自带回复 30% 最大生命；首领和建筑不能驯服。' },
+  golem: { name: '雇佣铁傀儡', icon: 'skill_golem', color: '#d9d5cd', desc: '花费绿宝石，在我方半场安全地面召唤铁傀儡；费用与钱炮共用可用余额，仅本场有效。' },
 };

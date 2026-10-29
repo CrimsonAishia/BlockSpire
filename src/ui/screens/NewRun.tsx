@@ -43,6 +43,8 @@ export function NewRun() {
                 class={`cmd-card ${cmd === c.id ? 'on' : ''} ${ok ? '' : 'locked'} ${tier ? `tier-${tier}` : ''}`}
                 style={{ '--cc': c.color } as never}
                 disabled={!ok}
+                aria-label={ok ? `选择统领：${c.name}` : `未解锁统领：${c.title}`}
+                aria-pressed={cmd === c.id}
                 onClick={() => {
                   sfx('card_flip');
                   setCmd(c.id);
@@ -181,7 +183,7 @@ function CommanderDetail({ id }: { id: string }) {
     <div class="panel cmd-detail" style={{ '--cc': c.color } as never}>
       <div class="cd-col">
         <div class="cd-head">
-          <span class="cd-tag">统领技能</span>
+          <span class="cd-tag">初始主技能</span>
           {icons.map((k) => (
             <img key={k} class="pixelated" src={url.icon(SKILL_INFO[k].icon)} />
           ))}
@@ -189,7 +191,7 @@ function CommanderDetail({ id }: { id: string }) {
           <b style={{ color: c.color }}>{c.skill.name}</b>
         </div>
         <div class="cd-text">
-          <RichText text={c.skill.desc} />
+          <RichText text={c.skill.summary} />
         </div>
       </div>
       <div class="cd-col">

@@ -1,6 +1,8 @@
 import type { RunState } from '../../run/run.ts';
 import { COMMANDER_MAP, OMEN_SCALING, POTION_MAP, difficultyPolicy } from '../../data/items.ts';
 import { url } from '../assets.ts';
+import { COMMANDER_VARIANTS } from '../../data/tactics.ts';
+import { formatTacticCopy } from '../tactic-copy.ts';
 import { Emerald, Hearts, PotionTipContent, RelicSlot, Tip, itemIcon } from '../components/common.tsx';
 import { overlay } from '../store.ts';
 import { sfx } from '../../audio/audio.ts';
@@ -20,6 +22,7 @@ const ACT_DEFAULT_NAMES = ['', '主世界', '下界', '末地', '筛界', '遗�
 
 export function RunHud({ s }: { s: RunState }) {
   const cmd = COMMANDER_MAP[s.commander];
+  const mainVariant = COMMANDER_VARIANTS[s.commander]?.find(v => v.id === s.tacticsState?.variants[s.commander]);
   const floor = s.nodeId ? s.map.nodes[s.nodeId].row + 1 : 0;
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -39,6 +42,7 @@ export function RunHud({ s }: { s: RunState }) {
         <div>
           <div class="tt-title" style={{ color: cmd.color }}>{cmd.name} · {cmd.title}</div>
           {cmd.desc.map((d) => <div class="tt-line" key={d}>{d}</div>)}
+          {mainVariant && <div class="tt-sec">当前精进 · {mainVariant.name}：{formatTacticCopy(mainVariant.desc, s.act)}</div>}
           {(() => {
             const pol = difficultyPolicy(s.omen);
             return (

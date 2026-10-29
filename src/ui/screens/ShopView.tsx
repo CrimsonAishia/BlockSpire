@@ -70,8 +70,8 @@ function itemView(s: RunState, it: ShopItem) {
         tip: () => (
           <div>
             <div class="tt-title" style={{ color: '#e17055' }}>军令战术卷轴</div>
-            <div class="tt-line">购买后立即触发战术三选一。可在战斗中消耗军令施放。</div>
-            <div class="tt-sec tt-gray">每位统领至多收藏 3 项副战术，已满时可选择替换。</div>
+            <div class="tt-line">购买后立即从固定候选中选 1 项副战术；每场装备 1 项，在战斗中消耗军令施放。</div>
+            <div class="tt-sec tt-gray">本局最多收藏 3 项；满库必须替换旧战术，其精进变体也会遗忘。同店刷新不重抽候选或恢复已售卷轴。</div>
           </div>
         ),
       };

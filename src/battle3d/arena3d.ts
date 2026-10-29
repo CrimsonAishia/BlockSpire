@@ -2077,7 +2077,7 @@ export class Arena3D {
       if (flags.has(key)) continue;
       flags.add(key);
       ctx.fillStyle = point.valid ? '#69efb2' : '#ff7777';
-      ctx.fillText(point.valid ? '⚑ 集合点' : '× 不可达', dx, dy - 12);
+      ctx.fillText(point.valid ? '⚑ 集合点' : '× 不可用', dx, dy - 12);
       ctx.beginPath();
       ctx.arc(dx, dy, 9, 0, Math.PI * 2);
       ctx.stroke();
