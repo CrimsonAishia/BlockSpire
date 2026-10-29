@@ -4,7 +4,7 @@ import { effect } from '@preact/signals';
 import { Battle, DT, type BattleConfig, type BattleResult } from '../../battle/sim.ts';
 import type { Arena3D } from '../../battle3d/arena3d.ts';
 import { BLOCK, DEPLOY_COLS, FEATURE_NAME, GW, SURFACE_INFO, applyBuild, buildCells, clampToDeploy, cloneTerrain, isBlocked, isIndestructible, type BuildOrder, type Terrain } from '../../battle/terrain.ts';
-import { ARENA_W } from '../../battle/unit.ts';
+import { ARENA_W, type Unit } from '../../battle/unit.ts';
 import { tacticTargets, previewRetreat } from '../../battle/tactic_targets.ts';
 import { canTame, type SkillKind } from '../../battle/skills.ts';
 import { itemRadius } from '../../battle/items.ts';
@@ -197,6 +197,7 @@ export function Arena3DView({
     side: deploySide,
     lastMouse: null as null | { x: number; y: number },
     unitHovered: false,
+    lastSnapUnitId: null as number | null,
   });
   R.current.side = deploySide;
   R.current.paused = paused;
@@ -218,6 +219,7 @@ export function Arena3DView({
     setRetreatSelecting(false);
     R.current.pending = null;
     setPending(false);
+    R.current.lastSnapUnitId = null;
     const a = R.current.arena;
     if (!a) return;
     a.setAim(null);
@@ -225,6 +227,8 @@ export function Arena3DView({
     a.tameMark = null;
     a.tacticSelection = [];
     a.rallyPreview = null;
+    a.setSnapTarget(null);
+    a.setHoverUnit(null);
   };
 
   const cancelAction = () => {
@@ -374,6 +378,135 @@ export function Arena3DView({
     return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s };
   };
 
+  /** Whether the current aim requires targeting a single enemy (Alex's tame, Villager's cannon, etc.) */
+  const isEnemySingleTargetAim = (A: Aim, b: Battle | null): boolean => {
+    if (!A || !b) return false;
+    if (A.k === 'skill' && A.s === 'tame') return true;
+    if (A.k === 'tactic') {
+      const tac = b.sides[0].plan.tactic;
+      if (!tac) return false;
+      const tdef = tacticConfig(tac.id, tac.variant);
+      return tdef?.targetType === 'enemy_single';
+    }
+    return false;
+  };
+
+  // ── aiming ──
+  /** What the current aim would hit under a stage point. */
+  const aimAt = (p: { x: number; y: number }): AimTarget | null => {
+    const c = R.current;
+    const a = c.arena;
+    if (!a || c.aim === null) return null;
+    if (isEnemySingleTargetAim(c.aim, c.battle)) {
+      const isTame = c.aim.k === 'skill' && c.aim.s === 'tame';
+      const enemyFilter = (u: Unit) => u.alive && !u.structure && u.team === 1;
+      const preferFilter = isTame ? (u: Unit) => !!c.battle && canTame(c.battle, 0, u) : undefined;
+      const u = a.pickSnapEnemy(p.x, p.y, enemyFilter, preferFilter, c.lastSnapUnitId ?? undefined);
+      if (u) {
+        if (c.lastSnapUnitId !== u.id) {
+          c.lastSnapUnitId = u.id;
+          sfx('click', { vol: 0.35 });
+        }
+        return { x: u.x, y: u.y, unit: u };
+      }
+      c.lastSnapUnitId = null;
+      const cell = a.pickCell(p.x, p.y);
+      return cell ? { x: cell.x, y: cell.y } : null;
+    }
+    const cell = a.pickCell(p.x, p.y);
+    return cell ? { x: cell.x, y: cell.y } : null;
+  };
+
+  /** Preview ring (or wall cells) for a target; null hides it. */
+  const showAim = (t: AimTarget | null) => {
+    const c = R.current;
+    const a = c.arena;
+    const A = c.aim;
+    if (!a || A === null || !c.battle) return;
+    if (!isEnemySingleTargetAim(A, c.battle)) {
+      a.setSnapTarget(null);
+    }
+    if (A.k === 'item') {
+      const id = slots[A.i];
+      const def = ITEM_MAP[id];
+      if (!t || !def) a.setAim(null);
+      else a.setAim(t, itemRadius(c.battle, 0, id), def.target !== 'own' || t.x < ARENA_W / 2, def.color);
+    } else if (A.k === 'skill' && (A.s === 'wall' || A.s === 'platform')) {
+      if (!t) a.setCells(null);
+      else {
+        const cells = buildCells(c.battle.terrain, 0, A.s, t.x, t.y);
+        let ok = cells.length > 0;
+        if (ok && A.s === 'wall') ok = !!applyBuild(cloneTerrain(c.battle.terrain), 0, 'wall', t.x, t.y);
+        a.setCells(cells.length ? cells : null, ok, A.s === 'wall' ? 2 : c.battle.has(0, 'obsidian') ? 2 : 1);
+      }
+    } else if (A.k === 'skill' && A.s === 'golem') {
+      if (!t) a.setAim(null);
+      else a.setAim(t, 1.2, t.x < ARENA_W / 2, '#e8e4dc');
+    } else if (A.k === 'skill' && A.s === 'tame') {
+      const u = t?.unit;
+      if (!u) {
+        a.setSnapTarget(null);
+        a.setHoverUnit(null);
+        if (t) a.setAim(t, 0.8, false, '#ff4a4a');
+        else a.setAim(null);
+      } else {
+        const ok = canTame(c.battle, 0, u);
+        const color = ok ? '#ff9a3d' : '#e17055';
+        a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), ok, color);
+        a.setHoverUnit(u);
+        a.setSnapTarget({
+          unit: u,
+          ok,
+          color,
+          label: ok ? '❤ 可驯服' : '生命过高',
+          cursor: c.lastMouse ?? undefined,
+        });
+      }
+    } else if (A.k === 'tactic') {
+      const tac = c.battle.sides[0].plan.tactic;
+      const tdef = tac ? tacticConfig(tac.id, tac.variant) : null;
+      const selected = c.retreat ? c.battle.units.filter(u => c.retreat!.ids.includes(u.id) && u.alive) : [];
+      if (tdef?.targetType === 'ally_move' && c.retreat) {
+        a.setSnapTarget(null);
+        const valid = t ? previewRetreat(c.battle, selected, t).ok : false;
+        a.tacticSelection = c.retreat.ids;
+        a.rallyPreview = t ? { ...t, valid } : null;
+        a.setAim(t, 0.7, valid, '#ffd166');
+      } else if (!t || !tdef) {
+        a.setAim(null);
+        a.tacticSelection = [];
+        a.setSnapTarget(null);
+      } else if (tdef.targetType === 'enemy_single') {
+        const u = t.unit;
+        if (!u) {
+          a.setSnapTarget(null);
+          a.setHoverUnit(null);
+          if (t) a.setAim(t, 0.8, false, '#ff4a4a');
+          else a.setAim(null);
+        } else {
+          const ok = u.alive && !u.structure && u.team === 1;
+          const color = '#f39c12';
+          a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), ok, color);
+          a.setHoverUnit(u);
+          a.setSnapTarget({
+            unit: u,
+            ok,
+            color,
+            label: '🎯 锁定目标',
+            cursor: c.lastMouse ?? undefined,
+          });
+        }
+      } else {
+        a.setSnapTarget(null);
+        const rad = (tdef.radius ?? 90) / BLOCK;
+        const color = tdef.category === 'offense' ? '#e17055' : '#00cec9';
+        const preview = tacticTargets(c.battle, 0, t, t.unit ?? null);
+        a.tacticSelection = preview.units.map(u => u.id);
+        a.setAim(t, rad, preview.ok, color);
+      }
+    }
+  };
+
   // ── create arena ──
   useEffect(() => {
     let disposed = false;
@@ -455,13 +588,17 @@ export function Arena3DView({
             }
           }
         }
-        if (c.lastMouse && !c.pointer?.moved && c.aim === null && c.fightStarted && !c.finished) {
-          const u = arena.pickUnit(c.lastMouse.x, c.lastMouse.y);
-          arena.setHoverUnit(u);
-          const hoverable = !!u;
-          if (c.unitHovered !== hoverable) {
-            c.unitHovered = hoverable;
-            setUnitHovered(hoverable);
+        if (c.lastMouse && !c.pointer?.moved && c.fightStarted && !c.finished) {
+          if (isEnemySingleTargetAim(c.aim, c.battle)) {
+            showAim(aimAt(c.lastMouse));
+          } else if (c.aim === null) {
+            const u = arena.pickUnit(c.lastMouse.x, c.lastMouse.y);
+            arena.setHoverUnit(u);
+            const hoverable = !!u;
+            if (c.unitHovered !== hoverable) {
+              c.unitHovered = hoverable;
+              setUnitHovered(hoverable);
+            }
           }
         }
         arena.frame(c.fightStarted && !c.paused ? Math.min(1, acc / DT) : 1, c.fightStarted ? (c.paused ? 0 : dt * Math.min(c.speed, 2) * arena.timeScale()) : dt);
@@ -551,70 +688,7 @@ export function Arena3DView({
     return () => timers.forEach(clearTimeout);
   }, [phase, ready]);
 
-  // ── aiming ──
-  /** What the current aim would hit under a stage point. */
-  const aimAt = (p: { x: number; y: number }): AimTarget | null => {
-    const c = R.current;
-    const a = c.arena;
-    if (!a || c.aim === null) return null;
-    if ((c.aim.k === 'skill' && c.aim.s === 'tame') || (c.aim.k === 'tactic' && c.battle?.sides[0].plan.tactic && tacticConfig(c.battle.sides[0].plan.tactic.id, c.battle.sides[0].plan.tactic.variant).targetType === 'enemy_single')) {
-      const u = a.pickUnit(p.x, p.y, 1, 60);
-      return u ? { x: u.x, y: u.y, unit: u } : null;
-    }
-    const cell = a.pickCell(p.x, p.y);
-    return cell ? { x: cell.x, y: cell.y } : null;
-  };
-
-  /** Preview ring (or wall cells) for a target; null hides it. */
-  const showAim = (t: AimTarget | null) => {
-    const c = R.current;
-    const a = c.arena;
-    const A = c.aim;
-    if (!a || A === null || !c.battle) return;
-    if (A.k === 'item') {
-      const id = slots[A.i];
-      const def = ITEM_MAP[id];
-      if (!t || !def) a.setAim(null);
-      else a.setAim(t, itemRadius(c.battle, 0, id), def.target !== 'own' || t.x < ARENA_W / 2, def.color);
-    } else if (A.k === 'skill' && (A.s === 'wall' || A.s === 'platform')) {
-      if (!t) a.setCells(null);
-      else {
-        const cells = buildCells(c.battle.terrain, 0, A.s, t.x, t.y);
-        let ok = cells.length > 0;
-        if (ok && A.s === 'wall') ok = !!applyBuild(cloneTerrain(c.battle.terrain), 0, 'wall', t.x, t.y);
-        a.setCells(cells.length ? cells : null, ok, A.s === 'wall' ? 2 : c.battle.has(0, 'obsidian') ? 2 : 1);
-      }
-    } else if (A.k === 'skill' && A.s === 'golem') {
-      if (!t) a.setAim(null);
-      else a.setAim(t, 1.2, t.x < ARENA_W / 2, '#e8e4dc');
-    } else if (A.k === 'skill' && A.s === 'tame') {
-      const u = t?.unit;
-      if (!u) a.setAim(null);
-      else a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), canTame(c.battle, 0, u), '#ff9a3d');
-    } else if (A.k === 'tactic') {
-      const tac = c.battle.sides[0].plan.tactic;
-      const tdef = tac ? tacticConfig(tac.id, tac.variant) : null;
-      const selected = c.retreat ? c.battle.units.filter(u => c.retreat!.ids.includes(u.id) && u.alive) : [];
-      if (tdef?.targetType === 'ally_move' && c.retreat) {
-        const valid = t ? previewRetreat(c.battle, selected, t).ok : false;
-        a.tacticSelection = c.retreat.ids;
-        a.rallyPreview = t ? { ...t, valid } : null;
-        a.setAim(t, 0.7, valid, '#ffd166');
-      } else if (!t || !tdef) { a.setAim(null); a.tacticSelection = []; }
-      else if (tdef.targetType === 'enemy_single') {
-        const u = t.unit;
-        if (!u) a.setAim(null);
-        else a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), u.alive && !u.structure && u.team === 1, '#f39c12');
-      } else {
-        const rad = (tdef.radius ?? 90) / BLOCK;
-        const color = tdef.category === 'offense' ? '#e17055' : '#00cec9';
-        const preview = tacticTargets(c.battle, 0, t, t.unit ?? null);
-        a.tacticSelection = preview.units.map(u => u.id);
-        a.setAim(t, rad, preview.ok, color);
-      }
-    }
-  };
-
+  // ── aiming & firing ──
   /** Uses the aimed item or skill on a target. */
   const fireAim = (t: AimTarget | null) => {
     const c = R.current;
@@ -1054,7 +1128,7 @@ export function Arena3DView({
       {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0 || !!tacticDef) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
+          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending, tacticDef)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点战场的地面{touchUI ? '' : '（Q / E）'}</div>}
           {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
             军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点
@@ -1216,7 +1290,7 @@ export function Arena3DView({
   );
 }
 
-function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, touch: boolean, pending: boolean) {
+function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, touch: boolean, pending: boolean, tacticDef?: ReturnType<typeof tacticConfig> | null) {
   if (touch && pending) return '再点一次圈内确认 · 点别处换位置 · 再点按钮取消';
   const cancel = touch ? '再点按钮取消' : '右键 / Esc 取消';
   if (aim.k === 'item') {
@@ -1224,6 +1298,9 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
     return `点击战场投放「${def?.name}」${def?.target === 'own' ? '（只能放在我方半场）' : ''} · ${cancel}`;
   }
   if (aim.k === 'tactic') {
+    if (tacticDef?.targetType === 'enemy_single') {
+      return `靠近敌人自动吸附锁定目标 · 点击释放「${tacticDef.name}」（消耗 1 点军令）· ${cancel}`;
+    }
     return `点击指定目标，确认后开始施放前摇（消耗 1 点军令）· ${cancel}`;
   }
   switch (aim.s) {
@@ -1232,7 +1309,7 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
     case 'platform':
       return `点击战场垫高一块 3×3 的土台（布阵时把远程拖上去）· ${cancel}`;
     case 'tame':
-      return `点击头顶有橙色爱心的敌人驯服它 · ${cancel}`;
+      return `靠近敌人自动吸附锁定 · 点击头顶有橙色爱心的敌人驯服它 · ${cancel}`;
     case 'golem':
       return `点击我方半场召唤铁傀儡${golemCost ? `（消耗 ${golemCost} 绿宝石）` : ''} · ${cancel}`;
   }

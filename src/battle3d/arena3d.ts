@@ -25,6 +25,15 @@ export interface ArenaOpts {
   onEgg?: (id: 'dinnerbone' | 'jeb' | 'johnny') => void;
 }
 
+export interface SnapTargetInfo {
+  unit: Unit;
+  ok: boolean;
+  color: string;
+  label?: string;
+  cursor?: { x: number; y: number } | null;
+  snapTime?: number;
+}
+
 const SPRITE_SCALE = 1.3;
 const UI_FONT = "'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
 const TEAM_COLOR = [new THREE.Color(0x3d8bff), new THREE.Color(0xff3b3b)];
@@ -2108,6 +2117,92 @@ export class Arena3D {
         ctx.globalAlpha = 1;
       }
     }
+    // Single-target enemy skill magnetic snap lock reticle
+    if (this.snapTarget && this.snapTarget.unit.alive) {
+      const targetUnit = this.snapTarget.unit;
+      const v = this.views.get(targetUnit.id);
+      if (v) {
+        const [cx, cy, okCenter] = this.project(v.pos.x, v.pos.y + v.h * 0.5, v.pos.z);
+        const [, by, okB] = this.project(v.pos.x, v.pos.y, v.pos.z);
+        const [, ty, okT] = this.project(v.pos.x, v.pos.y + v.h, v.pos.z);
+        if (okCenter) {
+          const screenH = okB && okT ? Math.abs(by - ty) : 40;
+          const elapsed = this.snapTarget.snapTime !== undefined ? this.time - this.snapTarget.snapTime : 1;
+          const pop = elapsed < 0.18 ? 1 + (1 - elapsed / 0.18) * 0.35 : 1;
+          const pulse = 1 + Math.sin(this.time * 8) * 0.04;
+          const scale = pop * pulse;
+          const halfW = Math.max(20, screenH * 0.45 + 6) * scale;
+          const halfH = Math.max(22, screenH * 0.55 + 6) * scale;
+          const arm = Math.max(7, Math.min(16, halfW * 0.4));
+          const color = this.snapTarget.ok ? this.snapTarget.color : '#ff4a4a';
+
+          ctx.save();
+          // Dashed magnetic connection line from cursor to snapped target
+          const cur = this.snapTarget.cursor;
+          if (cur && Math.hypot(cur.x - cx, cur.y - cy) > 16) {
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.45;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(cur.x, cur.y);
+            ctx.lineTo(cx, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+          }
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 8;
+
+          const l = cx - halfW;
+          const r = cx + halfW;
+          const t = cy - halfH;
+          const b = cy + halfH;
+
+          ctx.beginPath();
+          // Top-left ⌜
+          ctx.moveTo(l, t + arm); ctx.lineTo(l, t); ctx.lineTo(l + arm, t);
+          // Top-right ⌝
+          ctx.moveTo(r - arm, t); ctx.lineTo(r, t); ctx.lineTo(r, t + arm);
+          // Bottom-left ⌞
+          ctx.moveTo(l, b - arm); ctx.lineTo(l, b); ctx.lineTo(l + arm, b);
+          // Bottom-right ⌟
+          ctx.moveTo(r - arm, b); ctx.lineTo(r, b); ctx.lineTo(r, b - arm);
+          ctx.stroke();
+
+          // Reticle ticks
+          const tick = 5;
+          ctx.beginPath();
+          ctx.moveTo(l - 3, cy); ctx.lineTo(l - 3 - tick, cy);
+          ctx.moveTo(r + 3, cy); ctx.lineTo(r + 3 + tick, cy);
+          ctx.moveTo(cx, t - 3); ctx.lineTo(cx, t - 3 - tick);
+          ctx.moveTo(cx, b + 3); ctx.lineTo(cx, b + 3 + tick);
+          ctx.stroke();
+
+          // Top label banner
+          if (this.snapTarget.label) {
+            ctx.shadowBlur = 0;
+            ctx.font = `bold 13px ${UI_FONT}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const lw = ctx.measureText(this.snapTarget.label).width + 14;
+            const ly = t - 8;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+            ctx.fillRect(cx - lw / 2, ly - 17, lw, 19);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx - lw / 2, ly - 17, lw, 19);
+            ctx.fillStyle = color;
+            ctx.fillText(this.snapTarget.label, cx, ly - 2);
+          }
+          ctx.restore();
+        }
+      }
+    }
     // Name tags (easter eggs), Minecraft style.
     ctx.textAlign = 'center';
     ctx.font = `600 14px ${UI_FONT}`;
@@ -2393,6 +2488,57 @@ export class Arena3D {
     return best;
   }
 
+  /**
+   * Finds the best enemy to magnetically snap to for single-target enemy skills (e.g. Tame, Cannon).
+   * Evaluates proximity in both screen space and ground raycast space.
+   */
+  pickSnapEnemy(
+    px: number,
+    py: number,
+    filter?: (u: Unit) => boolean,
+    preferFilter?: (u: Unit) => boolean,
+    prevId?: number | null,
+    maxScreenDist = 120,
+    maxWorldDist = 72
+  ): Unit | null {
+    let best: Unit | null = null;
+    let bestScore = Infinity;
+    const ground = this.pickCell(px, py);
+
+    for (const v of this.views.values()) {
+      const u = v.u;
+      if (!u.alive || u.team !== 1 || u.structure) continue;
+      if (filter && !filter(u)) continue;
+
+      const [sx, sy, ok] = this.project(v.pos.x, v.pos.y + v.h * 0.5, v.pos.z);
+      if (!ok) continue;
+
+      const screenDist = Math.hypot(sx - px, sy - py);
+      const worldDist = ground ? Math.hypot(u.x - ground.x, u.y - ground.y) : Infinity;
+
+      // Must be within magnetic threshold in either screen space or ground world space
+      if (screenDist > maxScreenDist && worldDist > maxWorldDist) continue;
+
+      let score = Math.min(screenDist, worldDist * 2.0);
+
+      // Prioritize preferred targets (e.g. tameable targets get a 40% distance advantage)
+      if (preferFilter && preferFilter(u)) {
+        score *= 0.6;
+      }
+
+      // Hysteresis/stickiness: if unit was already locked in previous frame, give 20% bonus
+      if (prevId !== null && prevId !== undefined && u.id === prevId) {
+        score *= 0.8;
+      }
+
+      if (score < bestScore) {
+        bestScore = score;
+        best = u;
+      }
+    }
+    return best;
+  }
+
   private aimRing: THREE.Group | null = null;
 
   /** Item targeting preview: a ring of the item's radius on the ground (red when not allowed). */
@@ -2420,6 +2566,13 @@ export class Arena3D {
 
   /** Enemies to mark as tameable while Alex is aiming (null = off). */
   tameMark: ((u: Unit) => boolean) | null = null;
+
+  /** Snap target info for 2D lock-on reticle HUD. */
+  snapTarget: SnapTargetInfo | null = null;
+
+  setSnapTarget(info: SnapTargetInfo | null) {
+    this.snapTarget = info;
+  }
 
   private cellsMesh: THREE.Mesh | null = null;
 
