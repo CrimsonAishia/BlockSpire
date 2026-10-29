@@ -144,6 +144,10 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
         resetCd(u, 'spike_armor', 9, b);
         u.ref.spikesActive = b.t + 3.0;
         u.ref.spikeReflects = 0;
+        u.takenMul *= 0.85;
+        b.addTimedAction(3.0, () => {
+          if (u.alive) u.takenMul /= 0.85;
+        });
         b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '海晶棘甲!', color: '#cf8ddc' });
         if (u.star >= 3) {
           b.addTimedAction(3.0, () => {
@@ -174,21 +178,38 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
       b.shoot(u, t, 'chin_spike', b.atkOf(u), { special: 'magic' });
     },
     tick(u, b, dt) {
-      const firstCd = u.star >= 3 ? 2 : 3;
+      const firstCd = u.star >= 3 ? 1.5 : 2.5;
       if (cool(u, 'summon_minion', dt, firstCd)) {
-        resetCd(u, 'summon_minion', 9, b);
+        resetCd(u, 'summon_minion', 7.5, b);
         u.ref.totalSummons = (u.ref.totalSummons ?? 0);
-        if (u.ref.totalSummons >= 4) return;
+        if (u.ref.totalSummons >= 6) return;
         const currentMinions = alliesOf(u, b).filter(
           (a) => a.alive && a.isSummon && a.mob.id === 'nameless_minion' && a.ref.ownerId === u.id
         );
         if (currentMinions.length >= 2) return;
-        u.ref.totalSummons++;
-        const hpRatio = u.star >= 3 ? 0.30 : 0.24;
-        const px = clampX(u, u.x + (u.team === 0 ? 30 : -30));
-        const py = clampY(u.y + b.rng.range(-20, 20));
-        b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '残王仪仗!', color: '#99db68' });
-        b.summon(u, 'nameless_minion', px, py, hpRatio, { lifespan: 8, fx: 'summon' });
+
+        const countToSummon = (u.star >= 3 && currentMinions.length === 0) ? 2 : 1;
+        const mul = u.star >= 3 ? 1.25 : 1.0;
+
+        for (let i = 0; i < countToSummon; i++) {
+          if (u.ref.totalSummons >= 6) break;
+          u.ref.totalSummons++;
+          const dy = countToSummon > 1 ? (i === 0 ? -25 : 25) : b.rng.range(-20, 20);
+          const px = clampX(u, u.x + (u.team === 0 ? 35 : -35));
+          const py = clampY(u.y + dy);
+          b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '残王仪仗!', color: '#99db68' });
+          const m = b.summon(u, 'nameless_minion', px, py, mul, { lifespan: 10, fx: 'summon' });
+          if (m) {
+            m.ref.ownerId = u.id;
+          }
+        }
+
+        // 王印律令：召唤时为自身及周围友方亡灵赋予短时王印护盾
+        b.aoe(u.x, u.y, 100, u.team, (a) => {
+          if (a.alive && a.mob.families.includes('undead')) {
+            a.shield = Math.max(a.shield, b.atkOf(u) * 0.4);
+          }
+        });
       }
     },
   },
@@ -759,7 +780,7 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
       b.shoot(u, t, 'chin_spike', b.atkOf(u), { special: 'magic' });
     },
     tick(u, b) {
-      u.ref.summonTimes = u.ref.summonTimes ?? [4, 14, 24];
+      u.ref.summonTimes = u.ref.summonTimes ?? [4, 12, 20, 28];
       if (u.ref.summonTimes.length > 0 && b.t >= u.ref.summonTimes[0]) {
         u.ref.summonTimes.shift();
         const currentHelpers = alliesOf(u, b).filter(
@@ -769,7 +790,21 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '王令援军!', color: '#ff4757' });
           const px = clampX(u, u.x + (u.team === 0 ? 30 : -30));
           const py = clampY(u.y + b.rng.range(-15, 15));
-          b.summon(u, 'arch_reinforcement', px, py, 0.22, { lifespan: 8, fx: 'summon' });
+          const mul = u.star >= 3 ? 1.33 : 1.0;
+          const m = b.summon(u, 'arch_reinforcement', px, py, mul, { lifespan: 10, fx: 'summon' });
+          if (m) m.ref.ownerId = u.id;
+
+          // ★3 强化：号角吹响时为全场灾厄友军提升 12% 攻速持续 4 秒
+          if (u.star >= 3) {
+            for (const ally of alliesOf(u, b)) {
+              if (ally.alive && ally.mob.families.includes('illager')) {
+                ally.atkSpd *= 1.12;
+                b.addTimedAction(4.0, () => {
+                  if (ally.alive) ally.atkSpd /= 1.12;
+                });
+              }
+            }
+          }
         }
       }
     },
@@ -917,11 +952,16 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
 
   // 无名者骨盾侍从 (nameless_minion)
   nameless_minion: {
+    init(u) {
+      // 登场自带坚固骨盾充能
+      u.shield = Math.max(u.shield, 30);
+    },
     onDamaged(u, src, o) {
-      if (o.proj && src) {
+      if (src) {
         const isFront = (u.facing > 0 && src.x > u.x) || (u.facing < 0 && src.x < u.x);
         if (isFront) {
-          u.shield = Math.max(u.shield, 6);
+          // 正面承受投射物或近战时刷新骨盾维持防御姿态
+          u.shield = Math.max(u.shield, 18);
         }
       }
       return false;

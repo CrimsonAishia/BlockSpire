@@ -586,10 +586,10 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'nameless_sovereign', sprite: 'nameless_sovereign_card', name: '无名者 · 王印', rarity: 'red', families: ['undead'], role: 'summoner',
-    hp: 560, atk: 32, cd: 1.7, range: 245, speed: 28, armor: 0.08, radius: 19, size: 78, mass: 3,
+    hp: 600, atk: 35, cd: 1.6, range: 245, speed: 28, armor: 0.10, radius: 19, size: 78, mass: 3,
     count: [1, 1, 1], ai: 'nameless_sovereign', dmgKind: 'magic', defaultRow: 'back',
-    skill: { name: '残王仪仗', desc: '开战 3 秒后及每 9 秒召唤 1 名手持骨盾的亡灵侍从（继承 24% 生命与 42% 攻击，存在 8 秒；场上最多存在 2 名）。' },
-    star3: '侍从继承生命提升至 30%，首次召唤提前至开战 2 秒。',
+    skill: { name: '残王仪仗', desc: '开战 2.5 秒后及每 7.5 秒召唤手持坚韧骨盾的亡灵侍从护卫前排（存在 10 秒；场上最多 2 名，登场为周围亡灵赋予王印护盾）。' },
+    star3: '首次召唤提前至 1.5 秒且一次性召唤 2 名骨盾侍从，侍从生命与攻击提升 25%。',
     flavor: '掩埋在沙漠深处的古代君王，即便王权陨落，亡灵侍从依然响应号召。',
   },
   {
@@ -604,8 +604,8 @@ export const MOBS: MobDef[] = [
     id: 'arch_illager', sprite: 'arch_illager_card', name: '灾厄之王', rarity: 'red', families: ['illager'], role: 'summoner',
     hp: 620, atk: 34, cd: 1.8, range: 250, speed: 34, armor: 0.08, radius: 17, size: 72,
     count: [1, 1, 1], ai: 'arch_illager', dmgKind: 'magic', defaultRow: 'back',
-    skill: { name: '王令援军', desc: '分别在战斗第 4、14、24 秒吹响灾厄号角，各召唤 1 名精锐掠夺者助战（继承 22% 生命与 30% 攻击，存在 8 秒；场上最多存在 2 名）。' },
-    star3: '援军掠夺者继承的攻击力提升至 40%。',
+    skill: { name: '王令援军', desc: '分别在战斗第 4、12、20、28 秒吹响灾厄号角，各召唤 1 名精锐掠夺者助战（继承 22% 生命与 30% 攻击，存在 10 秒；场上最多存在 2 名）。' },
+    star3: '援军掠夺者继承的攻击力提升至 40%，且号角吹响时为全场灾厄友军提升 12% 攻速（持续 4 秒）。',
     flavor: '手握支配宝珠的灾厄统帅，虽身材矮小，号角一响便有源源不断的掠夺者前赴后继。',
   },
   {
@@ -1332,9 +1332,9 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'nameless_minion', name: '骨盾侍从', rarity: 'blue', families: ['undead'], role: 'tank', sprite: 'skeleton_vanguard',
-    hp: 135, atk: 14, cd: 1.5, range: 10, speed: 32, armor: 0.1, radius: 14, size: 54,
+    hp: 180, atk: 16, cd: 1.4, range: 12, speed: 32, armor: 0.15, radius: 15, size: 58,
     count: [1, 1, 1], ai: 'nameless_minion', defaultRow: 'front', hidden: true,
-    skill: { name: '骨盾护卫', desc: '手持骨盾吸收投射物伤害。' }, star3: '', flavor: '效忠于古代无名君王的白骨仪仗。',
+    skill: { name: '骨盾护卫', desc: '手持骨盾吸收正面伤害。' }, star3: '', flavor: '效忠于古代无名君王的白骨仪仗。',
   },
   {
     id: 'verdant_vine', name: '共生藤蔓', rarity: 'blue', families: ['construct'], role: 'melee', sprite: 'quick_vine',
@@ -1344,7 +1344,7 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'arch_reinforcement', name: '灾厄卫从', rarity: 'blue', families: ['illager'], role: 'ranged', sprite: 'pillager', projectile: 'bolt',
-    hp: 136, atk: 10, cd: 1.8, range: 230, speed: 36, armor: 0.05, radius: 14, size: 60,
+    hp: 140, atk: 12, cd: 1.6, range: 230, speed: 36, armor: 0.06, radius: 14, size: 60,
     count: [1, 1, 1], ai: 'arch_reinforcement', defaultRow: 'back', hidden: true,
     skill: { name: '奉命射击', desc: '支援灾厄之王进行远程射击。' }, star3: '', flavor: '听从灾厄之王号角调遣的精锐弩手。',
   },

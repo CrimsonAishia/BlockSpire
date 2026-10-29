@@ -326,8 +326,10 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           resetCd(u, 'necro_sum', 8, b);
           const skel = b.summon(u, 'skeleton', u.x + (u.team === 0 ? 30 : -30), u.y, 1.0, { lifespan: 12, fx: 'summon' });
           if (skel) {
-            skel.maxHp = skel.hp = Math.max(10, Math.round(u.maxHp * 0.22));
-            skel.atk = Math.max(2, Math.round((u.atk * u.atkSpd * 0.35) / Math.max(0.1, skel.atkSpd)));
+            const hpRatio = u.star >= 3 ? 0.28 : 0.22;
+            const atkRatio = u.star >= 3 ? 0.45 : 0.35;
+            skel.maxHp = skel.hp = Math.max(10, Math.round(u.maxHp * hpRatio));
+            skel.atk = Math.max(2, Math.round((u.atk * u.atkSpd * atkRatio) / Math.max(0.1, skel.atkSpd)));
           }
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '亡骸复苏!', color: '#2ed573' });
         } else {
@@ -660,19 +662,21 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
     },
     tick(u, b, dt) {
       u.ref.drownedCount = u.ref.drownedCount ?? 0;
-      if (u.ref.drownedCount >= 4) return;
+      if (u.ref.drownedCount >= 5) return;
       const initialWait = u.star >= 3 ? 2.0 : 3.0;
-      if (cool(u, 'drowned_sum', dt, u.ref.drownedCount === 0 ? initialWait : 10)) {
+      if (cool(u, 'drowned_sum', dt, u.ref.drownedCount === 0 ? initialWait : 8.5)) {
         const aliveDrowned = alliesOf(u, b).filter((a) => a.alive && a.isSummon && a.mob.id === 'drowned' && a.card === u.card);
         if (aliveDrowned.length < 1) {
           u.ref.drownedCount++;
-          resetCd(u, 'drowned_sum', 10, b);
+          resetCd(u, 'drowned_sum', 8.5, b);
           const fx = u.team === 0 ? Math.min(ARENA_W - 60, u.x + 100) : Math.max(60, u.x - 100);
           const fy = clampY(u.y > ARENA_D / 2 ? u.y - 35 : u.y + 35);
           const d = b.summon(u, 'drowned', fx, fy, 1.0, { lifespan: 12, fx: 'summon' });
           if (d) {
-            d.maxHp = d.hp = Math.max(15, Math.round(u.maxHp * 0.45));
-            d.atk = Math.max(2, Math.round((u.atk * u.atkSpd * 0.40) / Math.max(0.1, d.atkSpd)));
+            const hpRatio = u.star >= 3 ? 0.55 : 0.45;
+            const atkRatio = u.star >= 3 ? 0.50 : 0.40;
+            d.maxHp = d.hp = Math.max(15, Math.round(u.maxHp * hpRatio));
+            d.atk = Math.max(2, Math.round((u.atk * u.atkSpd * atkRatio) / Math.max(0.1, d.atkSpd)));
           }
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '前哨溺尸!', color: '#1e90ff' });
         } else {
