@@ -129,7 +129,7 @@ export type Pending =
   | { type: 'shop'; stock: ShopItem[]; reroll: number; /** Villager orders left in this shop. */ orders?: number }
   | { type: 'event'; id: string; result?: string; resultTone?: 'good' | 'bad' | 'neutral'; data: Record<string, number> }
   | { type: 'rest'; actions: number; done: string[] }
-  | { type: 'pick_card'; purpose: 'enchant' | 'upgrade' | 'bonus' | 'sacrifice' | 'trade' | 'fuse_base' | 'fuse_sac' | 'netherite'; title: string; enchant?: string; data?: Record<string, number | string> }
+  | { type: 'pick_card'; purpose: 'enchant' | 'upgrade' | 'bonus' | 'sacrifice' | 'trade' | 'fuse_base' | 'fuse_sac'; title: string; enchant?: string; data?: Record<string, number | string> }
   | { type: 'enchant_choice'; title: string; books: string[]; cost: number; /** Book levels (default I). */ levels?: number[] }
   | { type: 'boss_reward'; relics: string[]; slotGained: boolean; healed: number }
   | { type: 'act_intro'; act: number }
@@ -1751,16 +1751,6 @@ export function applyEnchant(c: Card, enchant: string, lv: number): boolean {
     c.enchant2Lv = Math.min(3, (c.enchant2Lv ?? 2) + lv);
     return true;
   }
-  if (c.netherite && c.enchant && !c.enchant2) {
-    c.enchant2 = enchant;
-    c.enchant2Lv = Math.max(1, Math.min(3, lv));
-    return false;
-  }
-  if (c.netherite && c.enchant && c.enchant2) {
-    c.enchant2 = enchant;
-    c.enchant2Lv = Math.max(1, Math.min(3, lv));
-    return false;
-  }
   c.enchant = enchant;
   c.enchantLv = Math.max(1, Math.min(3, lv));
   return false;
@@ -2040,11 +2030,6 @@ export function pickCard(s: RunState, uid: string | null) {
       s.queue.unshift(openCrate(s, 'ominous', grade, '流浪商人的交易'));
       break;
     }
-    case 'netherite': {
-      c.netherite = true;
-      toast(s, `【下界合金淬炼】${mobDef(c.mob).name} 成功淬炼为下界合金武装，护甲提升，受控时间缩短 30%，解锁双附魔槽位！`, 'gold');
-      break;
-    }
     case 'fuse_base': {
       s.queue.unshift({
         type: 'pick_card',
@@ -2091,13 +2076,10 @@ export function fuseCard(s: RunState, baseUid: string, sacUid: string) {
   const bonusAdd = rawEssence * hostMul + resonance;
   baseCard.bonus = (baseCard.bonus ?? 0) + bonusAdd;
 
-  // 3. Trait Inheritance: Inherit enchant if base card has none, or into enchant2 if netherite reinforced
+  // 3. Trait Inheritance: Inherit enchant if base card has none
   if (!baseCard.enchant && sacCard.enchant) {
     baseCard.enchant = sacCard.enchant;
     baseCard.enchantLv = sacCard.enchantLv;
-  } else if (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && sacCard.enchant && sacCard.enchant !== baseCard.enchant) {
-    baseCard.enchant2 = sacCard.enchant;
-    baseCard.enchant2Lv = sacCard.enchantLv;
   }
 
   // 4. Consume sacrificial card from team / bench
@@ -2131,7 +2113,7 @@ export function restHeal(s: RunState) {
   return difficultyPolicy(s.omen).restHeal;
 }
 
-export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant' | 'fuse' | 'netherite') {
+export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant' | 'fuse') {
   const p = s.queue[0];
   if (p.type !== 'rest' || p.actions <= 0 || p.done.includes(action)) return;
   if (action === 'rest') {
@@ -2150,9 +2132,6 @@ export function restAction(s: RunState, action: 'rest' | 'smith' | 'enchant' | '
   }
   if (action === 'fuse') {
     s.queue.unshift({ type: 'pick_card', purpose: 'fuse_base', title: '印记融合：选择接受印记刻印的主力卡牌' });
-  }
-  if (action === 'netherite') {
-    s.queue.unshift({ type: 'pick_card', purpose: 'netherite', title: '下界合金重铸台：选择进行合金淬炼的 ★3 卡牌' });
   }
 }
 

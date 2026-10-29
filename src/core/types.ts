@@ -104,9 +104,9 @@ export interface Card {
   sigil?: string;
   /** Infused sigil tier / star (1, 2, 3), scaling effect magnitude and mechanics. */
   sigilStar?: number;
-  /** Netherite reinforced card (unlocked in late-game): +5% armor, -30% CC duration, dual enchant slot. */
+  /** Deprecated: former Netherite reinforcement. */
   netherite?: boolean;
-  /** Second enchantment slot unlocked by Netherite Reinforcement. */
+  /** Deprecated: former second enchantment slot. */
   enchant2?: string;
   enchant2Lv?: number;
 }

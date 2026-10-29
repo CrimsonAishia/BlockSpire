@@ -86,7 +86,7 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     let immune = 0;
     let count = c.count ?? unitCount(m, c.star);
 
-    // ── Enchantment (levels I–III; 青金石 boosts the numbers; supports dual enchant with Netherite) ──
+    // ── Enchantment (levels I–III; 青金石 boosts the numbers) ──
     const applyOneEnchant = (ench?: string, elv?: number) => {
       if (!ench) return;
       const lv = elv ?? 1;
@@ -163,12 +163,6 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     applyOneEnchant(c.enchant, c.enchantLv);
     if (c.enchant2) applyOneEnchant(c.enchant2, c.enchant2Lv);
 
-    // ── Netherite Reinforcement (下界合金强化) ──
-    if (c.netherite) {
-      armorAdd += 0.05;
-      fx.dmgTaken *= 0.95;
-      immune |= IMM_KB;
-    }
 
     // ── Relics ──
     if (relics.has('iron_sword') && !ranged) atkMul *= 1.15;

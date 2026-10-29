@@ -437,7 +437,6 @@ export function MobTipContent({
   sigil,
   sigilStar = 1,
   mastery,
-  netherite,
   enchant2,
   enchant2Lv,
   showStar3 = true,
@@ -450,7 +449,6 @@ export function MobTipContent({
   sigil?: string;
   sigilStar?: number;
   mastery?: number;
-  netherite?: boolean;
   enchant2?: string;
   enchant2Lv?: number;
   showStar3?: boolean;
@@ -492,11 +490,6 @@ export function MobTipContent({
         </div>
       )}
       <KeywordBox texts={[m.skill.desc, m.star3]} />
-      {netherite && (
-        <div class="tt-sec" style={{ color: '#ffbe76' }}>
-          【下界合金武装】受控时间缩短 30%，护甲 +5%，已开启第二附魔槽位！
-        </div>
-      )}
       {enchant && (
         <div class="tt-sec tt-purple">
           {enchant2 ? '第一附魔 · ' : ''}{enchantName(enchant, enchantLv)}：{enchantText(enchant, enchantLv)}
@@ -634,7 +627,7 @@ export function MobCard({
   const ench = card?.enchant;
   const body = (
     <div
-      class={`mcard r-${m.rarity} ${size} ${onClick && !locked ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench && !locked ? 'ench' : ''} ${card?.sigil && !locked ? 'fused' : ''} ${card?.netherite && !locked ? 'netherite' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''} ${locked ? 'locked' : ''}`}
+      class={`mcard r-${m.rarity} ${size} ${onClick && !locked ? 'clickable' : ''} ${selected ? 'selected' : ''} ${ench && !locked ? 'ench' : ''} ${card?.sigil && !locked ? 'fused' : ''} ${m.rarity === 'gold' ? 'gold-card' : ''} ${locked ? 'locked' : ''}`}
       style={{ ...(style ?? {}), opacity: locked ? 0.6 : dim ? 0.45 : 1 }}
       onClick={onClick && !locked ? () => (sfx('card_flip', { vol: 0.5 }), onClick()) : undefined}
     >
@@ -679,28 +672,7 @@ export function MobCard({
           印·{sigilOfMob(card.sigil)?.name.split(' · ')[1] ?? mobDef(card.sigil).name} [{sigilRoman(card.sigilStar ?? 1)}]
         </div>
       )}
-      {!locked && card?.netherite && (
-        <div
-          class="mc-netherite-tag"
-          style={{
-            position: 'absolute',
-            left: 4,
-            top: 24,
-            background: 'linear-gradient(135deg, #2c1a1d 0%, #442a2f 100%)',
-            border: '1px solid #c97d60',
-            borderRadius: 3,
-            padding: '1px 4px',
-            fontSize: 9,
-            fontWeight: 800,
-            color: '#ffbe76',
-            zIndex: 3,
-            boxShadow: '0 0 6px rgba(201, 125, 96, 0.6)',
-            pointerEvents: 'none',
-          }}
-        >
-          合金
-        </div>
-      )}
+
       {showCount && !locked && <div class="mc-count">×{unitCount(m, st)}</div>}
       <div class="mc-name">{locked ? '？？？' : m.name}</div>
       <div class="mc-fams">
@@ -748,7 +720,6 @@ export function MobCard({
           sigil={card?.sigil}
           sigilStar={card?.sigilStar}
           mastery={card?.mastery}
-          netherite={card?.netherite}
           enchant2={card?.enchant2}
           enchant2Lv={card?.enchant2Lv}
         />

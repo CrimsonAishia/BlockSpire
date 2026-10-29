@@ -16,7 +16,6 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
   const heal = restHeal(s);
   const noRest = hasRelic(s, 'sculk_catalyst');
   const canUp = allCards(s).some(canSmith);
-  const canNetherite = allCards(s).some((c) => c.star >= 3 && !c.netherite);
   const opts = [
     {
       id: 'rest' as const,
@@ -28,13 +27,6 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
     { id: 'smith' as const, icon: 'smithing', name: '锻造', desc: '使一张卡牌 ★+1（隐秘级及以上最高 ★2）。', off: !canUp },
     { id: 'enchant' as const, icon: 'enchanted_book', name: '附魔', desc: '从 3 本随机附魔书中选择一本，附魔一张卡牌。', off: false },
     { id: 'fuse' as const, icon: 'nether_star', name: '融合', desc: '献祭一张副卡，将其独特生物印记与精魄刻印至主力卡牌。', off: allCards(s).length < 2 },
-    {
-      id: 'netherite' as const,
-      icon: 'netherite_plate',
-      name: '合金',
-      desc: '将一张 ★3 卡牌淬炼为下界合金武装，护甲 +5%，受控时间 -30%，并解锁第二附魔槽位。',
-      off: !canNetherite,
-    },
   ];
   return (
     <div class="screen rest-screen">
@@ -56,7 +48,7 @@ export function RestView({ s, p }: { s: RunState; p: P<'rest'>; v?: number }) {
               class={`rest-opt ${off ? 'off' : ''} ${done ? 'done' : ''}`}
               disabled={off}
               onClick={() => {
-                sfx(o.id === 'rest' ? 'heal' : o.id === 'smith' ? 'golem' : o.id === 'fuse' ? 'star_up' : o.id === 'netherite' ? 'star_up' : 'enchant');
+                sfx(o.id === 'rest' ? 'heal' : o.id === 'smith' ? 'golem' : o.id === 'fuse' ? 'star_up' : 'enchant');
                 act((r) => restAction(r, o.id));
               }}
             >
@@ -105,8 +97,6 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
         return canSmith(c) && c.star <= maxStar;
       case 'fuse_sac':
         return c.uid !== p.data?.baseUid;
-      case 'netherite':
-        return c.star >= 3 && !c.netherite;
       default:
         return true;
     }
@@ -121,7 +111,6 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
     trade: '交出的卡牌将永久消失，换取一次更高品质的开箱。',
     fuse_base: '选择一张接受刻印的主力卡牌。融合后将获得副卡的专属生物印记，并吸收副卡的精魄成长。',
     fuse_sac: '选择一张献祭的副卡。副卡将永久消耗，将其专属印记与精魄（属性+5~10%、已有附魔）赋予主力卡牌。',
-    netherite: '下界合金淬炼：将一张 ★3 卡牌重铸为终极下界合金武装形态，永久护甲 +5%，受到控制时间缩短 30%，免疫击退，并解锁【第二附魔槽位】！',
   };
   const selCard = cards.find((c) => c.uid === sel);
   return (
@@ -175,9 +164,7 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
 
                     const enchName = !baseCard.enchant && selCard.enchant
                       ? enchantName(selCard.enchant, selCard.enchantLv)
-                      : (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
-                        ? `【第二槽位】${enchantName(selCard.enchant, selCard.enchantLv)}`
-                        : undefined;
+                      : undefined;
 
                     const fusedCard: Card = {
                       ...baseCard,
@@ -186,12 +173,6 @@ export function PickCardView({ s, p }: { s: RunState; p: P<'pick_card'>; v?: num
                       bonus: (baseCard.bonus ?? 0) + totalBonus / 100,
                       enchant: baseCard.enchant ?? selCard.enchant,
                       enchantLv: baseCard.enchant ? baseCard.enchantLv : selCard.enchantLv,
-                      enchant2: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
-                        ? selCard.enchant
-                        : baseCard.enchant2,
-                      enchant2Lv: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && selCard.enchant && selCard.enchant !== baseCard.enchant)
-                        ? selCard.enchantLv
-                        : baseCard.enchant2Lv,
                     };
                     setSel(null);
                     sfx('star_up');
@@ -287,60 +268,11 @@ const CONFIRM: Record<P<'pick_card'>['purpose'], string> = {
   trade: '确认交易',
   fuse_base: '选为主力',
   fuse_sac: '确认献祭融合',
-  netherite: '确认合金淬炼',
 };
 
 /** Before → after for the chosen card, with warnings for anything that gets lost. */
 function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card }) {
   const m = mobDef(c.mob);
-  if (p.purpose === 'netherite') {
-    const afterCard: Card = { ...c, netherite: true };
-    return (
-      <div>
-        <div class="panel-title">淬炼 {m.name} 为下界合金武装形态</div>
-        <div class="row gap16 center" style={{ alignItems: 'center', margin: '8px 0 14px' }}>
-          <div class="col center gap4">
-            <span class="faint" style={{ fontSize: 12 }}>原始形态</span>
-            <MobCard mob={c.mob} card={c} size="sm" tip={false} />
-          </div>
-          <span class="cp-big-arrow">➜</span>
-          <div class="col center gap4">
-            <span class="gold-t" style={{ fontSize: 12 }}>下界合金武装</span>
-            <MobCard mob={c.mob} card={afterCard} size="sm" tip={false} />
-          </div>
-        </div>
-        <div class="cp-table">
-          <div class="cp-row">
-            <span class="subtle">材质装甲</span>
-            <span>普通装甲</span>
-            <span class="cp-arrow">➜</span>
-            <span class="em" style={{ color: '#c97d60' }}>下界合金武装 (Netherite)</span>
-          </div>
-          <div class="cp-row">
-            <span class="subtle">护甲加成</span>
-            <span>基础减伤</span>
-            <span class="cp-arrow">➜</span>
-            <span class="em" style={{ color: '#55efc4' }}>额外 +5% 永久全额护甲减伤</span>
-          </div>
-          <div class="cp-row">
-            <span class="subtle">霸体与韧性</span>
-            <span>标准受控</span>
-            <span class="cp-arrow">➜</span>
-            <span class="em" style={{ color: '#ffeaa7' }}>受到控制时间 -30% & 免疫击退</span>
-          </div>
-          <div class="cp-row">
-            <span class="subtle">附魔槽位</span>
-            <span>单槽位</span>
-            <span class="cp-arrow">➜</span>
-            <span class="em" style={{ color: '#a29bfe' }}>解锁第二附魔槽位 (Dual Enchant)</span>
-          </div>
-        </div>
-        <div class="cp-note" style={{ color: '#fab1a0', marginTop: 12, border: '1px solid rgba(225, 112, 85, 0.4)', background: 'rgba(214, 48, 49, 0.1)', padding: '8px 12px', borderRadius: 4 }}>
-          🔥 淬炼后的卡牌在后续获得附魔（附魔台/宝箱/融合）时，若已有附魔不同，将自动激活并装备至【第二附魔槽位】，双重附魔同时生效！
-        </div>
-      </div>
-    );
-  }
   if (p.purpose === 'fuse_base') {
     return (
       <div>
@@ -377,12 +309,6 @@ function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card })
           bonus: (baseCard.bonus ?? 0) + totalBonus / 100,
           enchant: baseCard.enchant ?? c.enchant,
           enchantLv: baseCard.enchant ? baseCard.enchantLv : c.enchantLv,
-          enchant2: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant)
-            ? c.enchant
-            : baseCard.enchant2,
-          enchant2Lv: (baseCard.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant)
-            ? c.enchantLv
-            : baseCard.enchant2Lv,
         }
       : null;
 
@@ -429,12 +355,7 @@ function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card })
               <span class="em" style={{ color: '#74b9ff' }}>{enchantName(c.enchant, c.enchantLv)}</span>
             </div>
           )}
-          {baseCard?.netherite && baseCard.enchant && !baseCard.enchant2 && c.enchant && c.enchant !== baseCard.enchant && (
-            <div class="cp-row">
-              <span class="subtle">第二附魔继承</span>
-              <span class="em" style={{ color: '#e056fd' }}>⚔️ 第二槽位：{enchantName(c.enchant, c.enchantLv)}</span>
-            </div>
-          )}
+
         </div>
         <div class="cp-warn" style={{ marginTop: 12 }}>
           副卡 {m.name}（★{c.star}）将作为祭品永久消耗！
@@ -463,8 +384,7 @@ function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card })
   const a = stat(star, bonus);
   const b = stat(after.star, after.bonus);
   const lost = p.purpose === 'sacrifice' || p.purpose === 'trade';
-  const isSecondEnchant = c.netherite && !!c.enchant && c.enchant !== p.enchant && !c.enchant2;
-  const overwrite = !isSecondEnchant && after.enchant !== c.enchant && !!c.enchant;
+  const overwrite = after.enchant !== c.enchant && !!c.enchant;
   const changedEnch = after.enchant !== c.enchant || merge;
   const row = (label: string, x: number | string, y: number | string, up?: boolean) => (
     <div class="cp-row">
@@ -508,11 +428,7 @@ function ChangePreview({ s, p, c }: { s: RunState; p: P<'pick_card'>; c: Card })
           {enchantName(after.enchant, after.lv)}：{enchantText(after.enchant, after.lv)}
         </div>
       )}
-      {isSecondEnchant && (
-        <div class="cp-note tt-purple" style={{ color: '#e056fd' }}>
-          ⚔️ 解锁装备至【第二附魔槽位】：{enchantName(p.enchant!, bookLv)}：{enchantText(p.enchant!, bookLv)}（原有附魔保留，双重附魔同时生效！）
-        </div>
-      )}
+
       {overwrite && (
         <div class="cp-warn">
           ⚠ 每张卡牌只能有一个附魔：原有的「{enchantName(c.enchant!, c.enchantLv)}」（{enchantText(c.enchant!, c.enchantLv)}）会被覆盖并消失。
