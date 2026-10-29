@@ -29,7 +29,7 @@ export const COMMANDERS: CommanderDef[] = [
     skill: {
       id: 'build', name: '建造', charges: 4,
       summary: '每场建造 4 次：筑墙挡敌、垫高远程，并为掩体附近的友军提供减伤；布阵时也能使用。',
-      desc: '每场 4 次，布阵时就能建：「圆石墙」砌一道 3 格长、2 格高的墙，挡住敌人的行走和投射物（我方的箭能越墙射出）；「土台」把 3×3 区域垫高 2 格，站上去的远程会坚守高台、居高临下。紧挨己方墙壁或站在土台上的友军受到伤害 -20%。只能建在我方半场，不能把路完全堵死，墙会被爆炸炸毁。',
+      desc: '每场 4 次，布阵时就能建：「圆石墙」砌一道 3 格长、2 格高的墙，挡住敌人的行走和投射物（我方的箭能越墙射出）；「土台」把 3×3 区域垫高 2 格，站上去的远程会坚守高台、居高临下。紧挨己方墙壁或站在土台上的友军受到伤害 -20%。全图可放，不能把路完全堵死，墙会被爆炸炸毁。',
     },
     desc: ['初始 7 颗心、100 绿宝石：最皮实的统领，适合第一次游玩。', '每场战斗胜利额外获得 4 绿宝石。'],
   },
@@ -74,7 +74,7 @@ export const COMMANDER_MAP: Record<string, CommanderDef> = Object.fromEntries(CO
 
 /** Hotbar entries per skill: Steve's building has two shapes sharing one pool of charges. */
 export const SKILL_INFO: Record<string, { name: string; icon: string; color: string; desc: string }> = {
-  wall: { name: '圆石墙', icon: 'skill_wall', color: '#9a9a9a', desc: '在我方半场砌一道 3 格长、2 格高的墙：挡住敌人的行走与投射物，我方的箭可以越墙射出；紧挨墙的友军受到伤害 -20%。' },
+  wall: { name: '圆石墙', icon: 'skill_wall', color: '#9a9a9a', desc: '全图砌一道 3 格长、2 格高的墙：挡住敌人的行走与投射物，我方的箭可以越墙射出；紧挨墙的友军受到伤害 -20%。' },
   platform: { name: '土台', icon: 'skill_platform', color: '#a07a4a', desc: '把 3×3 区域垫高 2 格：站上去的远程会坚守高台、居高临下，站在上面的友军受到伤害 -20%。' },
   tame: { name: '驯服', icon: 'skill_tame', color: '#ff8a3d', desc: '点选残血敌人使其倒戈。基础门槛：军规/受限 ≤60%，保密 ≤45%，隐秘/特殊 ≤30%；野兽再放宽 20 个百分点，最高 95%。自带回复 30% 最大生命；首领和建筑不能驯服。' },
   golem: { name: '雇佣铁傀儡', icon: 'skill_golem', color: '#d9d5cd', desc: '花费绿宝石，在我方半场安全地面召唤铁傀儡；费用与钱炮共用可用余额，仅本场有效。' },

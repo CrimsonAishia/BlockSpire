@@ -845,17 +845,16 @@ export interface BuildOrder {
  * Cells a build would change: a wall is a 3-cell line across the field (along the depth),
  * a platform a 3×3 square around the clicked cell. Only the builder's half; liquids and solid obstacles are skipped.
  */
-export function buildCells(t: Terrain, team: 0 | 1, kind: BuildKind, x: number, y: number): number[] {
+export function buildCells(t: Terrain, _team: 0 | 1, kind: BuildKind, x: number, y: number): number[] {
   const cx = cellX(x);
   const cy = cellY(y);
-  const mine = (c: number) => (team === 0 ? c < GW / 2 : c >= GW / 2);
   const cand: [number, number][] = [];
   if (kind === 'wall') cand.push([cx, cy - 1], [cx, cy], [cx, cy + 1]);
   // A platform is 3×3 so a whole ranged squad can spread out on it.
   else for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) cand.push([cx + dx, cy + dy]);
   const out: number[] = [];
   for (const [ax, ay] of cand) {
-    if (ax < 1 || ay < 0 || ax >= GW - 1 || ay >= GD || !mine(ax)) continue;
+    if (ax < 1 || ay < 0 || ax >= GW - 1 || ay >= GD) continue;
     const i = idx(ax, ay);
     if (SURFACE_INFO[t.s[i]]?.liquid || blockingFeature(t.f[i])) continue;
     if (kind === 'platform' && t.h[i] >= 4) continue;

@@ -310,6 +310,7 @@ export function Arena3DView({
       return;
     }
     if (!c.battle.useSkill(0, kind, x, y)) return flash(kind === 'wall' ? '这里砌不了墙（不能把路完全堵死）' : '这里垫不了土台');
+    setHud(snapshot(c.battle, c.max));
     if (c.battle.skillLeft[0] <= 0) clearAim();
   };
 
@@ -1054,7 +1055,7 @@ export function Arena3DView({
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
           {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
-          {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面{touchUI ? '' : '（Q / E）'}</div>}
+          {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点战场的地面{touchUI ? '' : '（Q / E）'}</div>}
           {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
             军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点
             {tacticCost > 0 || skill?.id === 'golem' ? ` · 可用绿宝石 ${hud?.battleEmeralds ?? config.sides[0].flags.emeralds ?? 0}` : ''}
@@ -1227,9 +1228,9 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
   }
   switch (aim.s) {
     case 'wall':
-      return `点击我方半场砌一道 3 格长的墙（绿色可建，红色不行）· ${cancel}`;
+      return `点击战场砌一道 3 格长的墙（绿色可建，红色不行）· ${cancel}`;
     case 'platform':
-      return `点击我方半场垫高一块 3×3 的土台（布阵时把远程拖上去）· ${cancel}`;
+      return `点击战场垫高一块 3×3 的土台（布阵时把远程拖上去）· ${cancel}`;
     case 'tame':
       return `点击头顶有橙色爱心的敌人驯服它 · ${cancel}`;
     case 'golem':
