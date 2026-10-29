@@ -23,25 +23,23 @@
     "build": "node scripts/subset-font.mjs && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "gen:images": "node scripts/gen-images.mjs",
-    "process:images": "node scripts/process-images.mjs",
-    "gen:frames": "node scripts/gen-frames.mjs",
-    "process:frames": "node scripts/process-frames.mjs",
-    "sim": "node --experimental-strip-types --no-warnings scripts/balance-sim.ts",
-    "font": "node scripts/subset-font.mjs",
-    "bot": "node --experimental-strip-types --no-warnings scripts/bot.ts",
-    "aibench": "node --experimental-strip-types --no-warnings scripts/aibench.ts"
+    "test": "tsc --noEmit && node --experimental-strip-types --no-warnings scripts/test-commander-tactics.ts && node --experimental-strip-types --no-warnings scripts/test-battle-ai.ts && node --experimental-strip-types --no-warnings scripts/test-ai-safety.ts",
+    "test:ai": "node --experimental-strip-types --no-warnings scripts/test-battle-ai.ts && node --experimental-strip-types --no-warnings scripts/test-ai-safety.ts",
+    "font": "node scripts/subset-font.mjs"
   },
   "dependencies": {
     "@preact/signals": "^2.11.3",
+    "mistreevous": "^4.3.1",
     "preact": "^10.29.8",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "yuka": "^0.7.8"
   },
   "devDependencies": {
     "@plugin-web-update-notification/vite": "^2.1.2",
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.5",
     "@types/three": "^0.186.0",
+    "@types/yuka": "^0.7.4",
     "sharp": "^0.35.5",
     "subset-font": "^2.9.0",
     "typescript": "^7.0.2",

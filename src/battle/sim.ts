@@ -4,6 +4,7 @@ import { Rng } from '../core/rng.ts';
 import type { DmgKind, Family, MobDef, ProjectileKind, Row } from '../core/types.ts';
 import { mobDef, starStatMul } from '../data/mobs.ts';
 import { BEHAVIORS, type Behavior } from './ai.ts';
+import { coordinatedAct } from './coordinated_ai.ts';
 import { applyItem } from './items.ts';
 import { FORT_TAKEN, build, canTame, hireGolem, placeDispenser, tame, tickWalls, type SkillKind, type Wall } from './skills.ts';
 import type { SkillId } from '../data/commanders.ts';
@@ -88,7 +89,7 @@ export interface BattleConfig {
   boss?: boolean;
   headless?: boolean;
   terrain?: Terrain;
-  /** Per side AI level: 0 = classic nearest-enemy, 1 = tactical (default). */
+  /** Per side AI level: 0 = classic, 1 = legacy tactical, 2 = coordinated (default). */
   ai?: [number, number];
 }
 
@@ -207,6 +208,7 @@ export class Battle {
   terrain!: Terrain;
   /** Tactical AI per side, plus the shared blackboard it reads. */
   smart: [boolean, boolean];
+  coordinated: [boolean, boolean];
   front: [number, number] = [NaN, NaN];
   dangers: [Danger[], Danger[]] = [[], []];
   sayT: [number, number] = [0, 0];
@@ -234,6 +236,7 @@ export class Battle {
     this.boss = !!cfg.boss;
     this.suddenAt = this.boss ? 80 : 60;
     this.smart = cfg.ai ? [cfg.ai[0] > 0, cfg.ai[1] > 0] : [true, true];
+    this.coordinated = cfg.ai ? [cfg.ai[0] >= 2, cfg.ai[1] >= 2] : [true, true];
     this.sides = [0, 1].map((i) => ({
       plan: cfg.sides[i],
       fatigue: 0,
@@ -1339,6 +1342,10 @@ export class Battle {
     }
     u.atkTimer -= dt * this.atkSpeedOf(u);
     if (u.atkTimer < 0) u.atkTimer = 0;
+    if (this.coordinated[u.team]) {
+      coordinatedAct(this, u, dt, b, () => this.attackNow(u, u.target!, b));
+      return;
+    }
     const smart = this.smart[u.team];
     if (smart && TAC.dodge && (dodgeStep(this, u, dt) || retreatStep(this, u, dt) || kiteStep(this, u, dt))) return;
     const targetOutOfReach = u.speed <= 0 && !!u.target && Math.hypot(u.target.x - u.x, u.target.y - u.y) > this.reach(u, u.target);

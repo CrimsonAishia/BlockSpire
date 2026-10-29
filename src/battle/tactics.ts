@@ -1,8 +1,12 @@
 // Tactical layer shared by every mob: utility-based target scoring, ranged positioning
 // (high ground, spacing from melee, staying behind the frontline) and dodging telegraphed
 // area attacks. `Battle.smart[team]` switches a side back to the classic "nearest enemy"
-// behaviour, which the A/B benchmark (scripts/aibench.ts) uses to prove the AI is stronger.
+// behaviour for comparison with the tactical layer.
 import type { Battle } from './sim.ts';
+import type { DmgKind } from '../core/types.ts';
+import { collectDangers } from './threats.ts';
+import { contactPressure } from './engagement.ts';
+import { steerTo } from './steering.ts';
 import { ARENA_D, ARENA_W, MELEE_REACH_Z, type Unit } from './unit.ts';
 import { BLOCK, S, cellX, cellY, hatesOuch, hatesWater, idx, isBlocked, isClimber, isFireproof, moveMul, needsPath } from './terrain.ts';
 
@@ -34,7 +38,7 @@ interface RoleWeights {
   dodge: number;
 }
 
-// Tuned with scripts/aibench.ts. Plain "nearest enemy" is a strong baseline here (straight
+// Plain "nearest enemy" is a strong baseline here (straight
 // projectiles hit whoever is in the way, walking costs time), so only terms that measurably
 // win stay on: splash aiming, peeling for tanks/supports and avoiding targets in hazards.
 // Focus fire, spreading fire, "finish low HP" and target stickiness all lost games.
@@ -97,6 +101,18 @@ export interface Danger {
   /** Absolute battle time the area goes off (zones: already active). */
   at: number;
   zone: boolean;
+  damage?: number;
+  dk?: DmgKind;
+  src?: Unit | null;
+  proj?: boolean;
+  fire?: boolean;
+  burn?: boolean;
+  groundOnly?: boolean;
+  percent?: boolean;
+  control?: number;
+  controlKind?: 'stun' | 'slow' | 'knockback';
+  falloff?: number;
+  until?: number;
 }
 
 /** Recomputes damage estimates, who-targets-whom, frontlines and the danger lists. */
@@ -129,22 +145,7 @@ export function refreshTactics(b: Battle) {
     b.dangers[team].length = 0;
   }
   for (const p of b.projs) if (p.alive && p.target && p.target.alive && p.special !== 'heal') p.target.pend += p.dmg;
-  // Area attacks that are visibly about to land, listed for the side they threaten.
-  for (const u of b.units) {
-    if (!u.alive || u.mob.ai !== 'creeper' || !(u.ab.fuse > 0)) continue;
-    b.dangers[1 - u.team].push({ id: 1e6 + u.id, x: u.x, y: u.y, r: 85 * (u.star >= 3 ? 1.4 : 1), at: b.t + u.ab.fuse, zone: false });
-  }
-  for (const d of b.delayed) {
-    const dg = { id: d.id ?? 0, x: d.x, y: d.y, r: d.r, at: b.t + d.t, zone: false };
-    // A lit TNT block threatens everyone nearby, friend or foe.
-    if (d.kind === 'tnt') b.dangers[0].push(dg), b.dangers[1].push(dg);
-    else b.dangers[1 - d.team].push(dg);
-  }
-  for (const z of b.zones) if (z.kind !== 'regen' && z.kind !== 'bloom') b.dangers[1 - z.team].push({ id: z.id ?? 0, x: z.x, y: z.y, r: z.r, at: b.t, zone: true });
-  for (const p of b.projs) {
-    if (!p.alive || p.mode !== 0 || p.aoe <= 0 || p.special === 'heal') continue;
-    b.dangers[1 - p.team].push({ id: p.id ?? 0, x: p.tx, y: p.ty, r: p.aoe, at: b.t + (p.dur - p.t), zone: false });
-  }
+  collectDangers(b);
 }
 
 // ───────────────────────── callouts ─────────────────────────
@@ -193,6 +194,10 @@ export function pickTarget(b: Battle, u: Unit, filter?: (e: Unit) => boolean): U
     const d = Math.sqrt(dx * dx + dy * dy);
     const gap = d - reach0 - e.radius;
     let c = d;
+    if (b.coordinated[u.team]) {
+      if (!ranged) c += contactPressure(b, u, e);
+      if (e === cur && gap <= 4) c -= 12;
+    }
     if (ranged) {
       if (gap > 0) c += gap * w.walk;
       // Prefer targets that aren't hiding behind trees, rocks or hill sides.
@@ -286,6 +291,10 @@ export function safeDir(b: Battle, u: Unit, nx: number, ny: number): [number, nu
 }
 
 function stepDir(b: Battle, u: Unit, nx: number, ny: number, dt: number, mul = 1) {
+  if (b.coordinated[u.team]) {
+    steerTo(b, u, { x: u.x + nx * BLOCK * 2, y: u.y + ny * BLOCK * 2 }, dt, mul);
+    return;
+  }
   const sp = b.moveSpeedOf(u) * b.terrainSpeed(u, nx, ny) * dt * mul;
   u.x = cx_(u.x + nx * sp, u.radius);
   u.y = cy_(u.y + ny * sp);
