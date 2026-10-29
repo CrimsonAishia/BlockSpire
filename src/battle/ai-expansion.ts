@@ -159,7 +159,7 @@ export const EXPANSION_BEHAVIORS: Record<string, Behavior> = {
           if (b.t - lastR >= 0.5) {
             u.ref.lastSpikeT = b.t;
             u.ref.spikeReflects = (u.ref.spikeReflects ?? 0) + 1;
-            b.damage(u, src, b.atkOf(u) * 0.18, 'magic', { noCrit: true });
+            b.damage(u, src, b.atkOf(u) * 0.18, 'magic', { noCrit: true, reactive: true });
             b.emit({ k: 'hit', x: src.x, y: src.y, z: src.gz + src.z + src.size * 0.5, big: false, color: '#cf8ddc' });
           }
         }

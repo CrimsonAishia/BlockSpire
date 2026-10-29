@@ -1319,7 +1319,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
         const lastTime = lastReflect.get(src.card) ?? -999;
         if (now - lastTime >= 1.0) {
           lastReflect.set(src.card, now);
-          b.damage(u, src, b.atkOf(u) * 0.15, 'phys', { noThorns: true });
+          b.damage(u, src, b.atkOf(u) * 0.15, 'phys', { noThorns: true, reactive: true });
           b.emit({ k: 'hit', x: src.x, y: src.y, z: src.gz, big: false, color: '#ffa502' });
         }
       }

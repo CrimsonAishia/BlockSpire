@@ -5,6 +5,7 @@ import type { DmgKind, Family, MobDef, ProjectileKind, Row } from '../core/types
 import { mobDef, starStatMul } from '../data/mobs.ts';
 import { BEHAVIORS, type Behavior } from './ai.ts';
 import { coordinatedAct } from './coordinated_ai.ts';
+import { recordThreat } from './self_defense.ts';
 import { applyItem } from './items.ts';
 import { FORT_TAKEN, build, canTame, hireGolem, placeDispenser, tame, tickWalls, type SkillKind, type Wall } from './skills.ts';
 import type { SkillId } from '../data/commanders.ts';
@@ -1574,7 +1575,7 @@ export class Battle {
     if (fx.burnHit > 0) this.burn(t, fx.burnHit, fx.burnDur, u);
     if (fx.poisonHit > 0) this.poison(t, fx.poisonHit, fx.poisonDur, fx.poisonStacks, u);
     if (fx.knock > 0) this.knock(t, u.x, u.y, fx.knock * (ranged ? 0.6 : 1));
-    if (fx.stunChance > 0 && this.rng.chance(fx.stunChance)) this.stun(t, 0.4);
+    if (fx.stunChance > 0 && this.rng.chance(fx.stunChance)) this.stun(t, 0.4, u);
     if (fx.freezeHit > 0) this.freeze(t, fx.freezeHit, 2, u);
     if (fx.baneSlow > 0 && t.mob.families.includes('arthropod')) this.slow(t, 0.4, 0.2, fx.baneSlow);
     if (fx.windBurst > 0 && !ranged) {
@@ -1680,7 +1681,7 @@ export class Battle {
 
     // ── 骨棒 (Bone Club)：近战普攻造成 0.5 秒强力眩晕 ──
     if (this.has(u.team, 'bone_club') && !ranged && !u.structure) {
-      this.stun(t, 0.5);
+      this.stun(t, 0.5, u);
       this.emit({ k: 'hit', x: t.x, y: t.y, z: t.gz + t.size, big: true, color: '#ced6e0' });
       this.emit({ k: 'sfx', id: 'stomp' });
       this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.size + 10, s: '【重击敲晕!】', color: '#d9d5cd' });
@@ -2060,7 +2061,7 @@ export class Battle {
     if (p.wither > 0) this.wither(t, p.wither, p.witherDur, p.src);
     if (p.slowDur > 0) this.slow(t, 0.35, 0.2, p.slowDur);
     if (p.chill) this.chillHit(t);
-    if (p.stun > 0) this.stun(t, p.stun);
+    if (p.stun > 0) this.stun(t, p.stun, p.reflected ? null : p.src);
     if (p.lev > 0) this.levitate(t, p.lev, p.dmg * 0.6 + t.maxHp * 0.05);
   }
 
@@ -2891,7 +2892,7 @@ export class Battle {
     t: Unit,
     amount: number,
     kind: DmgKind,
-    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; projRef?: Proj; aoe?: boolean; isPandaIntercept?: boolean } = {},
+    o: { proj?: boolean; melee?: boolean; fire?: boolean; noCrit?: boolean; noDodge?: boolean; noThorns?: boolean; reactive?: boolean; projRef?: Proj; aoe?: boolean; isPandaIntercept?: boolean } = {},
   ): number {
     if (!t.alive || amount <= 0 || t.ghost) return 0;
     if (src && src.team === t.team) return 0;
@@ -3375,6 +3376,7 @@ export class Battle {
       if (src && this.has(src.team, 'dark_armor')) shieldDmgMul += 0.80;
       if (src && this.has(src.team, 'mechanized_sawblade') && !src.isRanged) shieldDmgMul += 1.00;
       const { absorbed } = t.consumeShield(d * shieldDmgMul);
+      recordThreat(this, t, src, absorbed, 0, kind === 'dot', o.reactive || o.projRef?.reflected);
       d = Math.max(0, d - absorbed / shieldDmgMul);
       if (hadShield && t.shield <= 0 && src && this.has(src.team, 'mechanized_sawblade') && !src.isRanged) {
         src.hasteT = Math.max(src.hasteT, 5.0);
@@ -3446,7 +3448,7 @@ export class Battle {
       }
       if (absorbed > 0 && t.mob.families.includes('construct') && this.syn(t.team, 'construct') >= 1 && src && src.alive && src !== t && !o.noThorns) {
         const reflectPct = this.syn(t.team, 'construct') >= 2 ? 0.35 : 0.25;
-        this.damage(t, src, absorbed * reflectPct, 'phys', { noCrit: true, noDodge: true, noThorns: true });
+        this.damage(t, src, absorbed * reflectPct, 'phys', { noCrit: true, noDodge: true, noThorns: true, reactive: true });
         this.emit({ k: 'text', x: t.x, y: t.y, z: t.gz + t.z + t.size, s: '盾铠反弹', color: '#c9c9c9' });
       }
       if (hadShield && t.shield <= 0 && this.syn(t.team, 'construct') >= 2 && t.mob.families.includes('construct')) {
@@ -3471,6 +3473,7 @@ export class Battle {
       }
     }
     const hpDamage = Math.max(0, Math.min(t.hp, d));
+    recordThreat(this, t, src, hpDamage, 0, kind === 'dot', o.reactive || o.projRef?.reflected);
     t.hp -= d;
     if (src) t.ref.lastHitBy = src;
     if (t.boss && t.channeling && kind !== 'dot' && hpDamage > 0 && t.maxHp > 0) {
@@ -3527,7 +3530,7 @@ export class Battle {
       }
     }
     if (o.melee && src && src.alive && t.fx.thorns > 0 && !o.noThorns)
-      this.damage(t, src, d * t.fx.thorns, 'true', { noThorns: true, noCrit: true, noDodge: true });
+      this.damage(t, src, d * t.fx.thorns, 'true', { noThorns: true, noCrit: true, noDodge: true, reactive: true });
     if (t.hp <= 0) this.kill(t, src);
     else {
       if (t.mob.id === 'wolf' && !t.isSummon && !t.wolfHasteUsed && t.hpFrac < 0.5 && this.has(t.team, 'combo_wolf_armor')) {
@@ -4117,7 +4120,7 @@ export class Battle {
     }
   }
 
-  stun(t: Unit, dur: number) {
+  stun(t: Unit, dur: number, src: Unit | null = null) {
     this.checkRavenInterrupt(t);
     if (this.has(t.team, 'unstable_robes') && !t.structure && (this.sides[t.team].timers['unstable_robes_procs'] || 0) < 2) {
       this.sides[t.team].timers['unstable_robes_procs'] = (this.sides[t.team].timers['unstable_robes_procs'] || 0) + 1;
@@ -4130,6 +4133,7 @@ export class Battle {
       if (t.boss) t.stunT = Math.max(t.stunT, dur * 0.2);
       return;
     }
+    recordThreat(this, t, src, 0, Math.max(0, dur - t.stunT));
     t.stunT = Math.max(t.stunT, dur);
   }
 

@@ -243,7 +243,7 @@ export const MODERN: Record<string, Behavior> = {
     afterDamaged(u, src, d, b) {
       if (u.star < 3 || !(u.ab.rollT > 0) || !src || !src.alive || src.isRanged) return;
       // Spiky scutes: 30% of the blow (before the 70% the ball soaked up) bounces back.
-      b.damage(u, src, d, 'true', { noThorns: true, noCrit: true, noDodge: true });
+      b.damage(u, src, d, 'true', { noThorns: true, noCrit: true, noDodge: true, reactive: true });
     },
   },
 

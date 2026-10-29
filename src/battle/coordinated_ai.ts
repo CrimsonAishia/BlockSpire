@@ -8,6 +8,7 @@ import { canStand, forgetRoute, planPath, type Point } from './navigation.ts';
 import { movePlanned } from './steering.ts';
 import { safetyStep } from './evasion.ts';
 import { firingGoal, releaseFiringSpot, visibleTarget } from './ranged_ai.ts';
+import { selfDefenseTarget, isDefending } from './self_defense.ts';
 
 export type AIAction = 'idle' | 'escape' | 'dodge' | 'retreat' | 'attack' | 'approach' | 'flank' | 'reposition' | 'wait';
 interface Brain {
@@ -50,7 +51,7 @@ function makeBrain(b: Battle, u: Unit): Brain {
     Retreat: () => done('retreat', TAC.dodge && retreatStep(b, u, brain.dt)),
     Attack: () => {
       let t = u.target;
-      if (t && !u.isRanged && !brain.behavior.target && u.tauntT <= 0 && Math.hypot(t.x - u.x, t.y - u.y) > b.reach(u, t)) {
+      if (t && !u.isRanged && !brain.behavior.target && u.tauntT <= 0 && !isDefending(u, b.t) && Math.hypot(t.x - u.x, t.y - u.y) > b.reach(u, t)) {
         const inContact = b.findTarget(u, e => Math.hypot(e.x - u.x, e.y - u.y) <= b.reach(u, e));
         if (inContact) {
           u.target = t = inContact; releaseContact(b, u); forgetRoute(u);
@@ -177,7 +178,14 @@ export function coordinatedAct(b: Battle, u: Unit, dt: number, behavior: Behavio
   const brain = brains.get(u) ?? makeBrain(b, u);
   brain.dt = dt; brain.attack = attack; brain.behavior = behavior;
   const old = u.target;
-  if (!old || !old.alive || old.team === u.team || old.invisT > 0 || !b.canReach(u, old) || u.retarget <= 0 || (u.speed <= 0 && Math.hypot(old.x - u.x, old.y - u.y) > b.reach(u, old))) {
+  const valid = old && old.alive && old.team !== u.team && old.invisT <= 0 && b.canReach(u, old)
+    && (u.speed > 0 || Math.hypot(old.x - u.x, old.y - u.y) <= b.reach(u, old));
+  const defense = valid && TAC.target && !behavior.target && u.tauntT <= 0
+    ? selfDefenseTarget(b, u, e => available(b, brain, e)) : null;
+  if (defense) {
+    u.target = defense;
+    if (defense !== old) u.retarget = 0.75;
+  } else if (!valid || u.retarget <= 0 || (u.tauntT > 0 && u.taunter?.alive && b.canReach(u, u.taunter) && old !== u.taunter)) {
     const specialized = behavior.target?.(u, b);
     u.target = specialized !== undefined ? specialized : b.findTarget(u, e => available(b, brain, e) && (u.speed > 0 || Math.hypot(e.x - u.x, e.y - u.y) <= b.reach(u, e)));
     u.retarget = 0.55 + (u.id % 4) / 30;

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { DT } from '../src/battle/sim.ts';
-import { inspectAI } from '../src/battle/coordinated_ai.ts';
+import { coordinatedAct, inspectAI } from '../src/battle/coordinated_ai.ts';
 import { contactGoal } from '../src/battle/engagement.ts';
 import { canStand, clearWalk, waypoint } from '../src/battle/navigation.ts';
 import { moveToward } from '../src/battle/steering.ts';
+import { IMM_STUN } from '../src/battle/unit.ts';
 import { BLOCK, F, S, cellX, cellY, idx, isBlocked } from '../src/battle/terrain.ts';
 import { contactScenario, flatBattle, measure } from './ai-scenarios.ts';
 
@@ -157,6 +158,135 @@ test('mixed sizes and special mob hooks remain finite and outside obstacles', ()
       if (u.alive && !u.flying) assert.equal(isBlocked(b.terrain, cellX(u.x), cellY(u.y)), false, u.mob.id);
     }
   }
+});
+
+function defenseScene(mob = 'zombie') {
+  const b = flatBattle([mob], ['zombie', 'zombie'], [2, 0]), u = b.live[0][0], [original, attacker] = b.live[1];
+  for (const a of b.units) { a.hp = a.maxHp = 1000; a.atk = 0; a.cd = 1; }
+  u.x = u.px = 600; u.y = u.py = 304; u.atk = 20;
+  original.x = original.px = 620; original.y = original.py = 304; original.speed = 0;
+  attacker.x = attacker.px = 600; attacker.y = attacker.py = 304 + b.reach(attacker, u) - 1; attacker.speed = 0;
+  attacker.atk = 80; attacker.target = u;
+  u.target = original; u.retarget = 10; u.atkTimer = 0;
+  return { b, u, original, attacker };
+}
+
+test('a melee unit turns against a contact attacker while its original target remains attackable', () => {
+  const { b, u, attacker } = defenseScene();
+  let attacked = u.target;
+  coordinatedAct(b, u, DT, {}, () => { attacked = u.target; });
+  assert.equal(u.target?.id, attacker.id); assert.equal(attacked?.id, attacker.id);
+});
+
+test('an approaching aggressor is handled before its first hit', () => {
+  const { b, u, attacker } = defenseScene();
+  attacker.speed = 60; attacker.y += b.moveSpeedOf(attacker) * 0.3;
+  coordinatedAct(b, u, DT, {}, () => {});
+  assert.equal(u.target, attacker);
+});
+
+test('shield-only damage records an attacker even without its target pointing back at us', () => {
+  const { b, u, attacker } = defenseScene(); attacker.target = null; attacker.atk = 0;
+  u.addSynergyShield('defense-test', 200, 5);
+  const hp = u.hp;
+  b.damage(attacker, u, 120, 'true', { noCrit: true, noDodge: true });
+  assert.equal(u.hp, hp); assert.ok(u.shield < 200);
+  coordinatedAct(b, u, DT, {}, () => {});
+  assert.equal(u.target, attacker);
+});
+
+test('a safe finishing hit takes priority over a weak aggressor across the next evaluation frames', () => {
+  const { b, u, original, attacker } = defenseScene();
+  original.hp = 1; attacker.atk = 1; u.atkTimer = 0.1; u.retarget = 0;
+  for (let i = 0; i < 4; i++) {
+    coordinatedAct(b, u, DT, {}, () => {});
+    assert.equal(u.target, original); b.t += DT;
+  }
+});
+
+test('a lethal contact threat interrupts finishing the original target', () => {
+  const { b, u, original, attacker } = defenseScene();
+  original.hp = 1; u.hp = 40; attacker.atk = 300;
+  coordinatedAct(b, u, DT, {}, () => {});
+  assert.equal(u.target, attacker);
+});
+
+test('similar alternating attackers do not repeatedly steal the defensive target', () => {
+  const { b, u, original, attacker } = defenseScene();
+  coordinatedAct(b, u, DT, {}, () => {});
+  assert.equal(u.target, attacker);
+  original.target = u; original.atk = 85;
+  for (let n = 0; n < 8; n++) {
+    b.t += 0.2; u.retarget = 0;
+    b.damage(n % 2 ? attacker : original, u, 1, 'true', { noCrit: true, noDodge: true });
+    coordinatedAct(b, u, DT, {}, () => {});
+    assert.equal(u.target, attacker);
+  }
+});
+
+test('a retreating attacker stops attracting defensive pursuit and an expired hit loses priority', () => {
+  const { b, u, original, attacker } = defenseScene();
+  b.damage(attacker, u, 100, 'true', { noCrit: true, noDodge: true });
+  coordinatedAct(b, u, DT, {}, () => {}); assert.equal(u.target, attacker);
+  attacker.x += 400; b.t += 0.3; u.retarget = 0;
+  coordinatedAct(b, u, DT, {}, () => {}); assert.equal(u.target, original);
+  attacker.x = 600; attacker.target = null; attacker.atk = 0; b.t += 3; u.retarget = 0;
+  coordinatedAct(b, u, DT, {}, () => {}); assert.equal(u.target, original);
+});
+
+test('passive retaliation, periodic damage, allies and avoided hits do not provoke a target switch', () => {
+  for (const kind of ['reactive', 'dot', 'ally', 'immune'] as const) {
+    const { b, u, original, attacker } = defenseScene(); attacker.target = null; attacker.atk = 0;
+    if (kind === 'immune') u.phaseImmunityTimer = 1;
+    b.damage(kind === 'ally' ? u : attacker, u, 120, kind === 'dot' ? 'dot' : 'true',
+      { noCrit: true, noDodge: true, reactive: kind === 'reactive' });
+    coordinatedAct(b, u, DT, {}, () => {}); assert.equal(u.target, original, kind);
+  }
+});
+
+test('attributed crowd control provokes defence but stun immunity does not', () => {
+  for (const immune of [false, true]) {
+    const { b, u, original, attacker } = defenseScene(); attacker.target = null; attacker.atk = 0; u.atk = 100;
+    if (immune) u.immune |= IMM_STUN;
+    b.stun(u, 2, attacker); u.stunT = 0;
+    coordinatedAct(b, u, DT, {}, () => {});
+    assert.equal(u.target, immune ? original : attacker);
+  }
+});
+
+test('taunts, specialized targets and committed casts keep priority over self defence', () => {
+  for (const kind of ['taunt', 'specialized', 'cast'] as const) {
+    const { b, u, original, attacker } = defenseScene();
+    b.damage(attacker, u, 100, 'true', { noCrit: true, noDodge: true });
+    if (kind === 'taunt') { u.tauntT = 2; u.taunter = original; }
+    if (kind === 'cast') {
+      assert.ok(b.startCast(u, 'defense-test', 0.8, 0.3, { target: original }));
+      advance(b, 0.2);
+    } else coordinatedAct(b, u, DT, kind === 'specialized' ? { target: () => original } : {}, () => {});
+    assert.equal(u.target, original, kind);
+  }
+});
+
+test('an aggressor behind a wall cannot steal the target', () => {
+  const { b, u, original, attacker } = defenseScene();
+  u.speed = 100; attacker.speed = 100; attacker.x = 680; attacker.y = 304; attacker.atk = 300;
+  b.terrain.f[idx(20, 9)] = F.WALL; b.terrain.fh[idx(20, 9)] = 3; b.terrain.ver++;
+  b.damage(attacker, u, 100, 'true', { noCrit: true, noDodge: true });
+  coordinatedAct(b, u, DT, {}, () => {});
+  assert.equal(u.target, original);
+});
+
+test('a ranged unit turns on a diving enemy and makes space between shots', () => {
+  const { b, u, original, attacker } = defenseScene('skeleton');
+  original.x = 600 + b.reach(u, original) * 0.8;
+  attacker.atk = 30; attacker.speed = 0;
+  for (const a of b.units) a.hp = a.maxHp = 10000;
+  b.damage(attacker, u, 500, 'true', { noCrit: true, noDodge: true });
+  const start = Math.hypot(attacker.x - u.x, attacker.y - u.y), hp = attacker.hp;
+  advance(b, 0.6);
+  assert.equal(u.target, attacker);
+  assert.ok(attacker.hp < hp || b.projs.some(p => p.alive && p.target === attacker));
+  assert.ok(Math.hypot(attacker.x - u.x, attacker.y - u.y) > start + 5);
 });
 
 console.log('Battle AI regression: ' + passed + ' groups passed.');
