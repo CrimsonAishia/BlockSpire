@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Pending, RunState } from '../../run/run.ts';
-import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy } from '../../run/run.ts';
+import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy, equipTactic, signWager, cancelWager, markBattleStarted, chooseBrew } from '../../run/run.ts';
+import { TACTIC_DEFS, TACTIC_VARIANTS, wagerStake, wagerProfit, type TacticId } from '../../data/tactics.ts';
 import { mobDef, unitCount, RARITY_INFO } from '../../data/mobs.ts';
 import { estimateCombatPower, evaluateMatchup, sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
@@ -14,7 +15,7 @@ import { sfx } from '../../audio/audio.ts';
 import { RichText } from '../components/rich.tsx';
 import { Hint } from '../components/hints.tsx';
 import { ComboList } from './TeamPanel.tsx';
-import { AFFIX_MAP, ENCHANT_MAP, enchantName } from '../../data/items.ts';
+import { AFFIX_MAP, ENCHANT_MAP, ITEM_MAP, enchantName } from '../../data/items.ts';
 import { BATTLE_MODIFIER_MAP } from '../../data/battleModifiers.ts';
 import { COMMANDER_MAP } from '../../data/commanders.ts';
 import { difficultyPolicy } from '../../data/difficulty.ts';
@@ -198,7 +199,15 @@ export function BattleStage({ s, p }: { s: RunState; p: BattleP; v?: number }) {
   const [phase, setPhase] = useState<'deploy' | 'fight'>('deploy');
   const terrain = battleTerrain(p);
   const config = battleConfig(s, p);
-  const key = JSON.stringify([p.deploy, p.build, s.team.map((c) => [c.uid, c.mob, c.star, c.enchant, c.bonus]), s.relics.length]);
+  const key = JSON.stringify([
+    p.deploy,
+    p.build,
+    s.team.map((c) => [c.uid, c.mob, c.star, c.enchant, c.bonus]),
+    s.relics.length,
+    s.tacticsState?.equipped,
+    s.tacticsState?.variants,
+    s.tacticsState?.wagers?.active,
+  ]);
   // The hotbar keeps the inventory as it was when the fight started.
   const [items] = useState(() => s.potions.slice());
   const floor = s.nodeId ? s.map.nodes[s.nodeId].row + 1 : 0;
@@ -222,7 +231,7 @@ export function BattleStage({ s, p }: { s: RunState; p: BattleP; v?: number }) {
       onBuild={s.commander === 'steve' ? (list) => act((r) => setBuilds(r, list)) : undefined}
       extraOverlay={<BattleTacticsOverlay tactics={p.tactics} modifierId={p.modifier} attempt={p.attempt} />}
     >
-      <DeployHud s={s} p={p} config={config} terrainName={terrain.name} effects={terrain.effects} onFight={() => (sfx('fight'), setPhase('fight'))} />
+      <DeployHud s={s} p={p} config={config} terrainName={terrain.name} effects={terrain.effects} onFight={() => { act(r => markBattleStarted(r)); sfx('fight'); setPhase('fight'); }} />
     </Arena3DView>
   );
 }
@@ -407,6 +416,111 @@ function DeployHud({
           {p.brew?.length ? <span class="faint" style={{ fontSize: 13 }}>紫框：坩埚熬的限定药水</span> : null}
           {s.potions.length > 0 && <span class="faint" style={{ fontSize: 13 }}>开战后在下方物品栏使用</span>}
         </div>
+
+        {/* 副战术装备与切换 */}
+        {s.tacticsState && s.tacticsState.tactics.length > 0 && (
+          <div class="potion-bar" style={{ marginLeft: 8 }}>
+            <span class="subtle">副战术</span>
+            {s.tacticsState.tactics.map((tid) => {
+              const tdef = TACTIC_DEFS[tid as TacticId];
+              const isEquipped = s.tacticsState?.equipped === tid;
+              const vId = s.tacticsState?.variants[tid];
+              const variant = vId ? TACTIC_VARIANTS[tid as TacticId]?.find((v) => v.id === vId) : null;
+              return (
+                <Tip
+                  key={tid}
+                  content={() => (
+                    <div>
+                      <div class="tt-title" style={{ color: tdef?.category === 'offense' ? '#e17055' : '#00cec9' }}>
+                        {tdef?.name}
+                        {variant && <span style={{ color: '#ffeaa7', marginLeft: 6 }}>[{variant.name}]</span>}
+                      </div>
+                      <div class="tt-line">{tdef?.desc}{variant ? `；${variant.desc}` : ''}</div>
+                      <div class="tt-sec tt-gold">{p.started || p.attempt > 1 || p.endgamePhase2 ? '本节点战斗装备已锁定' : isEquipped ? '✓ 当前已装备出战' : '点击切换装备此战术'}</div>
+                    </div>
+                  )}
+                >
+                  <div
+                    class={`slot dark ${isEquipped ? 'active' : ''}`}
+                    style={{
+                      border: isEquipped ? '2px solid #55efc4' : '1px solid rgba(255,255,255,0.2)',
+                      boxShadow: isEquipped ? '0 0 8px #55efc4aa' : undefined,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => {
+                      sfx('click');
+                      act((r) => equipTactic(r, isEquipped ? null : tid));
+                    }}
+                  >
+                    <img src={url.icon(tdef?.icon ?? tid)} />
+                  </div>
+                </Tip>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 村民风险投资合同 */}
+        {s.commander === 'villager' && s.tacticsState?.variants?.villager === 'venture' && (
+          <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center' }}>
+            {s.tacticsState.wagers?.active ? (
+              <div class="row gap8 center" style={{ background: 'rgba(255, 215, 0, 0.15)', padding: '4px 10px', borderRadius: 4, border: '1px solid #ffd700' }}>
+                <span class="gold-t" style={{ fontSize: 13, fontWeight: 'bold' }}>
+                  📜 风投生效中（押金 {s.tacticsState.wagers.active.stake}，18s内获胜净赚 +{s.tacticsState.wagers.active.profit}）
+                </span>
+                <button
+                  class="btn"
+                  style={{ padding: '2px 8px', fontSize: 12, background: 'rgba(214, 48, 49, 0.4)', borderColor: '#d63031', color: '#ff7675' }}
+                  onClick={() => {
+                    sfx('click');
+                    act((r) => cancelWager(r));
+                  }}
+                >
+                  取消签署
+                </button>
+              </div>
+            ) : (
+              <Tip
+                content={() => (
+                  <div>
+                    <div class="tt-title gold-t">风险投资合同（专长 B）</div>
+                    <div class="tt-line">下注 {wagerStake(s.act)} 绿宝石。若在 18 秒内首次尝试获胜，返还本金并净赚 {wagerProfit(s.act)} 绿宝石！</div>
+                    <div class="tt-sec tt-red">其他结果（超时、失败、重试）将损失本金。</div>
+                    <div class="tt-sec tt-gray">每幕至多签署 2 次（当前已签 {s.tacticsState?.wagers?.act === s.act ? s.tacticsState.wagers.count : 0}/2 次）。</div>
+                  </div>
+                )}
+              >
+                <button
+                  class="btn"
+                  disabled={p.attempt !== 1 || p.endgamePhase2 || p.started || (s.tacticsState?.wagers?.act === s.act ? s.tacticsState.wagers.count : 0) >= 2 || s.emeralds < wagerStake(s.act)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 13,
+                    borderColor: '#ffd700',
+                    background: 'rgba(255, 215, 0, 0.2)',
+                    color: '#ffeaa7',
+                  }}
+                  onClick={() => {
+                    sfx('click');
+                    act((r) => signWager(r));
+                  }}
+                >
+                  ✍ 签署风险投资（下注 {wagerStake(s.act)} 💎）
+                </button>
+              </Tip>
+            )}
+          </div>
+        )}
+        {p.brewChoices && <div class="dh-hint" style={{ flexBasis: '100%', textAlign: 'center' }}>定向配方（每份选一瓶，当前选择带 ✓）
+          {p.brewChoices.map((choices, slot) => <div class="row gap8" style={{ justifyContent: 'center', flexWrap: 'wrap' }} key={slot}>
+            {choices.map(id => <Tip key={id} content={() => <PotionTipContent id={id} />}>
+              <button class="btn" style={{ minHeight: 72, padding: '10px 16px', fontSize: 20, color: '#f0d0ff', border: p.brew?.[slot] === id ? '2px solid #e9c5ff' : '1px solid #876199', background: p.brew?.[slot] === id ? '#4c285e' : '#261e2c' }} disabled={p.started} aria-pressed={p.brew?.[slot] === id} onClick={() => act(r => chooseBrew(r, slot, id))}>
+                {p.brew?.[slot] === id ? '✓ ' : ''}{ITEM_MAP[id]?.name ?? id}
+              </button>
+            </Tip>)}
+          </div>)}
+        </div>}
+        {p.endgamePhase2 && <div class="dh-hint">连续作战：军令、冷却、主技能次数和剩余临时药水沿用上一阶段，副战术已锁定。</div>}
         <div class="dh-hint">
           拖动我方生物到 <b class="blue-t">蓝色区域</b> 布阵
         </div>

@@ -13,6 +13,7 @@ import { getImage, sheetFor, url, type FrameTier } from '../ui/assets.ts';
 import { sfx } from '../audio/audio.ts';
 import { buildWorld, type World } from './world.ts';
 import { ITEM_MAP } from '../data/items.ts';
+import { TacticsVfxManager } from './tactics_vfx.ts';
 
 export interface ArenaOpts {
   shake: boolean;
@@ -330,6 +331,9 @@ export class Arena3D {
   partA: Particles;
   projPools = new Map<string, THREE.Object3D[]>();
   fx: Fx[] = [];
+  tacticsVfx: TacticsVfxManager;
+  tacticSelection: number[] = [];
+  rallyPreview: { x: number; y: number; valid: boolean } | null = null;
   zoneViews = new Map<object, THREE.Mesh>();
   nums: Num[] = [];
   texts: { x: number; y: number; z: number; s: string; color: string; t: number; tac?: boolean }[] = [];
@@ -450,6 +454,7 @@ export class Arena3D {
     this.hoverBox.renderOrder = 20;
     this.scene.add(this.hoverBox);
     this.syncUnits(0);
+    this.tacticsVfx = new TacticsVfxManager(this.scene, (x, y) => this.groundY(x, y), id => this.b.units.find(u => u.id === id));
     this.warmup();
   }
 
@@ -898,6 +903,9 @@ export class Arena3D {
           }
           break;
         }
+        case 'tactic_vfx':
+          this.tacticsVfx.spawn(e, this.b.t);
+          break;
       }
     }
     ev.length = 0;
@@ -1966,6 +1974,7 @@ export class Arena3D {
         v.beam = undefined;
       }
     }
+    this.tacticsVfx.update(this.b.t, this.camera);
   }
 
   // ───────────────────────── overlay (HP bars, numbers, text) ─────────────────────────
@@ -2012,6 +2021,60 @@ export class Arena3D {
         ctx.fillRect(x0, y0 - 3, w * Math.min(1, u.shield / u.maxHp), 2);
       }
     }
+    // Tactical selection and retreat destinations remain legible above VFX.
+    const pending = this.b.pendingTactics[0];
+    const selected = new Set(pending?.ids ?? this.tacticSelection);
+    const rally = pending?.rally ? { ...pending.rally, valid: true } : this.rallyPreview;
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.font = `700 15px ${UI_FONT}`;
+    ctx.textAlign = 'center';
+    const flags = new Set<string>();
+    for (const v of this.views.values()) {
+      const u = v.u;
+      if (!u.alive) continue;
+      const march = u.ref.hornMarch;
+      if (!selected.has(u.id) && !march) continue;
+      const [sx, sy, ok] = this.project(v.pos.x, v.pos.y + 0.1, v.pos.z);
+      if (!ok) continue;
+      ctx.strokeStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, Math.max(12, u.radius / BLOCK * 24), 7, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      const point = march ? { x: march.tx, y: march.ty, valid: true } : rally;
+      if (!point) continue;
+      const [dx, dy, visible] = this.project(tx(point.x), this.groundY(point.x, point.y) / BLOCK + 0.08, tz(point.y));
+      if (!visible) continue;
+      ctx.strokeStyle = point.valid ? '#69efb2' : '#ff7777';
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      if (march?.path) {
+        for (const waypoint of march.path) {
+          const [wx, wy] = this.project(tx(waypoint.x), this.groundY(waypoint.x, waypoint.y) / BLOCK + 0.08, tz(waypoint.y));
+          ctx.lineTo(wx, wy);
+        }
+      } else ctx.lineTo(dx, dy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const key = `${point.x},${point.y}`;
+      if (flags.has(key)) continue;
+      flags.add(key);
+      ctx.fillStyle = point.valid ? '#69efb2' : '#ff7777';
+      ctx.fillText(point.valid ? '⚑ 集合点' : '× 不可达', dx, dy - 12);
+      ctx.beginPath();
+      ctx.arc(dx, dy, 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (pending && !pending.rally) {
+      const target = pending.target ?? pending;
+      const [sx, sy, ok] = this.project(tx(target.x), this.groundY(target.x, target.y) / BLOCK + 0.2, tz(target.y));
+      if (ok) {
+        ctx.fillStyle = '#ffd166';
+        ctx.fillText(`施放中 ${Math.max(0, pending.readyAt - this.b.t).toFixed(1)}s`, sx, sy - 12);
+      }
+    }
+    ctx.restore();
     // Taming: an orange heart over every enemy that can be tamed right now.
     if (this.tameMark) {
       ctx.textAlign = 'center';
@@ -2399,6 +2462,7 @@ export class Arena3D {
   }
 
   dispose() {
+    this.tacticsVfx.dispose();
     this.world.dispose();
     for (const s of this.sprites.values()) s.tex.dispose();
     this.spriteR.dispose();

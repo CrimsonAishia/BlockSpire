@@ -7,7 +7,7 @@ export const MAP_ROWS = 13; // rows 0..12, boss at row 13
 export const MAP_COLS = 7;
 
 /** `omen` ≥ 1 (不祥之兆 I): elites are more common and can show up from row 3. */
-export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): ActMap {
+export function generateMap(rng: Rng, act: number, bossId: string, omen = 0, placedTacticsCount = 0): ActMap {
   const grid: (MapNode | null)[][] = Array.from({ length: MAP_ROWS }, () => Array(MAP_COLS).fill(null));
   const edges = new Set<string>();
   const ensure = (r: number, c: number) => {
@@ -117,6 +117,19 @@ export function generateMap(rng: Rng, act: number, bossId: string, omen = 0): Ac
   if (act === 2 || act === 3) {
     const cands = ordered.filter((n) => n.row >= 3 && n.row <= 10 && n.row !== 6 && (n.type === 'battle' || n.type === 'event'));
     if (cands.length && rng.chance(0.8)) rng.pick(cands).type = 'rift';
+  }
+  // 战技殿堂 (Tactics Sanctuary): Act 2-6, independent RNG stream
+  const hallChance = [0, 0, 0.5, 0.5, 0.25, 0.25, 0.25, 0][act] ?? 0;
+  if (placedTacticsCount < 3 && hallChance > 0) {
+    const hallRng = rng.fork(8821);
+    if (hallRng.chance(hallChance)) {
+      const candidates = ordered.filter(
+        (n) => n.row >= 7 && n.row <= 10 && (n.type === 'battle' || n.type === 'event') && ordered.some((other) => other.row === n.row && other.id !== n.id),
+      );
+      if (candidates.length) {
+        hallRng.pick(candidates).type = 'tactics';
+      }
+    }
   }
   const boss: MapNode = { id: 'boss', row: MAP_ROWS, col: 3, type: 'boss', next: [], x: 3, ref: bossId };
   nodes.boss = boss;

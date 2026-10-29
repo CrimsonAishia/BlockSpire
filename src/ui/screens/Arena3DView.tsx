@@ -5,10 +5,12 @@ import { Battle, DT, type BattleConfig, type BattleResult } from '../../battle/s
 import type { Arena3D } from '../../battle3d/arena3d.ts';
 import { BLOCK, DEPLOY_COLS, FEATURE_NAME, GW, SURFACE_INFO, applyBuild, buildCells, clampToDeploy, cloneTerrain, isBlocked, isIndestructible, type BuildOrder, type Terrain } from '../../battle/terrain.ts';
 import { ARENA_W } from '../../battle/unit.ts';
+import { tacticTargets, previewRetreat } from '../../battle/tactic_targets.ts';
 import { canTame, type SkillKind } from '../../battle/skills.ts';
 import { itemRadius } from '../../battle/items.ts';
 import { ITEM_MAP } from '../../data/items.ts';
 import { SKILL_INFO, type SkillId } from '../../data/commanders.ts';
+import { tacticConfig, ORDER_REFILL_AT, ORDER_TOTAL, TACTIC_VARIANTS, cannonCost, type TacticId } from '../../data/tactics.ts';
 import { Emerald, PotionTipContent, Stars, Tip, itemIcon } from '../components/common.tsx';
 import { mobDef } from '../../data/mobs.ts';
 import { preload, sheetFor, url } from '../assets.ts';
@@ -51,7 +53,7 @@ interface Props {
 const inZone = (side: 0 | 1, cx: number) => (side === 0 ? cx < DEPLOY_COLS : cx >= GW - DEPLOY_COLS);
 
 /** What a click on the battlefield will do. */
-type Aim = { k: 'item'; i: number } | { k: 'skill'; s: SkillKind } | null;
+type Aim = { k: 'item'; i: number } | { k: 'skill'; s: SkillKind } | { k: 'tactic' } | null;
 /** Where an aimed item or skill would land: a battlefield point, or the enemy to tame. */
 type AimTarget = { x: number; y: number; unit?: NonNullable<ReturnType<Arena3D['pickUnit']>> };
 
@@ -83,6 +85,13 @@ interface Hud {
   boss?: { name: string; hp: number; max: number; shield: boolean };
   sudden: boolean;
   skillLeft: number;
+  orders: number;
+  orderCooldown: number;
+  cannonSpent: number;
+  battleEmeralds: number;
+  orderGranted: boolean;
+  orderElapsed: number;
+  castLeft: number;
 }
 
 function snapshot(b: Battle, max: [number, number]): Hud {
@@ -114,6 +123,13 @@ function snapshot(b: Battle, max: [number, number]): Hud {
     boss: boss ? { name: boss.mob.name, hp: boss.alive ? boss.hp : 0, max: boss.maxHp, shield: !!boss.ref.witherArmor } : undefined,
     sudden: b.t >= b.suddenAt,
     skillLeft: b.skillLeft[0],
+    orders: b.orders[0],
+    orderCooldown: b.orderCooldown[0],
+    cannonSpent: b.cannonSpent[0],
+    battleEmeralds: b.battleEmeralds[0],
+    orderGranted: b.orderGranted12s[0],
+    orderElapsed: b.t + (b.sides[0].plan.tacticCarry?.elapsed ?? 0),
+    castLeft: b.pendingTactics[0] ? Math.max(0, b.pendingTactics[0].readyAt - b.t) : 0,
   };
 }
 
@@ -145,6 +161,7 @@ export function Arena3DView({
   const [touchUI, setTouchUI] = useState(() => !!window.matchMedia?.('(pointer: coarse)').matches);
   /** Touch aiming: a first tap placed the preview ring and waits for a confirming tap. */
   const [pending, setPending] = useState(false);
+  const [retreatSelecting, setRetreatSelecting] = useState(false);
   const [camMoved, setCamMoved] = useState(false);
   const [unitHovered, setUnitHovered] = useState(false);
   const slots = [...items, ...temp];
@@ -173,6 +190,7 @@ export function Arena3DView({
     lastPreview: 0,
     configKey,
     aim: null as Aim,
+    retreat: null as { x: number; y: number; ids: number[] } | null,
     canUse: false,
     side: deploySide,
     lastMouse: null as null | { x: number; y: number },
@@ -183,16 +201,19 @@ export function Arena3DView({
   R.current.speed = speed;
   R.current.phase = phase;
   R.current.aim = aim;
-  R.current.canUse = phase === 'fight' && stage === 'fight' && !R.current.finished;
+  R.current.canUse = phase === 'fight' && stage === 'fight' && !R.current.finished && !R.current.battle?.over;
 
   /** Charges left: live in battle, otherwise what deployment builds left over. */
   const skillLeft = !skill ? 0 : phase === 'fight' ? (hud?.skillLeft ?? skill.charges) : Math.max(0, skill.charges - builds.length);
   /** Skills work in the fight; Steve can also build while deploying. */
   const skillReady = (k: SkillKind) =>
-    !!skill && skillLeft > 0 && (k === 'golem' ? canPay : true) && (R.current.canUse || (phase === 'deploy' && (k === 'wall' || k === 'platform') && !!onBuild));
+    !!skill && skillLeft > 0 && (k === 'golem' ? (hud ? hud.battleEmeralds >= golemCost : canPay) : true) && (R.current.canUse || (phase === 'deploy' && (k === 'wall' || k === 'platform') && !!onBuild));
 
   const clearAim = () => {
     setAim(null);
+    R.current.aim = null;
+    R.current.retreat = null;
+    setRetreatSelecting(false);
     R.current.pending = null;
     setPending(false);
     const a = R.current.arena;
@@ -200,6 +221,14 @@ export function Arena3DView({
     a.setAim(null);
     a.setCells(null);
     a.tameMark = null;
+    a.tacticSelection = [];
+    a.rallyPreview = null;
+  };
+
+  const cancelAction = () => {
+    const c = R.current;
+    if (c.battle?.cancelTactic(0)) setHud(snapshot(c.battle, c.max));
+    clearAim();
   };
 
   const flash = (t: string) => {
@@ -248,6 +277,23 @@ export function Arena3DView({
     if (k === 'tame' && c.arena) c.arena.tameMark = (u) => u.team === 1 && !!c.battle && canTame(c.battle, 0, u);
   };
 
+  const tactic = config.sides[0].tactic;
+  const tacticDef = tactic ? tacticConfig(tactic.id, tactic.variant) : null;
+  const tacticVariant = tactic && tactic.variant ? TACTIC_VARIANTS[tactic.id as TacticId]?.find((v) => v.id === tactic.variant) : null;
+  const ordersLeft = hud?.orders ?? (tactic ? 1 : 0);
+  const tacticCd = hud?.orderCooldown ?? 0;
+  const tacticCost = tactic?.id === 'cannon' ? cannonCost(config.sides[0].act ?? 1, tactic.variant) : 0;
+  const battleEmeralds = hud?.battleEmeralds ?? 0;
+  const tacticReady = !!tacticDef && !(hud?.castLeft) && ordersLeft > 0 && tacticCd <= 0 && stage === 'fight' && R.current.canUse && (tactic?.id === 'cannon' ? battleEmeralds >= tacticCost : true);
+
+  const pickTactic = () => {
+    if (!tacticReady) return;
+    sfx('click');
+    if (aim?.k === 'tactic') return clearAim();
+    clearAim();
+    setAim({ k: 'tactic' });
+  };
+
   /** Building: in deployment it becomes part of the plan, in battle it happens at once. */
   const doBuild = (kind: 'wall' | 'platform', x: number, y: number) => {
     const c = R.current;
@@ -279,7 +325,8 @@ export function Arena3DView({
       if (c.arena) c.arena.keyPan = { x: Math.sign(x), y: Math.sign(y) };
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') return clearAim();
+      if ((e.target as HTMLElement)?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (e.key === 'Escape') return cancelAction();
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (PAN_KEYS[e.code]) {
         e.preventDefault();
@@ -291,7 +338,9 @@ export function Arena3DView({
         e.preventDefault();
         return c.arena?.resetView();
       }
+      if (e.repeat) return;
       const up = e.key.toUpperCase();
+      if (up === 'R') return pickTactic();
       const si = SKILL_KEYS.indexOf(up);
       if (si >= 0 && skillKinds[si]) return pickSkill(skillKinds[si]);
       const k = Number(e.key);
@@ -387,6 +436,8 @@ export function Arena3DView({
           }
           if (b.over && endT === 0) {
             endT = 0.0001;
+            c.canUse = false;
+            clearAim();
             setStage('end');
             setWinner(b.winner);
             setDraw(b.draw);
@@ -503,7 +554,7 @@ export function Arena3DView({
     const c = R.current;
     const a = c.arena;
     if (!a || c.aim === null) return null;
-    if (c.aim.k === 'skill' && c.aim.s === 'tame') {
+    if ((c.aim.k === 'skill' && c.aim.s === 'tame') || (c.aim.k === 'tactic' && c.battle?.sides[0].plan.tactic && tacticConfig(c.battle.sides[0].plan.tactic.id, c.battle.sides[0].plan.tactic.variant).targetType === 'enemy_single')) {
       const u = a.pickUnit(p.x, p.y, 1, 60);
       return u ? { x: u.x, y: u.y, unit: u } : null;
     }
@@ -522,7 +573,7 @@ export function Arena3DView({
       const def = ITEM_MAP[id];
       if (!t || !def) a.setAim(null);
       else a.setAim(t, itemRadius(c.battle, 0, id), def.target !== 'own' || t.x < ARENA_W / 2, def.color);
-    } else if (A.s === 'wall' || A.s === 'platform') {
+    } else if (A.k === 'skill' && (A.s === 'wall' || A.s === 'platform')) {
       if (!t) a.setCells(null);
       else {
         const cells = buildCells(c.battle.terrain, 0, A.s, t.x, t.y);
@@ -530,13 +581,34 @@ export function Arena3DView({
         if (ok && A.s === 'wall') ok = !!applyBuild(cloneTerrain(c.battle.terrain), 0, 'wall', t.x, t.y);
         a.setCells(cells.length ? cells : null, ok, A.s === 'wall' ? 2 : c.battle.has(0, 'obsidian') ? 2 : 1);
       }
-    } else if (A.s === 'golem') {
+    } else if (A.k === 'skill' && A.s === 'golem') {
       if (!t) a.setAim(null);
       else a.setAim(t, 1.2, t.x < ARENA_W / 2, '#e8e4dc');
-    } else if (A.s === 'tame') {
+    } else if (A.k === 'skill' && A.s === 'tame') {
       const u = t?.unit;
       if (!u) a.setAim(null);
       else a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), canTame(c.battle, 0, u), '#ff9a3d');
+    } else if (A.k === 'tactic') {
+      const tac = c.battle.sides[0].plan.tactic;
+      const tdef = tac ? tacticConfig(tac.id, tac.variant) : null;
+      const selected = c.retreat ? c.battle.units.filter(u => c.retreat!.ids.includes(u.id) && u.alive) : [];
+      if (tdef?.targetType === 'ally_move' && c.retreat) {
+        const valid = t ? previewRetreat(c.battle, selected, t).ok : false;
+        a.tacticSelection = c.retreat.ids;
+        a.rallyPreview = t ? { ...t, valid } : null;
+        a.setAim(t, 0.7, valid, '#ffd166');
+      } else if (!t || !tdef) { a.setAim(null); a.tacticSelection = []; }
+      else if (tdef.targetType === 'enemy_single') {
+        const u = t.unit;
+        if (!u) a.setAim(null);
+        else a.setAim(u, Math.max(0.8, (u.radius / BLOCK) * 1.6), u.alive && !u.structure && u.team === 1, '#f39c12');
+      } else {
+        const rad = (tdef.radius ?? 90) / BLOCK;
+        const color = tdef.category === 'offense' ? '#e17055' : '#00cec9';
+        const preview = tacticTargets(c.battle, 0, t, t.unit ?? null);
+        a.tacticSelection = preview.units.map(u => u.id);
+        a.setAim(t, rad, preview.ok, color);
+      }
     }
   };
 
@@ -544,7 +616,7 @@ export function Arena3DView({
   const fireAim = (t: AimTarget | null) => {
     const c = R.current;
     const A = c.aim;
-    if (A === null || !c.battle) return;
+    if (A === null || !c.battle || c.battle.over || (c.phase === 'fight' && !c.canUse)) return;
     if (A.k === 'skill' && A.s === 'tame') {
       const u = t?.unit;
       if (!u || !u.alive || !canTame(c.battle, 0, u)) return flash(u ? `${u.mob.name} 的生命还太高（门槛见按钮说明）` : '点一个敌人');
@@ -552,12 +624,56 @@ export function Arena3DView({
       clearAim();
       return;
     }
+    if (A.k === 'tactic') {
+      const tac = c.battle.sides[0].plan.tactic;
+      if (!tac) return;
+      const tdef = tacticConfig(tac.id, tac.variant);
+      if (!tdef) return;
+      if (tdef.targetType === 'ally_move') {
+        if (!t) return;
+        if (!c.retreat) {
+          const preview = tacticTargets(c.battle, 0, t);
+          if (!preview.ok) return flash(preview.reason!);
+          c.retreat = { x: t.x, y: t.y, ids: preview.units.map(u => u.id) };
+          c.arena!.tacticSelection = c.retreat.ids;
+          c.pending = null;
+          setPending(false);
+          setRetreatSelecting(true);
+          c.arena!.setAim(null);
+          return;
+        }
+        const result = c.battle.useTactic(0, c.retreat.x, c.retreat.y, null, t, c.retreat.ids);
+        if (!result.ok) return flash(result.reason ?? '无法撤退');
+        clearAim();
+        setHud(snapshot(c.battle, c.max));
+        return;
+      }
+      if (tdef.targetType === 'enemy_single') {
+        const u = t?.unit;
+        if (!u || !u.alive || u.structure || u.team !== 1) return flash('请指定一个敌方目标');
+        const res = c.battle.useTactic(0, u.x, u.y, u);
+        if (!res.ok) flash(res.reason ?? '无法释放');
+        else {
+          clearAim();
+          setHud(snapshot(c.battle, c.max));
+        }
+        return;
+      }
+      if (!t) return;
+      const res = c.battle.useTactic(0, t.x, t.y, t.unit ?? null);
+      if (!res.ok) flash(res.reason ?? '无法释放');
+      else {
+        clearAim();
+        setHud(snapshot(c.battle, c.max));
+      }
+      return;
+    }
     if (!t) return;
     if (A.k === 'item') useSlot(A.i, t.x, t.y);
-    else if (A.s === 'wall' || A.s === 'platform') doBuild(A.s, t.x, t.y);
-    else if (A.s === 'golem') {
-      if (!c.battle.useSkill(0, 'golem', t.x, t.y)) flash('只能召唤在我方半场');
-      else clearAim();
+    else if (A.k === 'skill' && (A.s === 'wall' || A.s === 'platform')) doBuild(A.s, t.x, t.y);
+    else if (A.k === 'skill' && A.s === 'golem') {
+      if (!c.battle.useSkill(0, 'golem', t.x, t.y)) flash('请检查可用绿宝石，并选择我方安全地面');
+      else { clearAim(); setHud(snapshot(c.battle, c.max)); }
     }
   };
 
@@ -568,6 +684,11 @@ export function Arena3DView({
     const t = aimAt(p);
     if (A === null) return;
     if (A.k === 'skill' && A.s === 'tame') return fireAim(t);
+    if (A.k === 'tactic') {
+      const tac = c.battle?.sides[0].plan.tactic;
+      const tdef = tac ? tacticConfig(tac.id, tac.variant) : null;
+      if (tdef?.targetType === 'enemy_single' || (tdef?.targetType === 'ally_move' && !c.retreat)) return fireAim(t);
+    }
     const P = c.pending;
     const reach = Math.max(1.5, A.k === 'item' && c.battle ? itemRadius(c.battle, 0, slots[A.i]) : 0) * BLOCK;
     if (P && t && Math.hypot(t.x - P.x, t.y - P.y) <= reach) {
@@ -799,8 +920,8 @@ export function Arena3DView({
     if (!act || ptr.moved) return;
     // Touch has no hover: a tap on the ground while deploying shows what that terrain does.
     if (c.aim === null && c.phase === 'deploy' && e.pointerType !== 'mouse') return terrainTip(local(e));
+    if (ptr.button === 2) return cancelAction();
     if (c.aim === null) return;
-    if (ptr.button === 2) return clearAim();
     if (ptr.button !== 0) return;
     const p = local(e);
     if (e.pointerType === 'mouse') fireAim(aimAt(p));
@@ -924,11 +1045,16 @@ export function Arena3DView({
           <div class="cam-hint">{touchUI ? '单指拖动旋转 · 双指拖动平移 · 双指捏合缩放' : '左键拖动旋转 · 右键拖动 / WASD 平移 · 滚轮缩放'}</div>
         </div>
       )}
-      {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0) : skill?.id === 'build' && !!onBuild && ready) && (
+      {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0 || !!tacticDef) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {!note && aim !== null && <div class="hb-hint">{aimHint(aim, slots, golemCost, touchUI, pending)}</div>}
+          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方集合点：黄色圈为选中友军，旗帜为目的地；绿色可达，红色不可达' + (touchUI && pending ? ' · 再点圈内确认' : '') : '① 点击选择要撤退的友军（此步不消耗军令）') : aimHint(aim, slots, golemCost, touchUI, pending)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点我方半场的地面{touchUI ? '' : '（Q / E）'}</div>}
+          {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
+            军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点
+            {tacticCost > 0 || skill?.id === 'golem' ? ` · 可用绿宝石 ${hud?.battleEmeralds ?? config.sides[0].flags.emeralds ?? 0}` : ''}
+          </div>}
+          {!!hud?.castLeft && <div class="hb-hint">施放中：{hud.castLeft.toFixed(1)} 秒 <button class="hb-cancel" onClick={cancelAction}>取消施放（返还资源）</button></div>}
           <div class="hb-row">
             {skillKinds.length > 0 && (
               <div class="hb-skills">
@@ -944,7 +1070,7 @@ export function Arena3DView({
                             {info.name}
                           </div>
                           <div class="tt-line">{info.desc}</div>
-                          {k === 'golem' && <div class="tt-sec tt-gold">费用：{golemCost ? `${golemCost} 绿宝石（战后结算）` : '免费（钟楼）'}</div>}
+                          {k === 'golem' && <div class="tt-sec tt-gold">费用：{golemCost ? `${golemCost} 绿宝石（与钱炮共用战内余额）` : '免费（钟楼）'}</div>}
                           {k === 'tame' && <div class="tt-sec tt-gray">可驯服的敌人头顶会出现橙色爱心。首领和建筑不能驯服。</div>}
                           <div class="tt-sec tt-gray">统领技能 · 本场剩余 {skillLeft} 次</div>
                         </div>
@@ -964,6 +1090,65 @@ export function Arena3DView({
                     </Tip>
                   );
                 })}
+              </div>
+            )}
+            {fighting && tacticDef && (
+              <div class="hb-skills" style={{ marginLeft: 6, borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: 6 }}>
+                <Tip
+                  content={() => (
+                    <div>
+                      <div class="tt-title" style={{ color: tacticDef.category === 'offense' ? '#e17055' : '#00cec9' }}>
+                        {tacticDef.name}
+                        {tacticVariant && <span style={{ color: '#ffeaa7', marginLeft: 6 }}>[{tacticVariant.name}]</span>}
+                      </div>
+                      <div class="tt-line">{tacticDef.desc}</div>
+                      {tacticVariant && <div class="tt-line">{tacticVariant.desc}</div>}
+                      <div class="tt-sec tt-gold">军令点数：当前可用 {ordersLeft}，本场共 {ORDER_TOTAL} · 前摇 {tacticDef.windup}s</div>
+                      {tacticCd > 0 && <div class="tt-sec tt-yellow">战术冷却中：剩余 {tacticCd.toFixed(1)} 秒</div>}
+                      {tacticCost > 0 && (
+                        <div class="tt-sec tt-gold">单发费用：{tacticCost} 绿宝石（战内消耗，本场已耗 {hud?.cannonSpent ?? 0}）</div>
+                      )}
+                      <div class="tt-sec tt-gray">副战术 · 消耗 1 点军令，共享 8 秒冷却</div>
+                    </div>
+                  )}
+                >
+                  <button
+                    class={`hb-slot tactic ${!tacticReady ? 'used' : ''} ${aim?.k === 'tactic' ? 'aim' : ''}`}
+                    aria-label={`副战术：${tacticDef.name}`}
+                    disabled={!tacticReady}
+                    onClick={pickTactic}
+                    style={{ position: 'relative' }}
+                  >
+                    <img src={url.icon(tacticDef.icon)} />
+                    <span class="hb-key">R</span>
+                    <span class="hb-count">{ordersLeft}/{ORDER_TOTAL}</span>
+                    {tacticCd > 0 && (
+                      <span
+                        class="hb-cd"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(0,0,0,0.65)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 13,
+                          fontWeight: 'bold',
+                          color: '#ffeaa7',
+                          borderRadius: 4,
+                        }}
+                      >
+                        {Math.ceil(tacticCd)}s
+                      </span>
+                    )}
+                    {tacticCost > 0 && (
+                      <span class="hb-cost">
+                        {tacticCost}
+                        <Emerald size={11} />
+                      </span>
+                    )}
+                  </button>
+                </Tip>
               </div>
             )}
             {fighting &&
@@ -1030,6 +1215,9 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
     const def = ITEM_MAP[slots[aim.i]];
     return `点击战场投放「${def?.name}」${def?.target === 'own' ? '（只能放在我方半场）' : ''} · ${cancel}`;
   }
+  if (aim.k === 'tactic') {
+    return `点击战场释放副战术（消耗 1 点军令）· ${cancel}`;
+  }
   switch (aim.s) {
     case 'wall':
       return `点击我方半场砌一道 3 格长的墙（绿色可建，红色不行）· ${cancel}`;
@@ -1038,7 +1226,7 @@ function aimHint(aim: Exclude<Aim, null>, slots: string[], golemCost: number, to
     case 'tame':
       return `点击头顶有橙色爱心的敌人驯服它 · ${cancel}`;
     case 'golem':
-      return `点击我方半场召唤铁傀儡${golemCost ? `（战后支付 ${golemCost} 绿宝石）` : ''} · ${cancel}`;
+      return `点击我方半场召唤铁傀儡${golemCost ? `（消耗 ${golemCost} 绿宝石）` : ''} · ${cancel}`;
   }
 }
 

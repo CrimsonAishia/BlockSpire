@@ -61,6 +61,20 @@ function itemView(s: RunState, it: ShopItem) {
         color: '#ffd76a',
         tip: () => <div class="tt-line">选择一张 ★1 卡牌直接升至 ★2。（★3 需要在营火锻造或通过合成获得）</div>,
       };
+    case 'tactic_scroll':
+      return {
+        icon: url.icon('ominous_banner'),
+        name: '军令战术卷轴',
+        sub: '研读修习一项统领副战术',
+        color: '#e17055',
+        tip: () => (
+          <div>
+            <div class="tt-title" style={{ color: '#e17055' }}>军令战术卷轴</div>
+            <div class="tt-line">购买后立即触发战术三选一。可在战斗中消耗军令施放。</div>
+            <div class="tt-sec tt-gray">每位统领至多收藏 3 项副战术，已满时可选择替换。</div>
+          </div>
+        ),
+      };
   }
 }
 
@@ -78,7 +92,7 @@ export function ShopView({ s, p }: { s: RunState; p: P; v?: number }) {
   const owned = new Set(allCards(s).map((c) => c.mob));
   const groups: [string, ShopItem['kind'][]][] = [
     ['补给箱', ['crate']],
-    ['战斗物品与附魔', ['potion', 'enchant']],
+    ['战斗物品与战术', ['potion', 'enchant', 'tactic_scroll']],
     ['宝物', ['relic']],
     ['服务', ['heal', 'upgrade']],
   ];

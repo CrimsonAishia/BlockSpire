@@ -10,6 +10,8 @@ import { RelicChoice, BossReward, PotionChoice } from './RelicChoice.tsx';
 import { ShopView } from './ShopView.tsx';
 import { EventView } from './EventView.tsx';
 import { RestView, PickCardView, EnchantChoiceView, MessageView } from './MiscViews.tsx';
+import { TacticsHallView } from './TacticsHallView.tsx';
+import { TacticsDraftModal } from './TacticsDraftModal.tsx';
 import { ActIntro } from './ActIntro.tsx';
 import { RunEnd } from './RunEnd.tsx';
 import { TeamPanel } from './TeamPanel.tsx';
@@ -106,6 +108,12 @@ export function RunView() {
         break;
       case 'enchant_choice':
         body = <EnchantChoiceView s={s} p={p} v={v} />;
+        break;
+      case 'tactics_hall':
+        body = <TacticsHallView s={s} p={p} v={v} />;
+        break;
+      case 'tactics_draft':
+        body = <TacticsDraftModal s={s} p={p} v={v} />;
         break;
       case 'act_intro':
         body = <ActIntro s={s} p={p} v={v} />;

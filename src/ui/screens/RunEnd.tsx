@@ -66,6 +66,8 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
         potionsUsed: s.stats.potionsUsed ?? 0,
         duration: Math.round((Date.now() - s.stats.startTime) / 1000),
       },
+      tactics: s.tacticsState?.tactics ? [...s.tacticsState.tactics] : [],
+      variants: s.tacticsState?.variants ? { ...s.tacticsState.variants } : {},
     };
     setRecord(historyEntry);
     // ── 自动推送本局遥测数据给服务器 (后台静默自动上报，无需手动操作) ──
@@ -82,6 +84,14 @@ export function RunEnd({ s, won }: { s: RunState; won: boolean }) {
       if (s.daily) {
         const rec = p.daily?.[s.daily] ?? { tries: 1, best: -1 };
         p.daily = { ...(p.daily ?? {}), [s.daily]: { ...rec, best: Math.max(rec.best, score) } };
+      }
+      p.tacticsSeen = p.tacticsSeen ?? [];
+      p.variantsSeen = p.variantsSeen ?? [];
+      for (const t of s.tacticsState?.tactics ?? []) {
+        if (!p.tacticsSeen.includes(t)) p.tacticsSeen.push(t);
+      }
+      for (const v of Object.values(s.tacticsState?.variants ?? {})) {
+        if (v && !p.variantsSeen.includes(v)) p.variantsSeen.push(v);
       }
       p.history = [
         historyEntry,

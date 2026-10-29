@@ -248,6 +248,24 @@ export function commit() {
       p.relicsSeen.push(rel);
       changed = true;
     }
+  if (r.tacticsState?.tactics) {
+    p.tacticsSeen = p.tacticsSeen ?? [];
+    for (const t of r.tacticsState.tactics) {
+      if (!p.tacticsSeen.includes(t)) {
+        p.tacticsSeen.push(t);
+        changed = true;
+      }
+    }
+  }
+  if (r.tacticsState?.variants) {
+    p.variantsSeen = p.variantsSeen ?? [];
+    for (const v of Object.values(r.tacticsState.variants)) {
+      if (v && !p.variantsSeen.includes(v)) {
+        p.variantsSeen.push(v);
+        changed = true;
+      }
+    }
+  }
   if (changed) updateProfile(() => {});
   const earned = r.earned ?? [];
   r.earned = [];

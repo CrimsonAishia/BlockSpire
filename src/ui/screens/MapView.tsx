@@ -24,6 +24,7 @@ export const NODE_INFO: Record<NodeType, { name: string; desc: string; icon: str
   treasure: { name: '宝箱', desc: '免费打开一个高级补给箱。', icon: 'node_treasure' },
   boss: { name: '首领', desc: '本幕的最终考验。', icon: 'node_boss' },
   rift: { name: '筛界裂隙', desc: '一道通往筛界的裂隙：和那边的生物交战，胜利后开启「裂隙」补给箱（只有筛界生物）。', icon: 'node_rift' },
+  tactics: { name: '战技殿堂', desc: '学习新的副战术，或消耗绿宝石精进统领身份与战术变体。', icon: 'node_tactics' },
 };
 
 const ROW_H = 104;
@@ -483,7 +484,7 @@ export function MapView({ s }: { s: RunState; v?: number }) {
           <div class="faint" style={{ fontSize: 13, marginTop: 6 }}>{bossMob.skill.desc}</div>
           <div class="divider" />
           <div class="legend">
-            {(['battle', 'elite', 'event', 'shop', 'rest', 'treasure', ...(Object.values(s.map.nodes).some((n) => n.type === 'rift') ? ['rift'] : [])] as NodeType[]).map((t) => (
+            {(['battle', 'elite', 'event', 'shop', 'rest', 'treasure', ...(Object.values(s.map.nodes).some((n) => n.type === 'rift') ? ['rift'] : []), ...(Object.values(s.map.nodes).some((n) => n.type === 'tactics') ? ['tactics'] : [])] as NodeType[]).map((t) => (
               <div key={t} class="row gap8">
                 <img src={url.icon(NODE_INFO[t].icon)} width={28} height={28} class="pixelated" />
                 <span>{NODE_INFO[t].name}</span>

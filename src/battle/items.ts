@@ -35,8 +35,11 @@ function eggSpots(b: Battle, team: 0 | 1, x: number, y: number, n: number, mob: 
 }
 
 /** Potion strength: 龙息 doubles it, the Witch brews them 20% stronger, 烈焰粉 adds 30%. */
-export function potionPower(b: Battle, team: 0 | 1) {
-  return (b.has(team, 'dragon_breath') ? 2 : 1) * (b.has(team, 'cmd_witch') ? 1.2 : 1) * (b.has(team, 'blaze_powder') ? 1.3 : 1);
+export function potionPower(b: Battle, team: 0 | 1, temp = false, isContinuous = false) {
+  const mv = b.sides[team].plan.mainVariant;
+  const witchMul = (b.has(team, 'cmd_witch') && (!temp || mv !== 'targeted')) ? 1.2 : 1;
+  const twinMul = (temp && mv === 'twin' && !isContinuous) ? 0.6 : 1;
+  return (b.has(team, 'dragon_breath') ? 2 : 1) * witchMul * (b.has(team, 'blaze_powder') ? 1.3 : 1) * twinMul;
 }
 
 /** Effect radius in blocks (the Witch throws splash and lingering potions 20% wider). */
@@ -48,11 +51,14 @@ export function itemRadius(b: Battle, team: 0 | 1, id: string) {
 }
 
 /** Applies an item's effect at (x, y). */
-export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: number) {
+export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: number, temp = false) {
   const def = ITEM_MAP[id];
   if (!def) return;
   const side = b.sides[team];
-  const P = def.potion ? potionPower(b, team) : 1;
+  const mv = side.plan.mainVariant;
+  const durMul = (temp && mv === 'twin') ? 0.6 : 1;
+  const P = def.potion ? potionPower(b, team, temp, false) : 1;
+  const P_cont = def.potion ? potionPower(b, team, temp, true) : 1;
   const K = ACT_K[side.plan.act] ?? ACT_K[ACT_K.length - 1];
   const allies = b.live[team];
   const r = itemRadius(b, team, id) * BLOCK;
@@ -68,8 +74,8 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     case 'regeneration':
       for (const u of allies) {
-        u.regenT = Math.max(u.regenT, 20);
-        u.regenRate = Math.max(u.regenRate, 0.02 * P);
+        u.regenT = Math.max(u.regenT, 20 * durMul);
+        u.regenRate = Math.max(u.regenRate, 0.02 * P_cont);
       }
       break;
     case 'turtle':
@@ -82,7 +88,7 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       for (const u of allies) u.burnT = 0;
       break;
     case 'invisibility':
-      for (const u of allies) if (!u.structure) u.invisT = Math.max(u.invisT, 7);
+      for (const u of allies) if (!u.structure) u.invisT = Math.max(u.invisT, 7 * durMul);
       break;
     // ── splash / lingering ──
     case 'splash_healing':
@@ -103,22 +109,22 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     case 'poison':
       boom('#4caf50');
-      b.aoe(x, y, r, team, (e) => b.poison(e, e.maxHp * 0.03 * P, 8, 1, null));
+      b.aoe(x, y, r, team, (e) => b.poison(e, e.maxHp * 0.03 * P_cont, 8 * durMul, 1, null));
       break;
     case 'weakness':
       boom('#57606f');
       b.aoe(x, y, r, team, (e) => {
-        e.weakT = Math.max(e.weakT, 12);
-        e.weakMul = Math.max(e.weakMul, Math.min(0.6, 0.3 * P));
+        e.weakT = Math.max(e.weakT, 12 * durMul);
+        e.weakMul = Math.max(e.weakMul, Math.min(0.6, 0.3 * P_cont));
       });
       break;
     case 'splash_slowness':
       boom('#6d7f9e');
-      b.aoe(x, y, r, team, (e) => b.slow(e, Math.min(0.75, 0.5 * P), 0.2 * P, 8));
+      b.aoe(x, y, r, team, (e) => b.slow(e, Math.min(0.75, 0.5 * P_cont), 0.2 * P_cont, 8 * durMul));
       break;
     case 'lingering_regen':
       b.emit({ k: 'boom', x, y, r, color: '#ff9cc8', big: false });
-      b.addZone({ x, y, r, dur: 8, team, dps: 0.02 * P, kind: 'regen', src: null });
+      b.addZone({ x, y, r, dur: 8 * durMul, team, dps: 0.02 * P_cont, kind: 'regen', src: null });
       break;
     // ── tools ──
     case 'wind_charge':
@@ -205,7 +211,7 @@ export function applyItem(b: Battle, team: 0 | 1, id: string, x: number, y: numb
       break;
     case 'splash_freezing':
       boom('#8fd3ff');
-      b.aoe(x, y, r, team, (e) => b.freeze(e, e.maxHp * 0.02 * P, 5, null));
+      b.aoe(x, y, r, team, (e) => b.freeze(e, e.maxHp * 0.02 * P_cont, 5 * durMul, null));
       break;
     case 'firework':
       b.emit({ k: 'boom', x, y, r, color: '#ff6ad5', big: true });

@@ -112,7 +112,8 @@ export interface Card {
 }
 
 /** rift: a tear into the Sift (acts 2–3): a Sift fight that pays out a Sift crate. */
-export type NodeType = 'battle' | 'elite' | 'shop' | 'event' | 'rest' | 'treasure' | 'boss' | 'rift';
+/** tactics: sanctuary for commander tactic acquisition and refinement (acts 2–6). */
+export type NodeType = 'battle' | 'elite' | 'shop' | 'event' | 'rest' | 'treasure' | 'boss' | 'rift' | 'tactics';
 
 export interface MapNode {
   id: string;

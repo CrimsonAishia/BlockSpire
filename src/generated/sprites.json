@@ -4038,5 +4038,215 @@
     "w": 512,
     "h": 512,
     "ar": 1
+  },
+  "icons/node_tactics": {
+    "w": 64,
+    "h": 64,
+    "ar": 1
+  },
+  "events/bg_tactics": {
+    "w": 960,
+    "h": 540,
+    "ar": 1.7778
+  },
+  "icons/skill_tactic_tnt": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "icons/skill_tactic_horn": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "icons/skill_tactic_acid": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "icons/skill_tactic_cannon": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "icons/skill_tactic_smoke": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "icons/skill_tactic_ward": {
+    "w": 48,
+    "h": 48,
+    "ar": 1
+  },
+  "effects/tactic_cast_red": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cast_teal": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cast_lime": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cast_gold": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cast_violet": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cast_aqua": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_mark_danger": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_mark_support": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_demolition_charge": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_demolition_blast": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_concussion": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_command_wave": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_rally_banner": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_retreat_trail": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_acid_flask": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_acid_splash": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_corrosion": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_shield_shatter": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cannon_muzzle": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_emerald_shot": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_coin_impact": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_smoke_pot": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_smoke_cloud": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_smoke_guard": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_cleanse_spark": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_ward_weave": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_ward_hold": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_ward_shatter": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_build_dust": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_fort_outline": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_tame_link": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_tame_seal": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_hire_arrival": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
+  },
+  "effects/tactic_brew_swirl": {
+    "w": 1088,
+    "h": 1088,
+    "ar": 1
   }
 }

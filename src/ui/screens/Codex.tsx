@@ -3,6 +3,8 @@ import { MOBS, PLAYABLE_MOBS, RARITY_INFO, ROLE_INFO, mobDef, starStatMul, unitC
 import { DEVELOPMENT_RULES, DIFFICULTY_POLICIES } from '../../data/difficulty.ts';
 import { CRATES } from '../../data/crates.ts';
 import { ENCHANTS, ITEM_KIND_NAME, POTIONS, RELICS, RELIC_MAP, RELIC_TIER_INFO, COMMANDER_MAP } from '../../data/items.ts';
+import { COMMANDERS } from '../../data/commanders.ts';
+import { TACTIC_DEFS, TACTIC_POOL, TACTIC_VARIANTS, COMMANDER_VARIANTS } from '../../data/tactics.ts';
 import { FAMILY_LIST } from '../../data/families.ts';
 import { ACHIEVEMENTS, ACH_CAT, ROMAN_OMEN, type HistoryEntry } from '../../meta/profile.ts';
 import { RARITIES, type Family } from '../../core/types.ts';
@@ -78,9 +80,10 @@ const EXPEDITION_ITEM_IDS = new Set<string>([
   'emergency_satchel', 'rainbow_grass', 'wonderful_wheat', 'elemental_satchel', 'spore_bomb',
 ]);
 
-type Tab = 'rules' | 'mobs' | 'relics' | 'enchants' | 'families' | 'combos' | 'achievements' | 'records';
+type Tab = 'rules' | 'tactics' | 'mobs' | 'relics' | 'enchants' | 'families' | 'combos' | 'achievements' | 'records';
 const TABS: [Tab, string][] = [
   ['rules', '玩法说明'],
+  ['tactics', '副战术与精进'],
   ['mobs', '生物'],
   ['relics', '宝物'],
   ['enchants', '附魔与物品'],
@@ -109,6 +112,7 @@ export function Codex() {
         </div>
         <div class="codex-body panel">
           {tab === 'rules' && <RulesTab />}
+          {tab === 'tactics' && <TacticsTab p={p} />}
           {tab === 'mobs' && <MobsTab discovered={p.discovered} />}
           {tab === 'relics' && <RelicsTab seen={p.relicsSeen} />}
           {tab === 'enchants' && <EnchantsTab />}
@@ -603,12 +607,18 @@ const RULES: [string, string[]][] = [
     '冰洞的脆冰会被踩碎成水洼；硫磺立方会吞下脚下的方块，站在不同地面上开战会变成不同的形态。',
   ]],
   ['统领与流派', [
-    '每位统领都有自己的「统领技能」（物品栏左边，按 Q / E）、特色机制和 3–4 件专属宝物，玩法完全不同。',
-    '史蒂夫·建造者：布阵时就能砌墙、垫土台。墙挡住敌人的行走和投射物（我方的箭能越墙），把敌人引进窄口；3×3 的土台让远程坚守高台、居高临下。紧挨己方墙或站在土台上的友军受到伤害 -20%。墙不能把路完全堵死，会被爆炸炸毁。',
-    '亚历克斯·驯兽师：驯服生命足够低的敌人让它倒戈，赢下战斗后还能把它收为卡牌——精英战里的强敌也能收服。',
-    '村民·大商人：商店里可以「订购」指定的生物；战斗中花绿宝石雇佣铁傀儡。钱越多越强。',
-    '女巫·药剂师：每场开战都有一瓶免费的限定药水；药水更强、范围更大，中毒与燃烧伤害更高。',
-    '流派宝物会让某种打法越滚越强：岩浆膏（燃烧）、河豚（剧毒）、刷怪笼（数量）、滴水石锥（击退撞墙与摔落）、火焰弹（爆破）、瞭望塔（高地远程）、回响碎片（献祭）。配合羁绊和统领机制组出自己的流派。',
+    '每位统领都有专属的「统领技能」（开战在物品栏旁，按 Q 或 E 施放）、独特机制和 3–4 件专属宝物。在地图上的战技殿堂里，还可以挑选专属的【身份精进】路线（2 选 1），玩法风格完全不同。',
+    '史蒂夫·建造者：布阵时就能砌墙、垫高台。紧挨墙壁或站在高台上的友军受到伤害减少 20%。战技殿堂里可走「坚垒工程」（掩体更硬、减伤提至 25%）或「火力工事」（登台射手开战攻速爆发）。',
+    '亚历克斯·驯兽师：点残血敌人立刻让它倒戈，赢了还能收为生物卡。可走「安抚契约」（大幅放宽驯服血线，半血也能抓）或「短期借兵」（驯服单位攻击力暴增，但战后不带走）。',
+    '村民·大商人：商店里能指定买想要的卡，战斗中还能花绿宝石雇铁傀儡。可走「轻装雇佣」（雇傀儡更便宜）或「风险投资」（战前下注对赌，18 秒内速胜大赚一笔！）。',
+    '女巫·药剂师：每场开战自动熬制一瓶免费药水，药效更强、范围更大。可走「定向配方」（临时药水 2 选 1）或「应急双酿」（开战多熬一瓶，但单瓶药效稍打折）。',
+    '流派宝物会让某种打法越滚越强：岩浆膏（燃烧）、河豚（剧毒）、刷怪笼（数量）、滴水石锥（撞墙摔落）、火焰弹（爆破）、瞭望塔（高地射击）、回响碎片（献祭）。配合羁绊和副战术组出自己的打法。',
+  ]],
+  ['副战术与军令', [
+    '军令怎么用：开战直接获得 1 点军令，战斗打到 12 秒再补 1 点，每场战斗最多施放 2 次副战术。每次消耗 1 点军令，全队共用 8 秒冷却，找准关键时机放！',
+    '六大战场战术：遥控爆破（炸飞并打晕敌人）、战术撤退（全员加速拉开距离）、强酸喷溅（破除护盾与削弱护甲）、应急钱炮（花钱远程斩杀补刀）、烟幕掩护（掩护友军减免远程伤害）、应急护符（全体套上紧急护盾）。',
+    '群体上限与首领霸体：大范围伤害和护盾都有总额上限，怪再多也会均匀分摊，不会无脑秒怪；首领敌人天生霸体，不会被击退，打晕时间极短，破盾比例也会减半。',
+    '战技殿堂与卷轴：踩中地图上的「战技殿堂」可以免费自选 1 个新战术（一攻一防保底备选）；还能花点绿宝石精进统领的专属技能。商店里偶尔也会卖「副战术卷轴」，买了就能再学新战术。',
   ]],
   ['生命与经济', [
     '❤ 是整局的生命：普通战败 -1，精英/首领战败 -2，归零即失败（不死图腾可复活一次）。',
@@ -617,6 +627,385 @@ const RULES: [string, string[]][] = [
     '物品（药水、风弹、TNT、刷怪蛋……）在战斗中使用：点击下方物品栏或按数字键 1–5，再点击战场上的目标位置。饮用药水和山羊角立即生效；刷怪蛋只能放在我方半场。',
   ]],
 ];
+
+type TacticFilter = 'all' | 'offense' | 'defense' | 'commanders' | 'rules';
+const TACTIC_FILTERS: [TacticFilter, string][] = [
+  ['all', '全部'],
+  ['offense', '进攻战术'],
+  ['defense', '防御战术'],
+  ['commanders', '统领精进'],
+  ['rules', '战术规则'],
+];
+
+function TacticsTab({ p }: { p: typeof profile.value }) {
+  const [filter, setFilter] = useState<TacticFilter>('all');
+  const tacticsSeen = p.tacticsSeen ?? [];
+  const variantsSeen = p.variantsSeen ?? [];
+
+  const tacticsSeenCount = TACTIC_POOL.filter((id) => tacticsSeen.includes(id)).length;
+  const tacticVariantsTotal = Object.values(TACTIC_VARIANTS).flat().length;
+  const tacticVariantsSeenCount = Object.values(TACTIC_VARIANTS)
+    .flat()
+    .filter((v) => variantsSeen.includes(v.id)).length;
+  const cmdVariantsTotal = Object.values(COMMANDER_VARIANTS).flat().length;
+  const cmdVariantsSeenCount = Object.values(COMMANDER_VARIANTS)
+    .flat()
+    .filter((v) => variantsSeen.includes(v.id)).length;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 12 }}>
+      {/* 顶部筛选按钮栏 */}
+      <div class="row between center wrap" style={{ flexShrink: 0, gap: 8 }}>
+        <div class="row gap8 wrap">
+          {TACTIC_FILTERS.map(([k, label]) => (
+            <button
+              key={k}
+              class={`mc-btn ${filter === k ? 'gold' : ''}`}
+              style={{ padding: '4px 14px', fontSize: 13 }}
+              onClick={() => (sfx('click', { vol: 0.4 }), setFilter(k))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div class="faint" style={{ fontSize: 13 }}>
+          已解锁 {tacticsSeenCount}/{TACTIC_POOL.length} 战术 · {tacticVariantsSeenCount}/{tacticVariantsTotal} 战术变体 · {cmdVariantsSeenCount}/{cmdVariantsTotal} 统领精进
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingRight: 4 }}>
+        {/* 1. 战术展示 (进攻 / 防御) */}
+        {(filter === 'all' || filter === 'offense' || filter === 'defense') && (
+          <div>
+            <div class="tp-sec">战场副战术（消耗 1 军令 · 冷却 8 秒）</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
+              {TACTIC_POOL.filter((id) => {
+                const def = TACTIC_DEFS[id];
+                if (filter === 'offense') return def.category === 'offense';
+                if (filter === 'defense') return def.category === 'defense';
+                return true;
+              }).map((id) => {
+                const def = TACTIC_DEFS[id];
+                const variants = TACTIC_VARIANTS[id];
+                const isOffense = def.category === 'offense';
+                const isSeen = tacticsSeen.includes(id);
+
+                return (
+                  <div
+                    key={id}
+                    class="panel"
+                    style={{
+                      background: isSeen ? 'rgba(20, 24, 30, 0.75)' : 'rgba(15, 18, 24, 0.55)',
+                      border: isSeen
+                        ? `1px solid ${isOffense ? 'rgba(239, 68, 68, 0.35)' : 'rgba(56, 189, 248, 0.35)'}`
+                        : '1px dashed rgba(255, 255, 255, 0.15)',
+                      borderRadius: 6,
+                      padding: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      opacity: isSeen ? 1 : 0.85,
+                    }}
+                  >
+                    {/* Header */}
+                    <div class="row between center">
+                      <div class="row center gap8">
+                        <img
+                          src={url.icon(def.icon)}
+                          class={`pixelated ${isSeen ? '' : 'silhouette'}`}
+                          style={{ width: 36, height: 36, objectFit: 'contain', opacity: isSeen ? 1 : 0.35 }}
+                        />
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 16,
+                              fontWeight: 'bold',
+                              color: isSeen ? (isOffense ? '#fca5a5' : '#7dd3fc') : '#64748b',
+                            }}
+                          >
+                            {isSeen ? def.name : '？？？'}
+                          </div>
+                          <div class="row gap4 center" style={{ marginTop: 2 }}>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: '1px 5px',
+                                borderRadius: 3,
+                                background: isSeen
+                                  ? isOffense
+                                    ? 'rgba(239, 68, 68, 0.2)'
+                                    : 'rgba(56, 189, 248, 0.2)'
+                                  : 'rgba(255, 255, 255, 0.05)',
+                                color: isSeen ? (isOffense ? '#ef4444' : '#38bdf8') : '#64748b',
+                                border: isSeen
+                                  ? `1px solid ${isOffense ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)'}`
+                                  : '1px solid rgba(255, 255, 255, 0.1)',
+                              }}
+                            >
+                              {isOffense ? '进攻战术' : '防御战术'}
+                            </span>
+                            <span class="faint" style={{ fontSize: 11 }}>
+                              {isSeen ? `蓄力 ${def.windup}秒 ${def.radius ? `· 范围 ${def.radius}` : ''}` : '未习得'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', fontSize: 12, color: isSeen ? '#f59e0b' : '#64748b' }}>
+                        <div>1 军令</div>
+                        <div class="faint" style={{ fontSize: 11 }}>冷却 8秒</div>
+                      </div>
+                    </div>
+
+                    {/* Base Effect */}
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: isSeen ? '#e2e8f0' : '#64748b',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '6px 8px',
+                        borderRadius: 4,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {isSeen ? (
+                        <>
+                          <span class="gold-t" style={{ fontWeight: 'bold' }}>基础效果：</span>
+                          <RichText text={def.desc} />
+                        </>
+                      ) : (
+                        <span class="faint" style={{ fontStyle: 'italic' }}>
+                          尚未解锁。在战技殿堂研习或使用战术卷轴后解锁详细效果。
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Variants */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                      <div class="faint" style={{ fontSize: 11, fontWeight: 'bold' }}>
+                        进阶分支（在战技殿堂二选一解锁）：
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {variants.map((v) => {
+                          const isVarSeen = isSeen && variantsSeen.includes(v.id);
+                          return (
+                            <div
+                              key={v.id}
+                              style={{
+                                background: isVarSeen ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.2)',
+                                border: isVarSeen
+                                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                                  : '1px dashed rgba(255, 255, 255, 0.08)',
+                                borderRadius: 4,
+                                padding: '6px 8px',
+                                fontSize: 12,
+                              }}
+                            >
+                              <div class="row between center" style={{ marginBottom: 2 }}>
+                                <span
+                                  style={{
+                                    fontWeight: 'bold',
+                                    color: isVarSeen ? (v.tag === 'A' ? '#93c5fd' : '#c084fc') : '#64748b',
+                                  }}
+                                >
+                                  [{v.tag}] {isVarSeen ? v.name : '？？？'}
+                                </span>
+                              </div>
+                              <div class="subtle" style={{ fontSize: 11, lineHeight: 1.35 }}>
+                                {isVarSeen ? (
+                                  <RichText text={v.desc} />
+                                ) : (
+                                  <span class="faint">未研习（战技殿堂选择该变体后解锁）</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 2. 统领精进变体展示 */}
+        {(filter === 'all' || filter === 'commanders') && (
+          <div>
+            <div class="tp-sec">统领专属身份精进（战技殿堂专属进阶）</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 12 }}>
+              {COMMANDERS.map((c) => {
+                const variants = COMMANDER_VARIANTS[c.id];
+                if (!variants) return null;
+                const isCmdUnlocked = !c.unlock || !!p.flags[c.unlock.key];
+
+                return (
+                  <div
+                    key={c.id}
+                    class="panel"
+                    style={{
+                      background: isCmdUnlocked ? 'rgba(24, 20, 32, 0.75)' : 'rgba(15, 18, 24, 0.55)',
+                      border: isCmdUnlocked ? `1px solid ${c.color}66` : '1px dashed rgba(255, 255, 255, 0.12)',
+                      borderRadius: 6,
+                      padding: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      opacity: isCmdUnlocked ? 1 : 0.85,
+                    }}
+                  >
+                    {/* Header */}
+                    <div class="row between center">
+                      <div class="row center gap8">
+                        <img
+                          src={url.cmd(c.id)}
+                          class={isCmdUnlocked ? '' : 'silhouette'}
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 4,
+                            objectFit: 'cover',
+                            border: `1px solid ${isCmdUnlocked ? c.color : 'rgba(255,255,255,0.1)'}`,
+                            opacity: isCmdUnlocked ? 1 : 0.4,
+                          }}
+                        />
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 'bold', color: isCmdUnlocked ? c.color : '#64748b' }}>
+                            {c.name} · {c.title}
+                          </div>
+                          <div class="faint" style={{ fontSize: 12 }}>
+                            {isCmdUnlocked ? `${c.style.slice(0, 24)}…` : `解锁条件：${c.unlock?.text}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        class="tag"
+                        style={{
+                          color: isCmdUnlocked ? c.color : '#64748b',
+                          borderColor: isCmdUnlocked ? `${c.color}88` : 'rgba(255,255,255,0.1)',
+                          background: isCmdUnlocked ? `${c.color}22` : 'rgba(255,255,255,0.03)',
+                          fontSize: 11,
+                        }}
+                      >
+                        {isCmdUnlocked ? `专属：${c.skill.name}` : '未解锁'}
+                      </div>
+                    </div>
+
+                    {/* Base Skill description */}
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: isCmdUnlocked ? '#cbd5e1' : '#64748b',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '6px 8px',
+                        borderRadius: 4,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {isCmdUnlocked ? (
+                        <>
+                          <span class="gold-t">【技能机制】：</span>
+                          <RichText text={c.skill.desc.slice(0, 95) + (c.skill.desc.length > 95 ? '…' : '')} />
+                        </>
+                      ) : (
+                        <span class="faint" style={{ fontStyle: 'italic' }}>
+                          该统领尚未解锁。达成对应前置通关条件后开启。
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Masteries A & B */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                      <div class="faint" style={{ fontSize: 11, fontWeight: 'bold' }}>
+                        身份精进分支（在战技殿堂二选一解锁）：
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {variants.map((v) => {
+                          const isVarSeen = isCmdUnlocked && variantsSeen.includes(v.id);
+                          return (
+                            <div
+                              key={v.id}
+                              style={{
+                                background: isVarSeen ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.2)',
+                                border: isVarSeen
+                                  ? '1px solid rgba(255, 255, 255, 0.1)'
+                                  : '1px dashed rgba(255, 255, 255, 0.08)',
+                                borderRadius: 4,
+                                padding: '6px 8px',
+                                fontSize: 12,
+                              }}
+                            >
+                              <div class="row between center" style={{ marginBottom: 2 }}>
+                                <span style={{ fontWeight: 'bold', color: isVarSeen ? '#fbbf24' : '#64748b' }}>
+                                  [{v.tag}] {isVarSeen ? v.name : '？？？'}
+                                </span>
+                              </div>
+                              <div class="subtle" style={{ fontSize: 11, lineHeight: 1.35 }}>
+                                {isVarSeen ? (
+                                  <RichText text={v.desc} />
+                                ) : (
+                                  <span class="faint">未研习（在战技殿堂选择该分支后解锁）</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 3. 战术规则与机制 */}
+        {(filter === 'all' || filter === 'rules') && (
+          <div>
+            <div class="tp-sec">副战术与军令规则</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+              <div class="panel" style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+                <div style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: 14, marginBottom: 4 }}>
+                  🎖️ 军令与冷却
+                </div>
+                <div class="subtle" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  开战自动获得 1 点军令，战斗进行至第 12 秒时再补 1 点，整场最多使用 2 点。每次施放副战术消耗 1 点军令，全队共用 8 秒冷却，注意留着关键时刻救场！
+                </div>
+              </div>
+
+              <div class="panel" style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+                <div style={{ fontWeight: 'bold', color: '#38bdf8', fontSize: 14, marginBottom: 4 }}>
+                  ⚖️ 群体平摊与首领霸体
+                </div>
+                <div class="subtle" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  范围伤害与护盾都有总额上限，命中目标很多时会自动等比例平摊数值，避免数字无脑膨胀。首领敌人拥有强韧霸体，不会被击飞，被眩晕时间极短，破盾比例也会减半。
+                </div>
+              </div>
+
+              <div class="panel" style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+                <div style={{ fontWeight: 'bold', color: '#4ade80', fontSize: 14, marginBottom: 4 }}>
+                  🏛️ 战技殿堂与精进
+                </div>
+                <div class="subtle" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  地图上的战技殿堂可以免费自选 1 个新战术（必有一攻一防给你挑）；还可以花费少量绿宝石（约 25~45 绿宝石，随幕数递增）为统领挑选一门专属精进分支，彻底改变技能风格。
+                </div>
+              </div>
+
+              <div class="panel" style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+                <div style={{ fontWeight: 'bold', color: '#c084fc', fontSize: 14, marginBottom: 4 }}>
+                  📜 商店战术卷轴
+                </div>
+                <div class="subtle" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  商店里会刷出「副战术卷轴」（基准价格 48 绿宝石，受商店打折影响）。购买后能从 3 门未拥有的战术中任选 1 门补充进战术库，是补齐阵容防守或斩杀短板的利器。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function RulesTab() {
   return (

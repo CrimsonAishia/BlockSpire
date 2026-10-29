@@ -64,12 +64,16 @@ export interface HistoryEntry {
   killedBy?: DefeatCause;
   battles?: BattleRecord[];
   runStats?: RunTelemetryStats;
+  tactics?: string[];
+  variants?: Record<string, string>;
 }
 
 export interface Profile {
   v: 1;
   discovered: string[];
   relicsSeen: string[];
+  tacticsSeen: string[];
+  variantsSeen: string[];
   runs: number;
   wins: number;
   bestScore: number;
@@ -148,7 +152,7 @@ function safeDel(k: string) {
 
 export function defaultProfile(): Profile {
   return {
-    v: 1, discovered: [], relicsSeen: [], runs: 0, wins: 0, bestScore: 0, maxOmen: 0, lastOmen: 0, bestOmen: {}, totalEmeralds: 0, flags: {}, achievements: {},
+    v: 1, discovered: [], relicsSeen: [], tacticsSeen: [], variantsSeen: [], runs: 0, wins: 0, bestScore: 0, maxOmen: 0, lastOmen: 0, bestOmen: {}, totalEmeralds: 0, flags: {}, achievements: {},
     classic: { played: 0, guesses: 0, correct: 0, streak: 0, best: 0 }, history: [], unlockV: 2, daily: {},
   };
 }
@@ -158,6 +162,8 @@ export function loadProfile(): Profile {
   if (!raw) return defaultProfile();
   try {
     const p: Profile = { ...defaultProfile(), unlockV: undefined, ...JSON.parse(raw) };
+    p.tacticsSeen = Array.isArray(p.tacticsSeen) ? p.tacticsSeen : [];
+    p.variantsSeen = Array.isArray(p.variantsSeen) ? p.variantsSeen : [];
     // Early daily records were a bare score (-1 = started).
     for (const [d, v] of Object.entries(p.daily ?? {})) if (typeof v === 'number') p.daily![d] = { tries: 1, best: v };
     // Commanders used to unlock independently; profiles from then keep what they had unlocked.

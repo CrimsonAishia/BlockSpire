@@ -52,6 +52,7 @@ export function tameLimit(b: Battle, team: 0 | 1, u: Unit): number {
   let lim = tier;
   if (u.mob.families.includes('beast')) lim += 0.2;
   if (b.has(team, 'fishing_rod')) lim += 0.2;
+  if (b.sides[team].plan.mainVariant === 'soothing') lim += 0.1;
   return Math.min(0.95, lim);
 }
 
@@ -73,6 +74,9 @@ export function build(b: Battle, team: 0 | 1, kind: BuildKind, x: number, y: num
       const cy = Math.floor(i / GW);
       b.emit({ k: 'debris', x: (cx + 0.5) * BLOCK, y: (cy + 0.5) * BLOCK, z: b.terrain.h[i] * BLOCK, s: b.terrain.s[i], f: b.terrain.f[i], block: true });
     }
+    const mv = b.sides[team].plan.mainVariant;
+    const prof = mv === 'bulwark' ? 'steve_build__bulwark' : mv === 'fire_support' ? 'steve_build__fire_support' : 'steve_build';
+    b.emit({ k: 'tactic_vfx', profile: prof, sx: x, sy: y, tx: x, ty: y });
   }
   if (kind === 'platform') {
     b.platTeam ??= new Int8Array(GW * GD).fill(-1);
@@ -169,10 +173,21 @@ export function tame(b: Battle, team: 0 | 1, u: Unit): boolean {
       ally.retarget = 0;
     }
   }
-  if (b.has(team, 'wheat')) {
+  const mv = b.sides[team].plan.mainVariant;
+  if (mv === 'soothing') {
+    if (b.has(team, 'wheat')) {
+      const missing = u.maxHp - u.hp;
+      u.hp = Math.min(u.maxHp, u.hp + missing * 0.7);
+      u.atk *= 1.3;
+    }
+  } else if (b.has(team, 'wheat')) {
     u.hp = u.maxHp;
     u.atk *= 1.3;
   } else u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.3);
+  if (mv === 'mercenary') {
+    u.atk *= 1.2;
+    u.ref.mercenary = 1;
+  }
   u.burnT = u.poisonT = u.witherT = u.freezeT = u.slowT = 0;
   u.stunT = u.airT = u.levT = 0;
   b.live[team].push(u);
@@ -181,40 +196,49 @@ export function tame(b: Battle, team: 0 | 1, u: Unit): boolean {
   b.emit({ k: 'heal', x: u.x, y: u.y, z: u.gz + u.z });
   b.emit({ k: 'spawn', u, fx: 'revive' });
   b.emit({ k: 'sfx', id: 'levelup', v: 0.6 });
+
+  const prof = mv === 'soothing' ? 'alex_tame__soothing' : mv === 'mercenary' ? 'alex_tame__mercenary' : 'alex_tame';
+  const sx = team === 0 ? ARENA_W * 0.15 : ARENA_W * 0.85;
+  b.emit({ k: 'tactic_vfx', profile: prof, sx, sy: 160, tx: u.x, ty: u.y, units: [{ x: u.x, y: u.y }] });
   return true;
 }
 
 /** The Villager's hired iron golem, on our half. */
 export function hireGolem(b: Battle, team: 0 | 1, x: number, y: number): boolean {
-  if (team === 0 ? x >= ARENA_W / 2 : x < ARENA_W / 2) return false;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || (team === 0 ? x >= ARENA_W / 2 : x < ARENA_W / 2)) return false;
   const side = b.sides[team];
+  const isLight = side.plan.mainVariant === 'light_hire';
   // A village golem is weaker than a 隐秘 card (it costs no slot); the bell tower toughens it.
-  const mul = (SUMMON_K[side.plan.act] ?? 1) * 0.5 * (b.has(team, 'bell_tower') ? 1.3 : 1);
-  const ci = b.addCard(team, {
-    mob: 'iron_golem', star: 1, row: 'front', count: 1, hpMul: mul, atkMul: mul, atkSpd: 1, moveSpd: 1, rangeMul: 1, armorAdd: 0, fx: baseFx(), immune: 0,
-  });
+  const mul = (SUMMON_K[side.plan.act] ?? 1) * 0.5 * (b.has(team, 'bell_tower') ? 1.3 : 1) * (isLight ? 0.85 : 1);
   const t = b.terrain;
   let px = x;
   let py = y;
   // Nearest open cell around the click.
+  let found = false;
   for (let r = 0; r < 4; r++) {
-    let found = false;
     for (let dy = -r; dy <= r && !found; dy++)
       for (let dx = -r; dx <= r && !found; dx++) {
         const cx = cellX(x) + dx;
         const cy = cellY(y) + dy;
         if (cx < 0 || cy < 0 || cx >= GW || cy >= GD) continue;
-        if (isBlocked(t, cx, cy) || SURFACE_INFO[t.s[idx(cx, cy)]]?.liquid) continue;
+        if ((team === 0 ? cx >= GW / 2 : cx < GW / 2) || isBlocked(t, cx, cy) || SURFACE_INFO[t.s[idx(cx, cy)]]?.liquid) continue;
         px = (cx + 0.5) * BLOCK;
         py = (cy + 0.5) * BLOCK;
         found = true;
       }
     if (found) break;
   }
+  if (!found) return false;
+  const ci = b.addCard(team, {
+    mob: 'iron_golem', star: 1, row: 'front', count: 1, hpMul: mul, atkMul: mul, atkSpd: 1, moveSpd: 1, rangeMul: 1, armorAdd: 0, fx: baseFx(), immune: 0,
+  });
   const u = b.createUnit(ci, mobDef('iron_golem'), px, py, 1, true);
   u.facing = team === 0 ? 1 : -1;
   b.enlist(u, 'summon');
   b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.size + 10, s: '铁傀儡来了!', color: '#e8e4dc' });
+
+  const prof = isLight ? 'villager_hire__light_hire' : 'villager_hire';
+  b.emit({ k: 'tactic_vfx', profile: prof, sx: x, sy: y, tx: px, ty: py });
   b.emit({ k: 'sfx', id: 'golem' });
   return true;
 }

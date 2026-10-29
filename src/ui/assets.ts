@@ -49,7 +49,7 @@ export const url = {
   crate: (id: string) => `${BASE}assets/crates/${id}.webp`,
   cmd: (id: string) => `${BASE}assets/commanders/${id}.webp`,
   bg: (id: string) => `${BASE}assets/bg/${id}.jpg`,
-  event: (id: string) => `${BASE}assets/events/${id}.jpg`,
+  event: (id: string) => `${BASE}assets/events/${id.endsWith('.webp') ? id : id === 'bg_tactics' ? `${id}.webp` : `${id}.jpg`}`,
   arena: (id: string) => `${BASE}assets/arena/${id}.jpg`,
   tex: (id: string) => `${BASE}assets/tex/${id}.png`,
 };

@@ -7,6 +7,8 @@ import { BEHAVIORS, type Behavior } from './ai.ts';
 import { applyItem } from './items.ts';
 import { FORT_TAKEN, build, canTame, hireGolem, placeDispenser, tame, tickWalls, type SkillKind, type Wall } from './skills.ts';
 import type { SkillId } from '../data/commanders.ts';
+import { ORDER_INITIAL, ORDER_REFILL_AT, ORDER_TOTAL, type TacticId } from '../data/tactics.ts';
+import { requestTactic, cancelTactic, tickHornMarch, tickTacticUnits, type PendingTactic } from './tactics_exec.ts';
 import { ITEM_MAP } from '../data/items.ts';
 import { counterMul } from '../data/combos.ts';
 import { sigilOfMob } from '../data/sigils.ts';
@@ -70,6 +72,14 @@ export interface SidePlan {
   skill?: { id: SkillId; charges: number };
   /** Walls / platforms placed during deployment (Steve). */
   builds?: BuildOrder[];
+  /** Equipped commander sub-tactic and its variant */
+  tactic?: { id: TacticId; variant?: string };
+  /** Active variant for the commander's main identity skill */
+  mainVariant?: string;
+  golemCost?: number;
+  tacticCarry?: { orders: number; granted: boolean; cooldown: number; elapsed: number; skillLeft: number };
+  /** Active wager for villager venture capital */
+  wager?: { stake: number; profit: number };
 }
 
 export interface BattleConfig {
@@ -110,6 +120,7 @@ export interface BattleResult {
   draw?: boolean;
   /** Items the player used (consumed from the inventory afterwards). */
   itemsUsed: string[];
+  tempItemsUsed?: string[];
   /** Commander skills the player used. */
   skillsUsed: string[];
   /** Playable mobs the player tamed that are still alive at the end (Alex can keep one). */
@@ -117,6 +128,12 @@ export interface BattleResult {
   /** Units that fell per side, and units still standing at the end (summons and structures not counted). */
   lost?: [number, number];
   left?: [number, number];
+  /** Emeralds spent on Cannon during battle. */
+  cannonSpent?: number;
+  golemSpent?: number;
+  tacticCarry?: NonNullable<SidePlan['tacticCarry']>;
+  /** Whether the battle was won within 18 seconds simulated time (villager venture wager). */
+  wonWithin18s?: boolean;
 }
 
 export type BuffKind = 'atk' | 'atkSpd' | 'move' | 'taken' | 'fire';
@@ -157,13 +174,24 @@ export class Battle {
   winner: 0 | 1 = 1;
   draw = false;
   itemsUsed: [string[], string[]] = [[], []];
+  tempItemsUsed: [string[], string[]] = [[], []];
   /** Thrown items still in the air. */
-  pendingItems: { t: number; team: 0 | 1; id: string; x: number; y: number }[] = [];
+  pendingItems: { t: number; team: 0 | 1; id: string; x: number; y: number; temp?: boolean }[] = [];
   /** Timed callbacks tied to battle time (this.t) */
   timedActions: { at: number; fn: () => void }[] = [];
   /** Commander skill charges left and skills used, per side. */
   skillLeft: [number, number] = [0, 0];
   skillsUsed: [string[], string[]] = [[], []];
+  /** Sub-tactics order points (initial 1, +1 at 12s, max 2). */
+  orders: [number, number] = [0, 0];
+  orderGranted12s: [boolean, boolean] = [false, false];
+  orderCooldown: [number, number] = [0, 0];
+  battleEmeralds: [number, number] = [0, 0];
+  cannonSpent: [number, number] = [0, 0];
+  wonWithin18s = false;
+  golemSpent: [number, number] = [0, 0];
+  pendingTactics: [PendingTactic | null, PendingTactic | null] = [null, null];
+  tacticSequence = 0;
   /** Walls built this battle, and units tamed by either side. */
   walls: Wall[] = [];
   /** Platform cells built by each side (team per cell, -1 none), and fortified cells. */
@@ -237,6 +265,13 @@ export class Battle {
     for (const team of [0, 1] as const) {
       const sk = cfg.sides[team].skill;
       this.skillLeft[team] = sk?.charges ?? 0;
+      const carry = cfg.sides[team].tacticCarry;
+      if (carry) this.skillLeft[team] = carry.skillLeft;
+      this.orders[team] = cfg.sides[team].tactic ? (carry?.orders ?? ORDER_INITIAL) : 0;
+      this.orderGranted12s[team] = carry?.granted ?? false;
+      this.orderCooldown[team] = carry?.cooldown ?? 0;
+      this.battleEmeralds[team] = cfg.sides[team].flags['emeralds'] ?? 0;
+      this.cannonSpent[team] = 0;
       if (sk?.id !== 'build') continue;
       for (const o of cfg.sides[team].builds ?? []) {
         if (this.skillLeft[team] <= 0) break;
@@ -420,6 +455,17 @@ export class Battle {
       const aquaticUnits = this.live[team].filter((u) => u.mob.families.includes('aquatic') && !u.structure && !u.boss && !u.isSummon);
       this.sides[team].aquaticAvgAtk = aquaticUnits.length ? aquaticUnits.reduce((sum, u) => sum + u.atk, 0) / aquaticUnits.length : 20;
 
+      if (this.sides[team].plan.mainVariant === 'fire_support' && this.platTeam) {
+        for (const u of this.live[team]) {
+          const cidx = tidx(cellX(u.x), cellY(u.y));
+          if (this.platTeam[cidx] === team) {
+            u.hasteT = Math.max(u.hasteT, 4);
+            u.hasteMul = Math.max(u.hasteMul, 1.10);
+            this.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '火力工事 攻速 +10%!', color: '#3fb6d9' });
+          }
+        }
+      }
+
       if (this.syn(team, 'beast') >= 2) {
         this.sides[team].beastKillStacks = 3;
       }
@@ -556,13 +602,14 @@ export class Battle {
     if (def.target === 'own' && (team === 0 ? x >= ARENA_W / 2 : x < ARENA_W / 2)) return false;
     // Temporary items (the Witch's brew) don't come out of the inventory.
     if (!temp) this.itemsUsed[team].push(id);
+    else this.tempItemsUsed[team].push(id);
     this.emit({ k: 'item', id, team, x, y, t: def.target === 'none' ? 0 : 0.45 });
     if (def.target === 'none') {
       this.emit({ k: 'sfx', id: def.kind === 'drink' ? 'potion_drink' : 'horn' });
-      applyItem(this, team, id, x, y);
+      applyItem(this, team, id, x, y, temp);
     } else {
       this.emit({ k: 'sfx', id: 'potion_throw' });
-      this.pendingItems.push({ t: 0.45, team, id, x, y });
+      this.pendingItems.push({ t: 0.45, team, id, x, y, temp });
     }
     if (this.has(team, 'shadow_shifter')) {
       for (const a of this.live[team]) {
@@ -582,18 +629,41 @@ export class Battle {
    */
   useSkill(team: 0 | 1, kind: SkillKind, x = 0, y = 0, target: Unit | null = null): boolean {
     const sk = this.sides[team].plan.skill;
-    if (!sk || this.over || this.skillLeft[team] <= 0) return false;
+    if (!sk || this.over || !Number.isFinite(x) || !Number.isFinite(y) || this.skillLeft[team] <= 0) return false;
     const id = kind === 'wall' || kind === 'platform' ? 'build' : kind;
     if (sk.id !== id) return false;
     let ok = false;
     if (kind === 'wall' || kind === 'platform') ok = build(this, team, kind, clampX(x, 8), clampY(y));
     else if (kind === 'tame') ok = canTame(this, team, target) && tame(this, team, target);
-    else ok = hireGolem(this, team, clampX(x, 20), clampY(y));
+    else {
+      const plan = this.sides[team].plan;
+      const cost = plan.golemCost ?? (this.has(team, 'bell_tower') ? 0 : Math.round((25 + 15 * (plan.act - 1)) * (plan.mainVariant === 'light_hire' ? 0.8 : 1)));
+      if (this.battleEmeralds[team] < cost) return false;
+      ok = hireGolem(this, team, clampX(x, 20), clampY(y));
+      if (ok) { this.battleEmeralds[team] -= cost; this.golemSpent[team] += cost; }
+    }
     if (!ok) return false;
     this.skillLeft[team]--;
     this.skillsUsed[team].push(kind);
     return true;
   }
+
+  /**
+   * Uses the side's equipped sub-tactic: TNT, Horn, Acid, Cannon, Smoke, Ward.
+   * Consumes 1 Order Point and starts an 8s cooldown on success.
+   */
+  useTactic(
+    team: 0 | 1,
+    x = 0,
+    y = 0,
+    target: Unit | null = null,
+    rallyPoint: { x: number; y: number } | null = null,
+    selectedIds?: number[],
+  ): { ok: boolean; reason?: string } {
+    return requestTactic(this, team, x, y, target, rallyPoint, selectedIds);
+  }
+
+  cancelTactic(team: 0 | 1): boolean { return cancelTactic(this, team); }
 
   addSouls(team: 0 | 1, amount: number) {
     if (amount <= 0) return;
@@ -676,6 +746,17 @@ export class Battle {
     if (this.over) return;
     const dt = DT;
     this.t += dt;
+    for (const team of [0, 1] as const) {
+      if (!this.orderGranted12s[team] && this.t + (this.sides[team].plan.tacticCarry?.elapsed ?? 0) + 1e-8 >= ORDER_REFILL_AT && this.sides[team].plan.tactic) {
+        this.orders[team] = Math.min(ORDER_TOTAL, this.orders[team] + 1);
+        this.orderGranted12s[team] = true;
+        if (team === 0) this.emit({ k: 'text', x: 80, y: ARENA_D / 2, z: 50, s: '军令 +1!', color: '#f1c40f' });
+      }
+      if (this.orderCooldown[team] > 0) {
+        this.orderCooldown[team] = Math.max(0, this.orderCooldown[team] - dt);
+      }
+    }
+    tickTacticUnits(this, dt);
     for (const u of this.units) {
       u.px = u.x;
       u.py = u.y;
@@ -690,7 +771,7 @@ export class Battle {
     if (this.pendingItems.length) {
       for (const it of this.pendingItems) {
         it.t -= dt;
-        if (it.t <= 0) applyItem(this, it.team, it.id, it.x, it.y);
+        if (it.t <= 0) applyItem(this, it.team, it.id, it.x, it.y, it.temp);
       }
       this.pendingItems = this.pendingItems.filter((it) => it.t > 0);
     }
@@ -745,6 +826,7 @@ export class Battle {
 
     this.suddenDeath(dt);
     this.checkEnd();
+    if (this.over) for (const team of [0, 1] as const) this.cancelTactic(team);
   }
 
   /** Brittle ice gives way after about three seconds under someone's feet. */
@@ -793,6 +875,7 @@ export class Battle {
   }
 
   result(): BattleResult {
+    if (this.over) for (const team of [0, 1] as const) this.cancelTactic(team);
     const boss = this.units.find((u) => u.team === 1 && u.boss && !u.isSummon);
     return {
       winner: this.winner,
@@ -802,10 +885,16 @@ export class Battle {
       bossHp: boss ? (boss.alive ? boss.hp / boss.maxHp : 0) : undefined,
       draw: this.draw,
       itemsUsed: this.itemsUsed[0].slice(),
+      tempItemsUsed: this.tempItemsUsed[0].slice(),
       skillsUsed: this.skillsUsed[0].slice(),
-      tamed: this.tamed.filter((u) => u.alive && u.team === 0 && !u.mob.hidden && !u.isSummon).map((u) => u.mob.id),
+      tamed: this.tamed.filter((u) => u.alive && u.team === 0 && !u.mob.hidden && !u.isSummon && !u.ref.mercenary).map((u) => u.mob.id),
       lost: [this.lost[0], this.lost[1]],
       left: [0, 1].map((k) => this.units.filter((u) => u.alive && u.team === k && !u.isSummon && !u.structure).length) as [number, number],
+      cannonSpent: this.cannonSpent[0],
+      golemSpent: this.golemSpent[0],
+      tacticCarry: { orders: this.orders[0], granted: this.orderGranted12s[0], cooldown: this.orderCooldown[0],
+        elapsed: this.t + (this.sides[0].plan.tacticCarry?.elapsed ?? 0), skillLeft: this.skillLeft[0] },
+      wonWithin18s: this.winner === 0 && !this.draw && this.t + (this.sides[0].plan.tacticCarry?.elapsed ?? 0) <= 18,
     };
   }
 
@@ -954,6 +1043,7 @@ export class Battle {
       u.moving = false;
       return;
     }
+    if (tickHornMarch(this, u, dt)) return;
     b.tick?.(u, this, dt);
     if (!u.alive) return;
     if (u.cast && (u.cast.phase === 'windup' || u.cast.phase === 'recovery')) {
@@ -3083,7 +3173,16 @@ export class Battle {
       const hasFront = this.live[t.team].some((u) => u.alive && !u.structure && (u.row === 'front' || u.mob.role === 'tank' || u.mob.role === 'melee'));
       if (hasFront) d *= 0.65;
     }
-    if (this.fortTeam !== null && !t.flying && this.fortTeam[tidx(cellX(t.x), cellY(t.y))] === t.team) d *= FORT_TAKEN;
+    if (this.fortTeam !== null && !t.flying && this.fortTeam[tidx(cellX(t.x), cellY(t.y))] === t.team) {
+      const mv = this.sides[t.team].plan.mainVariant;
+      d *= mv === 'bulwark' ? 0.75 : mv === 'fire_support' ? 0.90 : FORT_TAKEN;
+    }
+    if (kind !== 'dot' && (o.proj || (src && src.isRanged && !o.melee)) && t.ref.smokeT && t.ref.smokeT > 0) {
+      d *= t.ref.smokeTaken ?? 0.70;
+    }
+    if (t.ref.hornMarch?.coverDmgMul) {
+      d *= t.ref.hornMarch.coverDmgMul;
+    }
     const erodedArmor = Math.max(0, t.armor - t.erosionStacks * 0.04);
     const armor = Math.min(0.75, src && src.fx.breach > 0 ? erodedArmor * (1 - src.fx.breach) : (src && src.ref.activeIgnoreArmor35 ? erodedArmor * 0.65 : erodedArmor));
     if (src) delete src.ref.activeIgnoreArmor35;

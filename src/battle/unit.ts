@@ -471,7 +471,26 @@ export type BEvent =
   | { k: 'stuck'; x: number; y: number; z: number; kind: string; dx: number; dy: number }
   | { k: 'land'; x: number; y: number; z: number; big: boolean }
   | { k: 'item'; id: string; team: 0 | 1; x: number; y: number; t: number }
-  | { k: 'tnt'; x: number; y: number; t: number };
+  | { k: 'tnt'; x: number; y: number; t: number }
+  | {
+      k: 'tactic_vfx';
+      profile: string;
+      sx: number;
+      sy: number;
+      tx: number;
+      ty: number;
+      units?: { x: number; y: number; id?: number; shieldRemoved?: boolean; armorReduced?: boolean; dispelled?: boolean }[];
+      phase?: 'windup' | 'impact' | 'cancel';
+      castId?: number;
+      windup?: number;
+      context?: {
+        controlApplied?: boolean;
+        shieldRemoved?: boolean;
+        armorReduced?: boolean;
+        shieldPresent?: boolean;
+        dispelled?: boolean;
+      };
+    };
 
 /** Number colors for damage popups. */
 export const NUM_PHYS = 0;

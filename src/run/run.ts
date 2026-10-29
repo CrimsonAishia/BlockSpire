@@ -22,8 +22,44 @@ import { createDungeonsTerrain } from '../battle/dungeonsTerrain.ts';
 import { BATTLE_MODIFIERS, BATTLE_MODIFIER_MAP } from '../data/battleModifiers.ts';
 import { rollEnemyTactics } from '../data/enemyTactics.ts';
 import { sigilOfMob } from '../data/sigils.ts';
+import {
+  TACTIC_DEFS,
+  TACTIC_VARIANTS,
+  COMMANDER_VARIANTS,
+  draftTactics,
+  hallTrainingCost,
+  wagerStake,
+  wagerProfit,
+  type TacticId,
+  type VariantDef,
+} from '../data/tactics.ts';
 
 export { actDifficultyRamp } from '../data/difficulty.ts';
+
+export interface TacticsState {
+  tactics: string[];
+  equipped: string | null;
+  variants: Record<string, string>;
+  placedHalls?: number;
+  hallVisits?: number;
+  missiveRolls?: number;
+  actMissive?: number;
+  wagers?: { act: number; count: number; active?: { stake: number; profit: number } };
+  act1DraftDone?: boolean;
+}
+
+export interface HallOffer {
+  studyChoices: string[];
+  trainingCost: number;
+  eligibleTargets: {
+    id: string;
+    name: string;
+    isMain: boolean;
+    currentVariant?: string;
+    variants: VariantDef[];
+  }[];
+  used: boolean;
+}
 
 export const RUN_VERSION = 4;
 
@@ -34,13 +70,14 @@ export interface CrateOffer {
 
 export interface ShopItem {
   id: string;
-  kind: 'crate' | 'potion' | 'relic' | 'enchant' | 'heal' | 'upgrade';
+  kind: 'crate' | 'potion' | 'relic' | 'enchant' | 'heal' | 'upgrade' | 'tactic_scroll';
   ref: string;
   /** Enchanted book level. */
   level?: number;
   grade?: CrateGrade;
   price: number;
   sold: boolean;
+  tacticChoices?: string[];
 }
 
 export interface BattleSummary {
@@ -87,6 +124,9 @@ export type Pending =
       tactics?: string[];
       /** Continuous endgame flag for Omen V final boss phase 2. */
       endgamePhase2?: boolean;
+      started?: boolean;
+      tacticCarry?: BattleResult['tacticCarry'];
+      brewChoices?: string[][];
     }
   | {
       type: 'result';
@@ -135,7 +175,9 @@ export type Pending =
   | { type: 'act_intro'; act: number }
   | { type: 'victory' }
   | { type: 'defeat' }
-  | { type: 'message'; title: string; text: string; tone: 'good' | 'bad' | 'neutral' };
+  | { type: 'message'; title: string; text: string; tone: 'good' | 'bad' | 'neutral' }
+  | { type: 'tactics_draft'; title: string; choices: string[]; skippable: boolean; source: 'act1_boss' | 'missive' | 'scroll' | 'hall' }
+  | { type: 'tactics_hall'; offer: HallOffer };
 
 export interface RunStats {
   battlesWon: number;
@@ -220,6 +262,8 @@ export interface RunState {
   visitedThemes?: string[];
   /** Mobs discovered in the codex by this profile (for starter squad filtering in Omen 3+). */
   discovered?: string[];
+  /** Sub-tactics library, equipped tactic, and chosen skill variants */
+  tacticsState?: TacticsState;
 }
 
 // ───────────────────────── helpers ─────────────────────────
@@ -357,6 +401,7 @@ export function createRun(commander: string, omen: number, seed = randomSeed(), 
     won: false,
     toasts: [],
     discovered: discovered ? [...discovered] : undefined,
+    tacticsState: { tactics: [], equipped: null, variants: {} },
   };
   if (commander === 'witch') withRng(s, (r) => s.potions.push(rollItem(r, { potionOnly: true }), rollItem(r, { potionOnly: true })));
   if (omen >= 4) {
@@ -568,6 +613,9 @@ export function enterNode(s: RunState, id: string) {
       break;
     case 'event':
       enterEvent(s);
+      break;
+    case 'tactics':
+      enterTactics(s);
       break;
   }
 }
@@ -1118,11 +1166,57 @@ function enchantEnemies(s: RunState, cards: EncCard[], n: number, lv: number) {
   });
 }
 
-/** The Witch's cauldron: free potions for one fight (more with the brewing stand). */
+const TWIN_POTION_POOL = [
+  'splash_healing', 'splash_harming', 'poison', 'weakness',
+  'splash_slowness', 'lingering_regen', 'splash_freezing',
+  'regeneration', 'invisibility',
+];
+
+/** The Witch's cauldron: free potions for one fight (more with the brewing stand, +1 with twin brew). */
 function brewFor(s: RunState): string[] | undefined {
   if (s.commander !== 'witch') return undefined;
-  const n = 1 + (hasRelic(s, 'brewing_stand') ? 1 : 0);
-  return withRng(s, (r) => Array.from({ length: n }, () => rollItem(r, { potionOnly: true })));
+  const isTwin = s.tacticsState?.variants?.witch === 'twin';
+  const isTargeted = s.tacticsState?.variants?.witch === 'targeted';
+  const n = 1 + (hasRelic(s, 'brewing_stand') ? 1 : 0) + (isTwin ? 1 : 0);
+  return withRng(s, (r) =>
+    Array.from({ length: n }, () => {
+      if (isTwin) return r.pick(TWIN_POTION_POOL);
+      if (isTargeted) {
+        const a = rollItem(r, { potionOnly: true });
+        return a;
+      }
+      return rollItem(r, { potionOnly: true });
+    }),
+  );
+}
+
+function remainingBrew(brew: string[] | undefined, used: string[]): string[] | undefined {
+  if (!brew) return undefined;
+  const left = brew.slice();
+  for (const id of used) { const i = left.indexOf(id); if (i >= 0) left.splice(i, 1); }
+  return left;
+}
+
+export function prepareBrewChoices(s: RunState, p: Extract<Pending, { type: 'battle' }>) {
+  if (s.commander !== 'witch' || s.tacticsState?.variants.witch !== 'targeted' || p.endgamePhase2 || p.brewChoices || !p.brew?.length) return;
+  const r = new Rng(p.seed ^ 0x6b726577);
+  p.brewChoices = p.brew.map(first => {
+    let second = rollItem(r, { potionOnly: true });
+    for (let i = 0; i < 20 && second === first; i++) second = rollItem(r, { potionOnly: true });
+    return [first, second];
+  });
+}
+
+export function chooseBrew(s: RunState, slot: number, id: string) {
+  const p = s.queue[0];
+  if (p?.type !== 'battle' || p.started || !Number.isInteger(slot) || slot < 0) return;
+  prepareBrewChoices(s, p);
+  if (p.brewChoices?.[slot]?.includes(id) && p.brew) p.brew[slot] = id;
+}
+
+export function markBattleStarted(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type === 'battle') p.started = true;
 }
 
 export function makeEventBattle(s: RunState, encId: string, onWin: string, biome?: string): Extract<Pending, { type: 'battle' }> {
@@ -1171,6 +1265,7 @@ export function battleTerrain(p: Extract<Pending, { type: 'battle' }>): Terrain 
 }
 
 export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }>, headless = false): BattleConfig {
+  prepareBrewChoices(s, p);
   const modifierFlags = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier]?.flags : undefined;
   const tacticFlags = (p.tactics ?? []).map((t) => `tactic_${t}`);
   const player = buildSide(
@@ -1190,7 +1285,25 @@ export function battleConfig(s: RunState, p: Extract<Pending, { type: 'battle' }
       enchant2: c.enchant2,
       enchant2Lv: c.enchant2Lv,
     })),
-    { relics: s.relics, potions: [], commander: s.commander, act: s.act, builds: p.build, flags: modifierFlags },
+    {
+      relics: s.relics,
+      potions: [],
+      commander: s.commander,
+      act: s.act,
+      builds: p.build,
+      flags: modifierFlags,
+      tactic: s.tacticsState?.equipped
+        ? {
+            id: s.tacticsState.equipped as TacticId,
+            variant: s.tacticsState.variants[s.tacticsState.equipped],
+          }
+        : undefined,
+      mainVariant: s.tacticsState?.variants[s.commander],
+      wager: s.tacticsState?.wagers?.active,
+      emeralds: s.emeralds,
+      golemCost: golemCost(s),
+      tacticCarry: p.tacticCarry,
+    },
   );
   const enemy = buildSide(
     p.cards.map(([mob, star, row, count, enchant, enchantLv]) => ({ mob, star, row: row ?? mobDef(mob).defaultRow, count, enchant, enchantLv })),
@@ -1228,7 +1341,9 @@ export function setBuilds(s: RunState, builds: BuildOrder[]) {
 
 /** Emeralds the Villager pays to hire a golem in this act (0 with the bell tower). */
 export function golemCost(s: RunState) {
-  return hasRelic(s, 'bell_tower') ? 0 : 25 + 15 * (s.act - 1);
+  if (hasRelic(s, 'bell_tower')) return 0;
+  const base = 25 + 15 * (s.act - 1);
+  return s.tacticsState?.variants?.villager === 'light_hire' ? Math.round(base * 0.8) : base;
 }
 
 export function toggleArmed(s: RunState, potion: string) {
@@ -1258,16 +1373,31 @@ export function gainEmeralds(s: RunState, n: number) {
 export function resolveBattle(s: RunState, res: BattleResult) {
   const p = s.queue[0];
   if (p.type !== 'battle') throw new Error('no battle');
-  const win = res.winner === 0;
+  const win = res.winner === 0 && !res.draw;
+  const continues = win && p.kind === 'boss' && s.omen >= 5 && s.act === 3 && !p.endgamePhase2;
   // Items used during the fight are gone, win or lose.
   for (const a of res.itemsUsed ?? []) {
     const i = s.potions.indexOf(a);
     if (i >= 0) s.potions.splice(i, 1);
   }
-  // The hired golem is paid for afterwards (the button needs the money up front).
+  // Both skills reserve against the same battle wallet; settle their actual expenses once.
   const golems = (res.skillsUsed ?? []).filter((k) => k === 'golem').length;
-  const golemPaid = Math.min(s.emeralds, golems * golemCost(s));
+  const golemPaid = Math.min(s.emeralds, res.golemSpent ?? golems * golemCost(s));
   s.emeralds -= golemPaid;
+  if (res.cannonSpent) {
+    const cannonPaid = Math.min(s.emeralds, res.cannonSpent);
+    s.emeralds -= cannonPaid;
+  }
+  if (!continues && s.tacticsState?.wagers?.active) {
+    const w = s.tacticsState.wagers.active;
+    s.tacticsState.wagers.active = undefined;
+    if (win && res.wonWithin18s && p.attempt === 1) {
+      gainEmeralds(s, w.stake + w.profit);
+      toast(s, `风险投资达成：返还押金并赚取 ${w.profit} 绿宝石！`, 'gold');
+    } else {
+      toast(s, '风险投资未达成目标（须 18 秒内首次尝试获胜），押金已被扣除。', 'bad');
+    }
+  }
   s.armed = [];
   const summary: BattleSummary = {
     win,
@@ -1348,6 +1478,24 @@ export function resolveBattle(s: RunState, res: BattleResult) {
       } else {
         follow.push({ type: 'relic_choice', title: '选择一件宝物', choices: relicChoices(s, 3, ['common', 'rare', 'legendary']), skippable: true });
       }
+      const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+      if (s.act >= 2 && s.act <= 6 && (tState.missiveRolls ?? 0) < 2 && tState.actMissive !== s.act) {
+        tState.actMissive = s.act;
+        const gotMissive = withRng(s, (r) => r.chance(0.15));
+        if (gotMissive) {
+          tState.missiveRolls = (tState.missiveRolls ?? 0) + 1;
+          const choices = withRng(s, (r) => draftTactics(r, tState.tactics));
+          if (choices.length > 0) {
+            follow.push({
+              type: 'tactics_draft',
+              title: '精英密函：战术三选一',
+              choices,
+              skippable: true,
+              source: 'missive',
+            });
+          }
+        }
+      }
     } else if (p.kind === 'boss') {
       // 不祥之兆 V 终局连续阶段 (Section 10.2)
       if (s.omen >= 5 && s.act === 3 && !p.endgamePhase2) {
@@ -1375,7 +1523,8 @@ export function resolveBattle(s: RunState, res: BattleResult) {
           attempt: 1,
           biome: p.biome,
           tseed: withRng(s, (r) => r.int(1, 2 ** 31)),
-          brew: brewFor(s),
+          brew: remainingBrew(p.brew, res.tempItemsUsed ?? []),
+          tacticCarry: res.tacticCarry,
           endgamePhase2: true,
         });
       } else {
@@ -1386,6 +1535,17 @@ export function resolveBattle(s: RunState, res: BattleResult) {
         const healed = Math.min(2, s.maxHearts - s.hearts);
         s.hearts += healed;
         follow.push({ type: 'boss_reward', relics: relicChoices(s, 3, ['boss']), slotGained, healed });
+        if (s.act === 1 && !s.tacticsState?.act1DraftDone) {
+          (s.tacticsState ??= { tactics: [], equipped: null, variants: {} }).act1DraftDone = true;
+          const choices = withRng(s, (r) => draftTactics(r, s.tacticsState!.tactics));
+          follow.push({
+            type: 'tactics_draft',
+            title: '战备整编：选择一个副战术',
+            choices,
+            skippable: true,
+            source: 'act1_boss',
+          });
+        }
         if (s.act < 7) follow.push({ type: 'act_intro', act: s.act + 1 });
         else follow.push({ type: 'victory' });
       }
@@ -1429,7 +1589,8 @@ export function resolveBattle(s: RunState, res: BattleResult) {
         }
         return c;
       });
-      follow.push({ ...p, cards, seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: p.attempt + 1, bossHp });
+      follow.push({ ...p, cards, seed: withRng(s, (r) => r.int(1, 2 ** 31)), attempt: p.attempt + 1, bossHp, started: false,
+        tacticCarry: undefined, brewChoices: undefined, brew: brewFor(s) });
     }
   }
   s.queue.unshift(...follow);
@@ -1859,6 +2020,10 @@ function genShop(s: RunState): ShopItem[] {
     }
     items.push({ id: 'heal', kind: 'heal', ref: 'golden_carrot', price: price(50), sold: false });
     items.push({ id: 'up', kind: 'upgrade', ref: 'smithing', price: price(130), sold: false });
+    if (s.act >= 2 && s.act <= 6 && r.chance(0.3)) {
+      items.push({ id: 'scroll', kind: 'tactic_scroll', ref: 'tactic_scroll', price: price(48), sold: false,
+        tacticChoices: draftTactics(r, s.tacticsState?.tactics ?? []) });
+    }
     return items;
   });
 }
@@ -1898,6 +2063,19 @@ export function buyItem(s: RunState, itemId: string): boolean {
       if (!allCards(s).some((c) => c.star === 1)) return false;
       s.queue.unshift({ type: 'pick_card', purpose: 'upgrade', title: '选择要锻造升星的 ★1 卡牌', data: { price: it.price, maxStar: 1 } });
       break;
+    case 'tactic_scroll': {
+      const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+      const choices = (it.tacticChoices ?? withRng(s, (r) => draftTactics(r, tState.tactics))).filter(id => !tState.tactics.includes(id));
+      if (!choices.length) return false;
+      s.queue.unshift({
+        type: 'tactics_draft',
+        title: '战术卷轴：战术三选一',
+        choices,
+        skippable: false,
+        source: 'scroll',
+      });
+      break;
+    }
   }
   s.emeralds -= it.price;
   it.sold = true;
@@ -1909,8 +2087,8 @@ export function rerollShop(s: RunState) {
   if (p.type !== 'shop' || s.emeralds < p.reroll) return;
   s.emeralds -= p.reroll;
   p.reroll += Math.round(10 * priceMul(s));
-  const keepServices = p.stock.filter((x) => x.kind === 'heal' || x.kind === 'upgrade');
-  p.stock = [...genShop(s).filter((x) => x.kind !== 'heal' && x.kind !== 'upgrade'), ...keepServices];
+  const keepServices = p.stock.filter((x) => x.kind === 'heal' || x.kind === 'upgrade' || x.kind === 'tactic_scroll');
+  p.stock = [...genShop(s).filter((x) => x.kind !== 'heal' && x.kind !== 'upgrade' && x.kind !== 'tactic_scroll'), ...keepServices];
 }
 
 /** Half the base item price back (shops only); resale does not rise with act prices. */
@@ -2235,11 +2413,209 @@ export function startAct(s: RunState, act: number) {
   // Chains don't follow you into the next dimension: a pending ambush is lost, the banner fades.
   if (s.ambush && s.ambush.act !== act) s.ambush = undefined;
   if (s.chains?.banner === 1) s.chains.banner = 3;
-  s.map = withRng(s, (r) => generateMap(r.fork(act * 7919), act, s.bosses[act - 1], s.omen));
+  const placed = s.tacticsState?.placedHalls ?? 0;
+  s.map = withRng(s, (r) => generateMap(r.fork(act * 7919), act, s.bosses[act - 1], s.omen, placed));
+  if (Object.values(s.map.nodes).some((n) => n.type === 'tactics')) {
+    (s.tacticsState ??= { tactics: [], equipped: null, variants: {} }).placedHalls = placed + 1;
+  }
   s.nodeId = null;
   s.visited = [];
   s.done = [];
   s.usedEnc = s.usedEnc.filter((x) => x.startsWith('ev:'));
+}
+
+// ───────────────────────── tactics & sanctuary ─────────────────────────
+
+function enterTactics(s: RunState) {
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+  tState.hallVisits = (tState.hallVisits ?? 0) + 1;
+  const trainingCost = hallTrainingCost(s.act);
+
+  const eligibleTargets: HallOffer['eligibleTargets'] = [];
+
+  // Commander main skill
+  const cmdVars = COMMANDER_VARIANTS[s.commander] ?? [];
+  const cmdNames: Record<string, string> = {
+    steve: '史蒂夫·战术工兵',
+    alex: '艾利克斯·荒野游侠',
+    villager: '村民·商队领袖',
+    witch: '女巫·炼金术士',
+  };
+  eligibleTargets.push({
+    id: s.commander,
+    name: cmdNames[s.commander] ?? '统领本领',
+    isMain: true,
+    currentVariant: tState.variants[s.commander],
+    variants: cmdVars,
+  });
+
+  // Owned tactics
+  for (const tid of tState.tactics) {
+    const tdef = TACTIC_DEFS[tid as TacticId];
+    if (tdef) {
+      targetsPush: {
+        eligibleTargets.push({
+          id: tid,
+          name: tdef.name,
+          isMain: false,
+          currentVariant: tState.variants[tid],
+          variants: TACTIC_VARIANTS[tid as TacticId] ?? [],
+        });
+      }
+    }
+  }
+
+  const studyChoices = withRng(s, (r) => draftTactics(r, tState.tactics));
+  const offer: HallOffer = {
+    studyChoices,
+    trainingCost,
+    eligibleTargets,
+    used: false,
+  };
+  s.queue.push({ type: 'tactics_hall', offer });
+}
+
+export function studyHallTactic(s: RunState, tacticId: string, replaceId?: string) {
+  const p = s.queue[0];
+  if (p?.type !== 'tactics_hall' || p.offer.used) return;
+  if (!p.offer.studyChoices.includes(tacticId)) return;
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+
+  if (tState.tactics.length >= 3) {
+    if (!replaceId || !tState.tactics.includes(replaceId)) return;
+    const idx = tState.tactics.indexOf(replaceId);
+    tState.tactics[idx] = tacticId;
+    delete tState.variants[replaceId];
+    if (tState.equipped === replaceId) {
+      tState.equipped = tacticId;
+    }
+  } else {
+    if (!tState.tactics.includes(tacticId)) {
+      tState.tactics.push(tacticId);
+    }
+    if (!tState.equipped) {
+      tState.equipped = tacticId;
+    }
+  }
+
+  p.offer.used = true;
+  s.queue.shift();
+  toast(s, `已研习战术：${TACTIC_DEFS[tacticId as TacticId]?.name ?? tacticId}`, 'good');
+  settle(s);
+}
+
+export function refineSkillVariant(s: RunState, targetId: string, variantId: string) {
+  const p = s.queue[0];
+  if (p?.type !== 'tactics_hall' || p.offer.used) return;
+  if (s.emeralds < p.offer.trainingCost) {
+    toast(s, '绿宝石不足，无法精进', 'bad');
+    return;
+  }
+  const target = p.offer.eligibleTargets.find((t) => t.id === targetId);
+  if (!target) return;
+  const variant = target.variants.find((v) => v.id === variantId);
+  if (!variant) return;
+
+  s.emeralds -= p.offer.trainingCost;
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+  tState.variants[targetId] = variantId;
+
+  p.offer.used = true;
+  s.queue.shift();
+  toast(s, `精进完成：${variant.name}`, 'good');
+  settle(s);
+}
+
+export function leaveHall(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type !== 'tactics_hall') return;
+  s.queue.shift();
+  settle(s);
+}
+
+export function chooseDraftTactic(s: RunState, tacticId: string | null, replaceId?: string) {
+  const p = s.queue[0];
+  if (p?.type !== 'tactics_draft') return;
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+
+  if (tacticId) {
+    if (!p.choices.includes(tacticId)) return;
+    if (tState.tactics.length >= 3) {
+      if (!replaceId || !tState.tactics.includes(replaceId)) return;
+      const idx = tState.tactics.indexOf(replaceId);
+      tState.tactics[idx] = tacticId;
+      delete tState.variants[replaceId];
+      if (tState.equipped === replaceId) {
+        tState.equipped = tacticId;
+      }
+    } else {
+      if (!tState.tactics.includes(tacticId)) {
+        tState.tactics.push(tacticId);
+      }
+      if (!tState.equipped) {
+        tState.equipped = tacticId;
+      }
+    }
+    toast(s, `已获得战术：${TACTIC_DEFS[tacticId as TacticId]?.name ?? tacticId}`, 'good');
+  } else if (!p.skippable) {
+    return;
+  }
+
+  s.queue.shift();
+  settle(s);
+}
+
+export function equipTactic(s: RunState, tacticId: string | null) {
+  const p = s.queue[0];
+  if (p?.type === 'battle' && (p.started || p.attempt > 1 || p.endgamePhase2)) return;
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+  if (tacticId === null) {
+    tState.equipped = null;
+    return;
+  }
+  if (tState.tactics.includes(tacticId)) {
+    tState.equipped = tacticId;
+  }
+}
+
+export function signWager(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type !== 'battle' || p.started || p.attempt !== 1 || p.endgamePhase2) return;
+  if (s.commander !== 'villager') return;
+  const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+  if (tState.variants.villager !== 'venture') return;
+  const wagers = (tState.wagers ??= { act: s.act, count: 0 });
+  if (wagers.act !== s.act) {
+    wagers.act = s.act;
+    wagers.count = 0;
+  }
+  if (wagers.count >= 2) {
+    toast(s, '本幕风险投资次数已达上限（2次）', 'bad');
+    return;
+  }
+  if (wagers.active) return;
+  const stake = wagerStake(s.act);
+  const profit = wagerProfit(s.act);
+  if (s.emeralds < stake) {
+    toast(s, `绿宝石不足以支付对赌押金（需 ${stake}）`, 'bad');
+    return;
+  }
+  s.emeralds -= stake;
+  wagers.active = { stake, profit };
+  wagers.count++;
+  toast(s, `已签署风险投资：下注 ${stake} 绿宝石`, 'good');
+}
+
+export function cancelWager(s: RunState) {
+  const p = s.queue[0];
+  if (p?.type !== 'battle' || p.started || p.endgamePhase2) return;
+  const tState = s.tacticsState;
+  if (!tState?.wagers?.active) return;
+  const stake = tState.wagers.active.stake;
+  s.emeralds += stake;
+  tState.wagers.count = Math.max(0, tState.wagers.count - 1);
+  tState.wagers.active = undefined;
+  toast(s, `已取消风险投资，退还 ${stake} 绿宝石`, 'neutral');
 }
 
 /** Repairs interactions left incomplete by older saves without awarding anything twice. */
@@ -2248,6 +2624,19 @@ export function recoverPendingInteractions(s: RunState) {
     if (p.type === 'boss_reward' && p.relics.length === 0) p.relics = relicChoices(s, 3, ['boss']);
   }
   if (!s.queue.length && s.nodeId && !s.done.includes(s.nodeId) && s.map.nodes[s.nodeId]?.type === 'event') enterEvent(s);
+  // Old save upgrade: if act > 1 and tactics not yet initialized or draft never offered, provide act1 draft.
+  if (s.act > 1 && (!s.tacticsState || (!s.tacticsState.act1DraftDone && s.tacticsState.tactics.length === 0))) {
+    const tState = (s.tacticsState ??= { tactics: [], equipped: null, variants: {} });
+    tState.act1DraftDone = true;
+    const choices = withRng(s, (r) => draftTactics(r, tState.tactics));
+    s.queue.unshift({
+      type: 'tactics_draft',
+      title: '战备整编：战术补领',
+      choices,
+      skippable: true,
+      source: 'act1_boss',
+    });
+  }
 }
 
 /** Runs node-completion hooks once when the queue drains after a node. */

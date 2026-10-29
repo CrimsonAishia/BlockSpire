@@ -41,6 +41,16 @@ export interface SideContext {
   affix?: string;
   /** Extra side flags (difficulty rules the sim checks with `has`). */
   flags?: string[];
+  /** Equipped sub-tactic and variant */
+  tactic?: { id: import('../data/tactics.ts').TacticId; variant?: string };
+  /** Commander identity skill variant */
+  mainVariant?: string;
+  /** Villager pre-battle wager */
+  wager?: { stake: number; profit: number };
+  /** Emeralds available for in-battle expenses (cannon) */
+  emeralds?: number;
+  golemCost?: number;
+  tacticCarry?: SidePlan['tacticCarry'];
 }
 
 export function synergyBonus(relics: string[]): Partial<Record<Family, number>> {
@@ -445,13 +455,16 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
   for (const r of relics) flags[r] = 1;
   for (const p of potions) flags[p] = 1;
   for (const c of combos) flags[`combo_${c}`] = 1;
-  for (const f of ctx.flags ?? []) flags[f] = 1;
+  if (ctx.emeralds !== undefined) flags['emeralds'] = ctx.emeralds;
   const cmd = ctx.commander ? COMMANDER_MAP[ctx.commander] : undefined;
   if (cmd) flags[`cmd_${cmd.id}`] = 1;
   // Commander skill charges (the Witch's brew is handled as free items by the run).
   let skill: SidePlan['skill'];
   if (cmd && cmd.skill.id !== 'brew') {
     let n = cmd.skill.charges;
+    if (cmd.id === 'steve' && (ctx.mainVariant === 'bulwark' || ctx.mainVariant === 'fire_support')) {
+      n = 3;
+    }
     if (relics.has('scaffolding')) n += 2;
     if (relics.has('name_tag')) n += 1;
     skill = { id: cmd.skill.id, charges: n };
@@ -464,6 +477,11 @@ export function buildSide(cards: PlanCardInput[], ctx: SideContext): SidePlan {
     act: ctx.act,
     skill,
     builds: ctx.builds,
+    tactic: ctx.tactic,
+    mainVariant: ctx.mainVariant,
+    wager: ctx.wager,
+    golemCost: ctx.golemCost,
+    tacticCarry: ctx.tacticCarry,
   };
 }
 
