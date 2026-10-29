@@ -487,6 +487,17 @@
 .stage.compact .dh-hint {
   min-width: 160px;
 }
+.stage.compact .dh-intel-wrap {
+  flex: 1 1 100%;
+}
+.stage.compact .dh-intel {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+.stage.compact .dh-right {
+  margin-left: auto;
+  gap: 12px;
+}
 .stage.compact .dh-panel {
   top: 118px;
   max-height: calc(100% - 118px - 176px);

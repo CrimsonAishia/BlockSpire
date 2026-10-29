@@ -500,6 +500,7 @@ export function MapView({ s }: { s: RunState; v?: number }) {
           <div class="row between">
             <div class="panel-title" style={{ marginBottom: 6 }}>
               出战阵容 <span class="faint" style={{ fontSize: 16 }}>{s.team.length}/{s.slots}</span>
+              {s.slots < 7 && <span class="faint" style={{ fontSize: 12, marginLeft: 6 }}>· 上限 7</span>}
             </div>
           </div>
           <div class="mini-team">
@@ -508,6 +509,14 @@ export function MapView({ s }: { s: RunState; v?: number }) {
             ))}
             {Array.from({ length: s.slots - s.team.length }, (_, i) => (
               <div key={i} class="empty-slot sm">空位</div>
+            ))}
+            {Array.from({ length: Math.max(0, 7 - s.slots) }, (_, i) => (
+              <Tip key={`l${i}`} content={() => <div class="tt-line">击败各幕首领逐步扩充出战栏位（最终可达 7 张卡）</div>}>
+                <div class="empty-slot sm locked">
+                  <span class="lock-icon">🔒</span>
+                  <span class="lock-txt">锁定</span>
+                </div>
+              </Tip>
             ))}
           </div>
           <div class="divider" />

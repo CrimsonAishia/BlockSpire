@@ -3,7 +3,7 @@ import type { Pending, RunState } from '../../run/run.ts';
 import { battleConfig, battleTerrain, encounterThreat, golemCost, resolveBattle, setBuilds, setDeploy, equipTactic, signWager, cancelWager, markBattleStarted, chooseBrew } from '../../run/run.ts';
 import { TACTIC_DEFS, TACTIC_VARIANTS, wagerStake, wagerProfit, type TacticId } from '../../data/tactics.ts';
 import { mobDef, unitCount, RARITY_INFO } from '../../data/mobs.ts';
-import { estimateCombatPower, evaluateMatchup, sideSynergies } from '../../battle/setup.ts';
+import { sideSynergies } from '../../battle/setup.ts';
 import { FAMILIES } from '../../data/families.ts';
 import type { Family } from '../../core/types.ts';
 import { url } from '../assets.ts';
@@ -250,13 +250,12 @@ function DeployHud({
   const foeSyn = sideSynergies(p.cards.map(([mob]) => ({ mob })), []);
   const stake = p.kind === 'battle' || p.kind === 'event' ? 1 : 2;
   const bossCard = p.cards.find(([m]) => mobDef(m).boss);
-  const mineEst = estimateCombatPower(config.sides[0]);
-  const theirsEst = estimateCombatPower(config.sides[1], { bossHp: p.bossHp });
-  const mine = mineEst.power;
-  const theirs = theirsEst.power;
-  const hasHighVariance = mineEst.variance === 'high' || theirsEst.variance === 'high';
-  const varianceReason = [mineEst.varianceReason, theirsEst.varianceReason].filter(Boolean).join('、');
-  const evaluation = evaluateMatchup(mine, theirs, hasHighVariance ? 'high' : 'normal', varianceReason);
+  const myFront = s.team.filter((c) => ['tank', 'melee'].includes(mobDef(c.mob).role)).length;
+  const myBack = s.team.filter((c) => ['ranged', 'support', 'caster'].includes(mobDef(c.mob).role)).length;
+  const foeFront = p.cards.filter(([m]) => ['tank', 'melee'].includes(mobDef(m).role)).length;
+  const foeBack = p.cards.filter(([m]) => ['ranged', 'support', 'caster'].includes(mobDef(m).role)).length;
+  const mySynCount = Object.keys(mySyn.active).length;
+  const foeSynCount = Object.keys(foeSyn.active).length;
   const formationThreat = encounterThreat({ cards: p.cards });
   const modifier = p.modifier ? BATTLE_MODIFIER_MAP[p.modifier] : undefined;
 
@@ -521,57 +520,65 @@ function DeployHud({
           </div>)}
         </div>}
         {p.endgamePhase2 && <div class="dh-hint">连续作战：军令、冷却、主技能次数和剩余临时药水沿用上一阶段，副战术已锁定。</div>}
-        <div class="dh-hint">
-          拖动我方生物到 <b class="blue-t">蓝色区域</b> 布阵
-        </div>
         <Tip
+          class="dh-intel-wrap"
           content={() => (
             <div>
-              <div class="tt-title">预估战况结构拆解</div>
+              <div class="tt-title">⚔ 战备态势推演简报</div>
               <div class="tt-line">
-                ① 基础兵力：我方 <b class="blue-t">{Math.round(mine)}</b> vs 敌方 <b class="red-t">{Math.round(theirs)}</b>
-              </div>
-              <div class="tt-line">
-                ② 羁绊联动：我方 {Object.keys(mySyn.active).length} 项激活 vs 敌方 {Object.keys(foeSyn.active).length} 项激活
+                ① 双方编制：我方 <b>{s.team.length}</b> 队 ({myFront} 前排 / {myBack} 后排) vs 敌方 <b>{p.cards.length}</b> 队 ({foeFront} 前排 / {foeBack} 后排)
               </div>
               <div class="tt-line">
-                ③ 敌军战术：{p.tactics?.length ? p.tactics.map((id) => ENEMY_TACTIC_MAP[id as EnemyTacticId]?.name).filter(Boolean).join('、') : '无额外战术'}
+                ② 羁绊联动：我方 <b>{mySynCount}</b> 项激活 vs 敌方 <b>{foeSynCount}</b> 项激活
               </div>
-              <div class="tt-line">
-                ④ 场地规则：{modifier ? `${modifier.name}（${modifier.desc}）` : '标准平原场地'}
-              </div>
-              <div class="tt-line tt-yellow">⑤ 储备资源（未计入）：{tacticalSummary}</div>
-              <div class="tt-line" style={{ marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 4 }}>
-                综合研判：<b style={{ color: evaluation.color }}>{evaluation.verdict}</b>
-              </div>
-              {evaluation.variance === 'high' && (
-                <div class="tt-sec tt-red">估算波动：较高（{evaluation.varianceReason || '召唤/复活阵容'}）</div>
+              {p.tactics?.length ? (
+                <div class="tt-line tt-yellow">
+                  ③ 敌军战术：{p.tactics.map((id) => ENEMY_TACTIC_MAP[id as EnemyTacticId]?.name).filter(Boolean).join('、')}
+                </div>
+              ) : null}
+              {modifier ? (
+                <div class="tt-line" style={{ color: modifier.color }}>
+                  ④ 战场规则：{modifier.name}（{modifier.desc}）
+                </div>
+              ) : null}
+              {tacticalItems.length > 0 && (
+                <div class="tt-line tt-yellow">⑤ 战备储备：{tacticalSummary}</div>
               )}
-              <div class="tt-sec tt-gray">基于有效生命、持续输出与机制加成估算；克制关系、布阵与战术资源往往能逆转局势。</div>
+              <div class="tt-sec tt-gray">战力不代表真实胜负。阵型站位、高地优势、控制链与战术调度才是克敌制胜的关键！</div>
             </div>
           )}
         >
-          <div class="power">
-            <div class="power-bar">
-              <div class="pb-me" style={{ width: `${(mine / (mine + theirs)) * 100}%` }} />
-            </div>
-            <div class="power-text">
-              我方 <span class="blue-t">{Math.round(mine)}</span> vs 敌方 <span class="red-t">{Math.round(theirs)}</span> ·{' '}
-              <b style={{ color: evaluation.color }}>预估：{evaluation.verdict}</b>
-            </div>
-            {evaluation.variance === 'high' && (
-              <div class="power-variance" style={{ color: '#ffa64d', fontSize: '11px', textAlign: 'center', marginTop: '2px' }}>
-                估算波动：较高（{evaluation.varianceReason}）
+          <div class="dh-intel">
+            <div class="intel-summary">
+              <div class="intel-item">
+                <span class="intel-lbl">参战编制</span>
+                <span class="intel-val">
+                  我方 <b class="blue-t">{s.team.length}队</b> <span class="faint">({myFront}前/{myBack}后)</span> · 敌方 <b class="red-t">{p.cards.length}队</b> <span class="faint">({foeFront}前/{foeBack}后)</span>
+                </span>
               </div>
-            )}
+              <div class="intel-item">
+                <span class="intel-lbl">激活羁绊</span>
+                <span class="intel-val">
+                  我方 <b class="gold-t">{mySynCount}项</b> · 敌方 <b>{foeSynCount}项</b>
+                </span>
+              </div>
+            </div>
+            <div class="intel-hint">
+              拖动我方生物到 <b class="blue-t">蓝色区域</b> 布阵 · 远程置于高台享居高临下
+            </div>
           </div>
         </Tip>
-        <div class="stake">
-          失败将失去 {stake} <HeartIcon size={18} />
+        <div class="dh-right">
+          <div class="stake">
+            <div class="stake-title">失利代价</div>
+            <div class="stake-hearts">
+              -{stake} <HeartIcon size={18} />
+            </div>
+          </div>
+          <Btn variant="green" size="big" onClick={onFight} disabled={!s.team.length}>
+            ⚔ 开战！
+          </Btn>
         </div>
-        <Btn variant="green" size="big" onClick={onFight} disabled={!s.team.length}>
-          ⚔ 开战！
-        </Btn>
       </div>
       <Hint id="deploy">
         <b>布阵阶段</b>：每张卡牌是一支小队。按住我方生物拖到蓝色区域即可调整站位。

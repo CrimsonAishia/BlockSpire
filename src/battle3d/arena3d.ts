@@ -675,8 +675,8 @@ export class Arena3D {
           if (e.c !== NUM_DODGE && e.v <= 0) break;
           if (this.nums.length > 100) this.nums.shift();
           const map: Record<number, [string, number]> = {
-            0: ['#ffffff', 20], [NUM_CRIT]: ['#ffd23f', 28], [NUM_MAGIC]: ['#e29bff', 20], [NUM_HEAL]: ['#7bff8f', 19],
-            [NUM_LIFESTEAL]: ['#ff7e7e', 18], [NUM_DOT]: ['#ffb066', 17], [NUM_TRUE]: ['#8ff6ff', 22], [NUM_DODGE]: ['#d0d0d0', 18],
+            0: ['#ffffff', 26], [NUM_CRIT]: ['#ffd23f', 36], [NUM_MAGIC]: ['#e29bff', 27], [NUM_HEAL]: ['#7bff8f', 24],
+            [NUM_LIFESTEAL]: ['#ff7e7e', 24], [NUM_DOT]: ['#ffb066', 22], [NUM_TRUE]: ['#8ff6ff', 28], [NUM_DODGE]: ['#d0d0d0', 24],
           };
           const [color, size] = map[e.c] ?? map[0];
           const text = e.c === NUM_DODGE ? '闪避' : e.c === NUM_HEAL ? `+${e.v}` : e.c === NUM_LIFESTEAL ? `+${e.v} ❤` : e.c === NUM_CRIT ? `⚔ ${e.v}!` : `${e.v}`;
@@ -1401,9 +1401,11 @@ export class Arena3D {
           } else {
             // Walking: a little hop per step that squashes on landing, leaning into the stride.
             const land = Math.pow(1 - Math.abs(s), 4);
-            lift += Math.abs(s) * 0.07 * h * walkAmt;
-            sy *= 1 - land * 0.07 * walkAmt;
-            sx *= 1 + land * 0.05 * walkAmt;
+            if (id !== 'vengeful_heart') {
+              lift += Math.abs(s) * 0.07 * h * walkAmt;
+              sy *= 1 - land * 0.07 * walkAmt;
+              sx *= 1 + land * 0.05 * walkAmt;
+            }
             bend += 0.09 * walkAmt;
             rot += s * (posed ? 0.03 : 0.06) * walkAmt;
             // Standing: breathing and a slow sway (not for blocks and turrets).
@@ -2006,8 +2008,14 @@ export class Arena3D {
       const x0 = Math.round(sx - w / 2);
       const y0 = Math.round(sy);
       const hit = u.animHit > 0;
-      ctx.fillStyle = hit ? '#ffffff' : '#000000';
+      const hasShield = u.shield >= 1;
+      ctx.fillStyle = hit ? '#ffffff' : hasShield ? '#ffd84a' : '#000000';
       ctx.fillRect(x0 - 1, y0 - 1, w + 2, 7);
+      if (hasShield) {
+        ctx.strokeStyle = '#ffeaa7';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 - 1.5, y0 - 1.5, w + 3, 8);
+      }
       ctx.fillStyle = '#2a0f0f';
       ctx.fillRect(x0, y0, w, 5);
       ctx.fillStyle = '#ffe9a8';
@@ -2016,9 +2024,17 @@ export class Arena3D {
       ctx.fillRect(x0, y0, w * frac, 5);
       ctx.fillStyle = 'rgba(255,255,255,0.28)';
       ctx.fillRect(x0, y0, w * frac, 1);
-      if (u.shield >= 1) {
-        ctx.fillStyle = '#ffe680';
-        ctx.fillRect(x0, y0 - 3, w * Math.min(1, u.shield / u.maxHp), 2);
+      if (hasShield) {
+        const sEnd = w * Math.min(1, (u.hp + u.shield) / u.maxHp);
+        const sStart = w * frac;
+        if (sEnd > sStart) {
+          ctx.fillStyle = '#ffd84a';
+          ctx.fillRect(x0 + sStart, y0, sEnd - sStart, 5);
+        }
+        ctx.fillStyle = 'rgba(255, 230, 90, 0.42)';
+        ctx.fillRect(x0, y0, w * frac, 5);
+        ctx.fillStyle = '#fff4a3';
+        ctx.fillRect(x0, y0, Math.max(w * frac, sEnd), 1.5);
       }
     }
     // Tactical selection and retreat destinations remain legible above VFX.
@@ -2113,7 +2129,7 @@ export class Arena3D {
       n.life -= dt;
       if (n.life <= 0) continue;
       keep.push(n);
-      n.rise += dt * 1.6 * (n.life / n.max);
+      n.rise += dt * 1.9 * (n.life / n.max);
       const [sx, sy, ok] = this.project(n.x, n.y + n.rise, n.z);
       if (!ok) continue;
       const k = n.life / n.max;
@@ -2125,14 +2141,14 @@ export class Arena3D {
       }
       ctx.globalAlpha = k < 0.3 ? k / 0.3 : 1;
       if (n.kind === NUM_CRIT) {
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 7;
         ctx.strokeStyle = '#5a1200';
         ctx.strokeText(n.text, sx, sy);
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 4;
         ctx.strokeStyle = '#000000';
         ctx.strokeText(n.text, sx, sy);
       } else {
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 5;
         ctx.strokeStyle = '#000';
         ctx.strokeText(n.text, sx, sy);
       }
@@ -2149,9 +2165,9 @@ export class Arena3D {
       tk.push(t);
       const [sx, sy, ok] = this.project(t.x, t.y + t.t * (t.tac ? 0.5 : 0.8), t.z);
       if (!ok) continue;
-      ctx.font = t.tac ? `600 15px ${UI_FONT}` : '22px Pixel, sans-serif';
+      ctx.font = t.tac ? `600 18px ${UI_FONT}` : '28px Pixel, sans-serif';
       ctx.globalAlpha = (t.t > life - 0.35 ? (life - t.t) / 0.35 : 1) * (t.tac ? 0.9 : 1);
-      ctx.lineWidth = t.tac ? 4 : 5;
+      ctx.lineWidth = t.tac ? 4.5 : 5.5;
       ctx.strokeStyle = '#000';
       ctx.strokeText(t.s, sx, sy);
       ctx.fillStyle = t.color;

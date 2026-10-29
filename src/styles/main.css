@@ -570,6 +570,7 @@ a.mc-btn {
   right: 6px;
   top: 180px;
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 4px;
   flex-wrap: wrap;
@@ -682,6 +683,9 @@ a.mc-btn {
 }
 .mcard.sm .mc-fams {
   top: 130px;
+  height: 20px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 .mcard.sm .mc-top {
   font-size: 11px;
@@ -730,17 +734,52 @@ a.mc-btn {
 .fam {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 20px;
+  line-height: 1;
   gap: 3px;
-  padding: 1px 6px;
-  font-size: 12px;
+  padding: 0 6px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.5;
   color: #111;
   background: var(--fc);
   box-shadow:
     inset -1px -2px 0 rgba(0, 0, 0, 0.25),
     0 0 0 1px #000;
   white-space: nowrap;
+  vertical-align: middle;
+}
+.fam.icon-only {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  padding: 0;
+  justify-content: center;
+  font-size: 12px;
+  cursor: help;
+  transition: transform 0.15s, filter 0.15s;
+  box-shadow:
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 1px #000;
+}
+.fam.icon-only:hover {
+  transform: scale(1.18);
+  filter: brightness(1.25);
+  z-index: 5;
+}
+.fam-glyph {
+  display: inline-block;
+  line-height: 1;
+}
+.fam-name {
+  display: inline-block;
+  line-height: 1;
+}
+.mc-fams .fam-tip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
 }
 
 .stars {

@@ -1262,7 +1262,7 @@ export const MOBS: MobDef[] = [
   },
   {
     id: 'vengeful_heart', name: '复仇之心', rarity: 'gold', families: ['ender'], role: 'boss',
-    hp: 14000, atk: 88, cd: 2.0, range: 270, speed: 26, armor: 0.12, radius: 34, size: 110, mass: 10,
+    hp: 14000, atk: 88, cd: 2.0, range: 270, speed: 26, armor: 0.12, radius: 40, size: 140, mass: 12,
     count: [1, 1, 1], ai: 'vengeful_heart', dmgKind: 'magic', immune: ['knockback', 'stun', 'burn', 'wither', 'slow'], defaultRow: 'back', hidden: true, boss: true,
     skill: { name: '虚空泯灭', desc: '终焉意志三阶段形态；生命降至 65% 与 30% 时依次发起排队虚空冲撞并击退眩晕；蓄势 2.4 秒后发动旋转眼束扫射战场，阶段二起释放虚空池；受击可触发【破势】打断眼束。' }, star3: '',
     flavor: '支配虚空废墟的终焉意志。',

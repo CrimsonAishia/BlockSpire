@@ -416,14 +416,50 @@ export function Stars({
   );
 }
 
-export function FamBadge({ f, count, active }: { f: Family; count?: number; active?: boolean }) {
+export function FamBadge({
+  f,
+  count,
+  active,
+  iconOnly,
+}: {
+  f: Family;
+  count?: number;
+  active?: boolean;
+  iconOnly?: boolean;
+}) {
   const d = FAMILIES[f];
-  return (
-    <span class="fam" style={{ '--fc': d.color, opacity: active === false ? 0.45 : 1 } as CSSProperties}>
-      {d.glyph} {d.name}
-      {count !== undefined && ` ${count}`}
+  const badge = (
+    <span
+      class={`fam ${iconOnly ? 'icon-only' : ''}`}
+      style={{ '--fc': d.color, opacity: active === false ? 0.45 : 1 } as CSSProperties}
+      title={iconOnly ? `${d.glyph} ${d.name}` : undefined}
+    >
+      <span class="fam-glyph">{d.glyph}</span>
+      {!iconOnly && <span class="fam-name">{d.name}</span>}
+      {count !== undefined && <span class="fam-count"> {count}</span>}
     </span>
   );
+  if (iconOnly) {
+    return (
+      <Tip
+        class="fam-tip"
+        content={() => (
+          <div>
+            <div class="tt-title" style={{ color: d.color }}>{d.glyph} {d.name}</div>
+            <div class="tt-line faint" style={{ fontSize: 12 }}>羁绊特性</div>
+            {d.tiers.map((t, i) => (
+              <div key={i} class="tt-sec" style={{ fontSize: 12 }}>
+                ({t.n}) {t.desc}
+              </div>
+            ))}
+          </div>
+        )}
+      >
+        {badge}
+      </Tip>
+    );
+  }
+  return badge;
 }
 
 // ───────────────────────── Tooltip contents ─────────────────────────
@@ -679,9 +715,13 @@ export function MobCard({
         {locked ? (
           <span class="faint" style={{ fontSize: 11, letterSpacing: 1 }}>？？？</span>
         ) : (
-          m.families.map((f) => (
-            <FamBadge key={f} f={f} />
-          ))
+          (() => {
+            const isSm = size === 'sm';
+            const iconOnly = isSm ? m.families.length >= 2 : m.families.length >= 3;
+            return m.families.map((f) => (
+              <FamBadge key={f} f={f} iconOnly={iconOnly} />
+            ));
+          })()
         )}
       </div>
       {!locked && ench && <div class="mc-ench">✦ {enchantName(ench, card?.enchantLv)}</div>}

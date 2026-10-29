@@ -82,7 +82,7 @@ interface Hud {
   hp: [number, number];
   max: [number, number];
   cards: HudCard[];
-  boss?: { name: string; hp: number; max: number; shield: boolean };
+  boss?: { name: string; hp: number; max: number; shield: boolean; shieldAmt?: number };
   sudden: boolean;
   skillLeft: number;
   orders: number;
@@ -120,7 +120,7 @@ function snapshot(b: Battle, max: [number, number]): Hud {
       hp: cardHp[i] ?? 0,
       maxHp: cardMax[i] || (c.spawned > 0 ? c.spawned : 1),
     })),
-    boss: boss ? { name: boss.mob.name, hp: boss.alive ? boss.hp : 0, max: boss.maxHp, shield: !!boss.ref.witherArmor } : undefined,
+    boss: boss ? { name: boss.mob.name, hp: boss.alive ? boss.hp : 0, max: boss.maxHp, shield: !!boss.ref.witherArmor, shieldAmt: boss.shield } : undefined,
     sudden: b.t >= b.suddenAt,
     skillLeft: b.skillLeft[0],
     orders: b.orders[0],
@@ -1003,6 +1003,9 @@ export function Arena3DView({
               </div>
               <div class="boss-track">
                 <div class="boss-fill" style={{ width: `${(hud.boss.hp / hud.boss.max) * 100}%` }} />
+                {hud.boss.shieldAmt && hud.boss.shieldAmt > 0 ? (
+                  <div class="boss-shield-fill" style={{ width: `${Math.min(100, (hud.boss.shieldAmt / hud.boss.max) * 100)}%` }} />
+                ) : null}
               </div>
             </div>
           )}
