@@ -120,6 +120,8 @@ export interface Settings {
   hints: boolean;
   /** Battlefield animation frames: high = 7 per mob, medium = 3, low = the card art alone. */
   frames: 'high' | 'medium' | 'low';
+  /** Time dilation pacing while aiming skills, tactics or items in battle. */
+  aimPacing?: 'bullet' | 'pause' | 'realtime';
   /** 竞技场: the last rules used and the last hand-picked squads (one player). */
   classic?: { rules?: Partial<Rules>; lab?: Teams };
 }
@@ -186,7 +188,7 @@ export function saveProfile(p: Profile) {
 }
 
 export function defaultSettings(): Settings {
-  return { master: 0.8, music: 0.5, sfx: 0.8, speed: 1, shake: true, numbers: true, particles: 'high', fps: false, fastSpin: false, spin: 'full', hints: true, frames: 'high' };
+  return { master: 0.8, music: 0.5, sfx: 0.8, speed: 1, shake: true, numbers: true, particles: 'high', fps: false, fastSpin: false, spin: 'full', hints: true, frames: 'high', aimPacing: 'bullet' };
 }
 
 export function loadSettings(): Settings {
@@ -196,6 +198,7 @@ export function loadSettings(): Settings {
     const saved = JSON.parse(raw) as Partial<Settings>;
     const out = { ...defaultSettings(), ...saved };
     if (!saved.spin) out.spin = saved.fastSpin ? 'fast' : 'full';
+    if (!saved.aimPacing) out.aimPacing = 'bullet';
     return out;
   } catch {
     return defaultSettings();

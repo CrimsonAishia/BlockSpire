@@ -177,6 +177,7 @@ export function Arena3DView({
     paused: false,
     speed,
     skip: false,
+    stage: 'intro' as 'intro' | 'fight' | 'end',
     fightStarted: false,
     finished: false,
     max: [1, 1] as [number, number],
@@ -203,8 +204,10 @@ export function Arena3DView({
   R.current.paused = paused;
   R.current.speed = speed;
   R.current.phase = phase;
+  R.current.stage = stage;
   R.current.aim = aim;
   R.current.canUse = phase === 'fight' && stage === 'fight' && !R.current.finished && !R.current.battle?.over;
+  const inFightAim = R.current.canUse && R.current.fightStarted && aim !== null;
 
   /** Charges left: live in battle, otherwise what deployment builds left over. */
   const skillLeft = !skill ? 0 : phase === 'fight' ? (hud?.skillLeft ?? skill.charges) : Math.max(0, skill.charges - builds.length);
@@ -545,6 +548,13 @@ export function Arena3DView({
         last = now;
         const c = R.current;
         const b = c.battle!;
+        const inFight = c.fightStarted && c.stage === 'fight' && !c.finished && !b.over;
+        const isAimingInFight = inFight && c.aim !== null;
+        const pacing = settings.value.aimPacing ?? 'bullet';
+        const isAimPaused = isAimingInFight && pacing === 'pause';
+        const isBulletTime = isAimingInFight && pacing === 'bullet';
+        const effectiveSpeed = isBulletTime ? 0.15 : c.speed;
+
         if (c.fightStarted && !c.finished) {
           if (c.skip && !b.over) {
             b.headless = true;
@@ -552,9 +562,11 @@ export function Arena3DView({
             b.headless = false;
             b.events.length = 0;
           }
-          if (!c.paused && !b.over) {
+
+          if (!c.paused && !isAimPaused && !b.over) {
             // Hit-stop slows the simulation for a few frames on heavy hits.
-            acc += dt * c.speed * arena.timeScale();
+            // Bullet time slows both simulation and visual playback when aiming during an active fight.
+            acc += dt * effectiveSpeed * arena.timeScale();
             let steps = 0;
             while (acc >= DT && steps < 16) {
               b.step();
@@ -562,7 +574,7 @@ export function Arena3DView({
               steps++;
             }
             if (steps >= 16) acc = 0;
-            arena.sfxEnabled = c.speed <= 2;
+            arena.sfxEnabled = effectiveSpeed <= 2;
             arena.consumeEvents();
           }
           hudT -= dt;
@@ -573,6 +585,7 @@ export function Arena3DView({
           if (b.over && endT === 0) {
             endT = 0.0001;
             c.canUse = false;
+            c.stage = 'end';
             clearAim();
             setStage('end');
             setWinner(b.winner);
@@ -601,7 +614,8 @@ export function Arena3DView({
             }
           }
         }
-        arena.frame(c.fightStarted && !c.paused ? Math.min(1, acc / DT) : 1, c.fightStarted ? (c.paused ? 0 : dt * Math.min(c.speed, 2) * arena.timeScale()) : dt);
+        const isSimPaused = inFight && (c.paused || isAimPaused);
+        arena.frame(c.fightStarted && !isSimPaused ? Math.min(1, acc / DT) : 1, c.fightStarted ? (isSimPaused ? 0 : dt * Math.min(effectiveSpeed, 2) * arena.timeScale()) : dt);
         const moved = arena.viewChanged();
         if (moved !== c.camMoved) {
           c.camMoved = moved;
@@ -677,6 +691,7 @@ export function Arena3DView({
           sfx(n > 0 ? 'countdown' : 'fight', { vol: 0.6 });
           if (n === 0) {
             c.fightStarted = true;
+            c.stage = 'fight';
             setStage('fight');
           }
         }, at),
@@ -1128,7 +1143,12 @@ export function Arena3DView({
       {(fighting ? stage !== 'end' && (slots.length > 0 || skillKinds.length > 0 || !!tacticDef) : skill?.id === 'build' && !!onBuild && ready) && (
         <div class={`hotbar ${fighting ? '' : 'deploy'}`}>
           {note && <div class="hb-hint warn">{note}</div>}
-          {aim !== null && <div class="hb-hint hb-aim-hint"><span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending, tacticDef)}</span><button class="hb-cancel" onClick={clearAim}>取消瞄准</button></div>}
+          {aim !== null && (
+            <div class="hb-hint hb-aim-hint">
+              <span>{aim.k === 'tactic' && tactic?.id === 'horn' ? (retreatSelecting ? '② 选择我方后方或侧方集合点（不能前进）：黄色圈为选中友军，旗帜为目的地；绿色可用，红色不可用' + (touchUI && pending ? ' · 再点圈内确认' : '') : `① 点击友军附近，选取最近的最多 ${tacticDef?.maxTargets ?? 4} 个友军；再选撤退点（此步不消耗军令）`) : aimHint(aim, slots, golemCost, touchUI, pending, tacticDef)}</span>
+              <button class="hb-cancel" onClick={clearAim}>取消瞄准</button>
+            </div>
+          )}
           {!note && aim === null && !fighting && <div class="hb-hint">布阵时就可以建造：点「圆石墙」或「土台」，再点战场的地面{touchUI ? '' : '（Q / E）'}</div>}
           {fighting && tacticDef && <div class="hb-hint" role="status" aria-live="off">
             军令：当前可用 {ordersLeft} 点 · {hud?.orderGranted ? '本场补充已领取' : `${Math.max(0, ORDER_REFILL_AT - (hud?.orderElapsed ?? 0)).toFixed(1)} 秒后补充 1 点`} · 本场共 {ORDER_TOTAL} 点
@@ -1283,6 +1303,9 @@ export function Arena3DView({
         <div class={`b-result side side${draw ? 'd' : winner}`}>
           <div class="b-result-text">{draw ? '平 局' : endText[winner]}</div>
         </div>
+      )}
+      {inFightAim && (settings.value.aimPacing ?? 'bullet') !== 'realtime' && (
+        <div class={`arena-bullet-overlay ${(settings.value.aimPacing ?? 'bullet') === 'pause' ? 'pause' : ''}`} />
       )}
       {paused && stage === 'fight' && <div class="b-paused">已暂停</div>}
       {extraOverlay}

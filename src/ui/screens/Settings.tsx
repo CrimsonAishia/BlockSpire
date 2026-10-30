@@ -60,6 +60,36 @@ export function SettingsModal() {
         </div>
       </div>
       <div class="set-row">
+        <Tip
+          content={() => (
+            <div>
+              <div class="tt-title">施法与道具瞄准流速</div>
+              <div class="tt-line">子弹时间（推荐）：瞄准技能或投掷道具时自动减速至 0.15× 慢动作，兼顾精准选点与战场动态感知。</div>
+              <div class="tt-line">暂停：瞄准时完全冻结时间，适合习惯纯回合制/战术暂停的玩家。</div>
+              <div class="tt-line">实时：保持原速不减速，高难度硬核挑战。</div>
+              <div class="tt-sec tt-gray">释放或取消瞄准后立即恢复原速。</div>
+            </div>
+          )}
+        >
+          <span>瞄准时流速 ⓘ</span>
+        </Tip>
+        <div class="row gap4">
+          {([
+            { id: 'bullet', name: '子弹时间' },
+            { id: 'pause', name: '暂停' },
+            { id: 'realtime', name: '实时' },
+          ] as const).map(({ id, name }) => (
+            <button
+              key={id}
+              class={`toggle ${(s.aimPacing ?? 'bullet') === id ? 'on' : ''}`}
+              onClick={() => (sfx('click'), updateSettings({ aimPacing: id }))}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div class="set-row">
         <span>粒子特效</span>
         <div class="row gap4">
           {(['high', 'medium', 'low'] as const).map((v) => (
