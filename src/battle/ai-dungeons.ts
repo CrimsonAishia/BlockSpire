@@ -606,6 +606,7 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           if (!u.alive || !t.alive) return;
           u.x = tx;
           u.y = ty;
+          if (t.alive && Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '跃入奇袭!', color: '#ffa502' });
           b.emit({ k: 'boom', x: u.x, y: u.y, r: 40, color: '#ffa502', big: false });
           let mul = 1.2;
@@ -643,6 +644,7 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
             if (!u.alive || u.stunT > 0 || !t.alive) return;
             u.x = clampX(u, t.x + (u.team === 0 ? -30 : 30));
             u.y = clampY(t.y);
+            if (t.alive && Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
             b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + u.z + u.size, s: '风暴冲撞!', color: '#70a1ff' });
             b.damage(u, t, atk * 1.2, 'phys', { melee: true });
             b.knock(t, u.x, u.y, 35);
@@ -1003,6 +1005,7 @@ export const DUNGEONS_BEHAVIORS: Record<string, Behavior> = {
           b.emit({ k: 'text', x: blinkX, y: blinkY, z: u.gz + u.size, s: '虚空闪现!', color: '#9b59b6' });
           u.x = blinkX;
           u.y = blinkY;
+          if (backliner.alive && Math.abs(backliner.x - u.x) > 2) u.facing = backliner.x > u.x ? 1 : -1;
           b.aoe(blinkX, blinkY, 70, u.team, (f) => {
             b.damage(u, f, b.atkOf(u) * 0.45, 'magic');
             b.knock(f, blinkX, blinkY, 80);

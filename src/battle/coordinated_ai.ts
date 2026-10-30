@@ -70,6 +70,7 @@ function makeBrain(b: Battle, u: Unit): Brain {
     },
     Move: () => {
       const moved = move(b, u, brain), t = u.target;
+      if (t && t.alive && Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
       // Resolve contact before the target gets its next movement step.
       if (!u.isRanged && u.atkTimer <= 0 && t?.alive && t.team !== u.team && b.canReach(u, t)
         && Math.hypot(t.x - u.x, t.y - u.y) <= b.reach(u, t) && b.canSee(u, t)) {
@@ -94,6 +95,7 @@ function threatened(b: Battle, u: Unit): boolean {
 function move(b: Battle, u: Unit, brain: Brain): boolean {
   let t = u.target;
   if (!t || u.speed <= 0) return false;
+  if (t.alive && Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
   const distance = Math.hypot(t.x - u.x, t.y - u.y);
   const due = b.t >= brain.nextPlan;
   if (b.t - brain.checked >= 0.6) {
@@ -139,7 +141,13 @@ function move(b: Battle, u: Unit, brain: Brain): boolean {
         if (Math.hypot(other.x - u.x, other.y - u.y) > distance + 160) continue;
         if (!available(b, brain, other)) continue;
         const goal = contactGoal(b, u, other, true, p => accepted(b, brain, p));
-        if (goal) { u.target = t = other; brain.goal = goal; u.retarget = 0.8; break; }
+        if (goal) {
+          u.target = t = other;
+          brain.goal = goal;
+          u.retarget = 0.8;
+          if (Math.abs(t.x - u.x) > 2) u.facing = t.x > u.x ? 1 : -1;
+          break;
+        }
       }
     }
     brain.action = 'flank';
@@ -209,6 +217,9 @@ export function coordinatedAct(b: Battle, u: Unit, dt: number, behavior: Behavio
   if (u.target !== old) {
     releaseContact(b, u); releaseFiringSpot(b, u); forgetRoute(u);
     brain.goal = null; brain.nextPlan = 0; brain.stalled = 0;
+  }
+  if (u.target && u.target.alive && Math.abs(u.target.x - u.x) > 2) {
+    u.facing = u.target.x > u.x ? 1 : -1;
   }
   brain.tree.step();
   if ((brain.action === 'retreat' || brain.action === 'dodge' || brain.action === 'escape') && brain.goal) {

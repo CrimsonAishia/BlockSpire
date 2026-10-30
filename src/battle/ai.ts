@@ -276,6 +276,7 @@ export function chargeMove(u: Unit, b: Battle, dt: number, o: { mul: number; kno
   u.y = Math.max(10, Math.min(ARENA_D - 10, u.y + C.dy * step));
   u.moving = true;
   u.walk += step * 1.5;
+  if (Math.abs(C.dx) > 0.05) u.facing = C.dx > 0 ? 1 : -1;
   C.dist += step;
   let end = C.dist >= C.max;
   b.aoe(u.x, u.y, u.radius + 6, u.team, (e) => {

@@ -849,6 +849,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           const sideY = clampY(target.y + (b.rng.chance(0.5) ? 20 : -20));
           u.x = clampX(u, target.x + (u.team === 0 ? -20 : 20));
           u.y = sideY;
+          if (target.alive && Math.abs(target.x - u.x) > 2) u.facing = target.x > u.x ? 1 : -1;
           b.emit({ k: 'tele', x: u.x, y: u.y, x2: u.x, y2: u.y, z: u.gz });
           b.damage(u, target, u.atk * 0.7, 'phys');
           b.damage(u, target, u.atk * 0.7, 'phys');
@@ -872,6 +873,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           u.ab.slamCd = 9;
           u.x = clampX(u, target.x + (u.team === 0 ? -25 : 25));
           u.y = clampY(target.y);
+          if (target.alive && Math.abs(target.x - u.x) > 2) u.facing = target.x > u.x ? 1 : -1;
           b.emit({ k: 'tele', x: u.x, y: u.y, x2: u.x, y2: u.y, z: u.gz });
           b.aoe(u.x, u.y, u.star >= 3 ? 78 : 60, u.team, (f) => {
             b.damage(u, f, u.atk * 1.8, 'phys');
@@ -979,6 +981,7 @@ export const POST_SIFT_BEHAVIORS: Record<string, Behavior> = {
           u.ab.ambushCd = 8;
           u.x = clampX(u, target.x + (u.team === 0 ? -25 : 25));
           u.y = clampY(target.y);
+          if (target.alive && Math.abs(target.x - u.x) > 2) u.facing = target.x > u.x ? 1 : -1;
           b.emit({ k: 'tele', x: u.x, y: u.y, x2: u.x, y2: u.y, z: u.gz });
           b.damage(u, target, u.atk * 1.3, 'phys');
           b.emit({ k: 'text', x: u.x, y: u.y, z: u.gz + 40, s: '侧翼突刺!', color: '#a55eea' });

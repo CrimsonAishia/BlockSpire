@@ -98,6 +98,14 @@ export function steerTo(b: Battle, u: Unit, goal: Point, dt: number, mul = 1, pu
   if (best === -Infinity || best < -10) { v.velocity.set(0, 0, 0); u.moving = false; return false; }
   v.velocity.set((bx - u.x) / dt, 0, (by - u.y) / dt);
   const moved = Math.hypot(bx - u.x, by - u.y);
+  const mdx = bx - u.x;
   u.x = bx; u.y = by; u.walk += moved; u.moving = moved > 0.01;
+  if (u.target && u.target.alive && Math.abs(u.target.x - u.x) > 2) {
+    u.facing = u.target.x > u.x ? 1 : -1;
+  } else if (pursue && Math.abs(goal.x - u.x) > 2) {
+    u.facing = goal.x > u.x ? 1 : -1;
+  } else if (u.moving && Math.abs(mdx) > 0.5 && (!u.target || !u.target.alive)) {
+    u.facing = mdx > 0 ? 1 : -1;
+  }
   return u.moving;
 }

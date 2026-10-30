@@ -300,6 +300,11 @@ function stepDir(b: Battle, u: Unit, nx: number, ny: number, dt: number, mul = 1
   u.y = cy_(u.y + ny * sp);
   u.moving = true;
   u.walk += sp;
+  if (u.target && u.target.alive && Math.abs(u.target.x - u.x) > 2) {
+    u.facing = u.target.x > u.x ? 1 : -1;
+  } else if (Math.abs(nx) > 0.1) {
+    u.facing = nx > 0 ? 1 : -1;
+  }
 }
 
 // ───────────────────────── dodging ─────────────────────────
@@ -549,6 +554,9 @@ export function goalStep(b: Battle, u: Unit, t: Unit, dt: number): boolean {
   const ny = dy / d;
   // Backpedalling while facing the enemy is slower.
   const away = nx * (t.x - u.x) + ny * (t.y - u.y) < 0;
+  if (t && t.alive && Math.abs(t.x - u.x) > 2) {
+    u.facing = t.x > u.x ? 1 : -1;
+  }
   stepDir(b, u, nx, ny, Math.min(dt, d / Math.max(1, b.moveSpeedOf(u))), away ? P.backpedal : 1);
   return true;
 }
