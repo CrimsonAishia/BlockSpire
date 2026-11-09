@@ -1823,6 +1823,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.result-screen > * {
+  flex-shrink: 0;
 }
 .result-screen.lose {
   background: radial-gradient(ellipse at 50% 20%, #2a1212, #08070b 70%);
@@ -1842,6 +1847,7 @@
   display: flex;
   gap: 24px;
   margin-top: 20px;
+  padding-bottom: 32px;
 }
 .result-table {
   width: 860px;
